@@ -34,3 +34,47 @@ func test_the_list_view_shows_the_note() -> void:
 	pane.build(Bindings.new(), ["engineering"], IntentTable.KBM)
 	pane.show_view(ControlsPane.VIEW_LIST)
 	assert_bool(note.visible).is_false()
+
+
+# FT: FT-STN-011
+# R25-13: the controller picture says which button each letter is, by place. R25-9: with
+# Weapons shown, the keyboard picture says a left click selects over an item and fires
+# elsewhere (D176).
+func test_the_pad_and_left_click_notes() -> void:
+	I18n.apply("en")
+	# The headless window is phone-sized, and a phone has no diagrams.
+	LayoutMode.forced = LayoutMode.Kind.DESKTOP
+	var pane: ControlsPane = auto_free(ControlsPane.new())
+	add_child(pane)
+	pane.build(Bindings.new(), ["weapons"], IntentTable.PAD)
+	pane.show_view(ControlsPane.VIEW_PAD)
+	var pad_note: Label = pane.get_node(ControlsPane.VIEW_PAD + "View").get_child(1)
+	assert_str(pad_note.text).contains("A bottom, B right, X left, Y top")
+	pane.show_view(ControlsPane.VIEW_KBM)
+	var kbm_note: Label = pane.get_node(ControlsPane.VIEW_KBM + "View").get_child(1)
+	assert_str(kbm_note.text).contains("Left click selects")
+	assert_bool(ControlsPane.lmb_split(Bindings.new(), ["helm"])).is_false()
+	var b: Bindings = Bindings.new()
+	b.rebind("fire", IntentTable.KBM, PackedStringArray(["Space"]))
+	assert_bool(ControlsPane.lmb_split(b, ["weapons"])).is_false()
+	LayoutMode.forced = -1
+
+
+# FT: FT-STN-011
+# R25-14: "?" is whichever key types it, so it has no place on the drawing; the note under
+# the keyboard names it. The US slash key is the physical Slash.
+func test_the_question_mark_is_named_not_drawn() -> void:
+	I18n.apply("en")
+	LayoutMode.forced = LayoutMode.Kind.DESKTOP
+	assert_dict(ControlsFigure.part(IntentTable.KBM, "?")).is_empty()
+	assert_str(ControlsFigure.part(IntentTable.KBM, "Slash")["caption"]).is_equal("/")
+	var known: Dictionary = ControlsFigure.ids(IntentTable.KBM)
+	assert_array(ControlsModel.parts_of("Slash", known)).is_equal(["Slash"])
+	var pane: ControlsPane = auto_free(ControlsPane.new())
+	add_child(pane)
+	pane.build(Bindings.new(), ["comms"], IntentTable.KBM)
+	pane.show_view(ControlsPane.VIEW_KBM)
+	var note: Label = pane.get_node(ControlsPane.VIEW_KBM + "View").get_child(1)
+	assert_str(note.text).contains("Show controls: type ?")
+	assert_str(note.text).not_contains("Not on the picture")
+	LayoutMode.forced = -1

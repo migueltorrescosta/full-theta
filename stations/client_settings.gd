@@ -12,11 +12,11 @@ const PATH: String = "user://client_settings.cfg"
 const UI_SCALE_MIN: float = 0.75
 const UI_SCALE_MAX: float = 1.5
 const UI_SCALE_STEP: float = 0.05
-## Comfort roll locks: the ship's deck plane, the selected target, or the player's
-## cosmetic reference plane.
 const MUSIC_DEFAULT: float = 0.5
 ## Subtitle sizes (W3/S1): name -> font size in px at 100 % (the smallest text is 12 px, D316).
 const SUBTITLE_SIZES: Dictionary = {"small": 14, "normal": 18, "large": 26}
+## Comfort roll locks: the ship's deck plane, the selected target, or the player's
+## cosmetic reference plane.
 const ROLL_LOCKS: Array[String] = ["deck", "target", "reference"]
 
 ## The game was started with `--dev` (#35 A7, amends D174): only then do the menu's Dev
@@ -45,11 +45,12 @@ var hints_seen: Dictionary = {}
 ## Not saved: the browser test hooks (?pick=) set it so the first-visit Controls menu never
 ## covers the station under test.
 var skip_first_visit_help: bool = false
-## Comfort (FT-STN-017): on/off, roll lock, reduced field of view, and the cosmetic
-## reference plane as a world orientation ("Set reference plane to my current deck").
+## Comfort (FT-STN-017): one switch that locks the roll and narrows the field of view, the
+## roll lock, and the cosmetic reference plane as a world orientation ("Set reference plane to
+## my current deck"). A file from before the single switch may hold "reduced_fov": it is
+## ignored, so comfort on now always narrows the view (ux-17).
 var comfort: bool = false
 var roll_lock: String = "deck"
-var reduced_fov: bool = false
 var reference_plane: Quaternion = Quaternion.IDENTITY
 var bindings: Bindings = Bindings.new()
 ## The data-shortcut toggle set the host starts a lobby with (DataToggles code, FT-STN-016):
@@ -93,7 +94,6 @@ func load_file() -> Error:
 	comfort = _value(cfg, "comfort", "on", false)
 	var lock: String = _value(cfg, "comfort", "roll_lock", "deck")
 	roll_lock = lock if lock in ROLL_LOCKS else "deck"
-	reduced_fov = _value(cfg, "comfort", "reduced_fov", false)
 	reference_plane = _value(cfg, "comfort", "reference_plane", Quaternion.IDENTITY)
 	lessons_done.clear()
 	for l: Variant in _value(cfg, "training", "lessons_done", []):
@@ -118,7 +118,6 @@ func save() -> Error:
 	cfg.set_value("input", "bindings", bindings.to_dict())
 	cfg.set_value("comfort", "on", comfort)
 	cfg.set_value("comfort", "roll_lock", roll_lock)
-	cfg.set_value("comfort", "reduced_fov", reduced_fov)
 	cfg.set_value("comfort", "reference_plane", reference_plane)
 	cfg.set_value("training", "lessons_done", lessons_done.keys())
 	cfg.set_value("lobby", "toggles", host_toggles)

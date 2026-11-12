@@ -174,11 +174,15 @@ func test_landscape_pages_and_persistent_zone() -> void:
 	# The radar covers the view: the HUD hides under it, and its foot stays above the band.
 	assert_bool(_panel.hud.visible).is_false()
 	assert_float(radar.end.y).is_less_equal(_ui().layout.right.get_global_rect().end.y)
-	_ui().pages.current = HelmTouch.PAGE_CREW
-	await _frames()
-	assert_bool(_panel.ring.is_visible_in_tree()).is_false()
-	assert_bool(_ui().crew.is_visible_in_tree()).is_true()
-	assert_bool(_panel.hud.visible).is_true()
+	# The Crew page has a tab only with something to share (C4).
+	var crew_tab: bool = _ui().pages.shown(HelmTouch.PAGE_CREW)
+	assert_bool(crew_tab).is_equal(not _ui().crew.entries().is_empty())
+	if crew_tab:
+		_ui().pages.current = HelmTouch.PAGE_CREW
+		await _frames()
+		assert_bool(_panel.ring.is_visible_in_tree()).is_false()
+		assert_bool(_ui().crew.is_visible_in_tree()).is_true()
+		assert_bool(_panel.hud.visible).is_true()
 
 
 # FT: FT-STN-005
@@ -394,7 +398,7 @@ func test_a_tap_on_the_radar_page_selects() -> void:
 	mb.button_index = MOUSE_BUTTON_LEFT
 	mb.pressed = true
 	mb.position = at
-	_ui()._on_radar_input(mb)
+	_ui().radar_box._on_radar_input(mb)
 	assert_bool(_ctx().crew.is_selected("contact", target["id"])).is_true()
 
 
@@ -479,7 +483,8 @@ func test_portrait_labels_do_not_collide() -> void:
 				)
 		for r: Rect2 in hud.reserved():
 			var cover: float = label.intersection(r).get_area()
-			assert_float(cover).is_less_equal(HelmHud.SLIGHT * label.get_area())
+			# (+0.01: a label placed at exactly the SLIGHT share reads 1e-5 over in floats)
+			assert_float(cover).is_less_equal(HelmHud.SLIGHT * label.get_area() + 0.01)
 
 
 # FT: FT-HLM-012

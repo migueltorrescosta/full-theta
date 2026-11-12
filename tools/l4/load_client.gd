@@ -1,8 +1,9 @@
 extends SceneTree
 ## Load-gate client process (#11, FT-GEN-003, FT-NET-040, D160, D161): one Godot process
 ## holding several NetClients, each standing in for a remote device. Seat i of the
-## 64-seat plan (LoadSeats) picks its ship and seat; each ship's Helm presses Start until
-## a `started` event names that ship (every ship is started, D129); once its own ship has
+## 64-seat plan (LoadSeats) picks its ship and seat; each crew seat says Ready and each
+## ship's Helm presses Start (no host: any Ready crew player may, #37 C1) until a `started`
+## event names that ship (every ship starts together); once its own ship has
 ## started, a Helm crew steers (helm input every 0.5 s) and a Weapons crew fires mount 0
 ## every second, so the command path carries load too. Every
 ## client logs each snapshot's seq and arrival time (NetClient.snapshot_log). When the
@@ -107,8 +108,13 @@ func _drive(c: NetClient, s: Dictionary, k: int, now: int) -> void:
 	if s["picked"] != "ok" or now < s["next_us"]:
 		return
 	if not _started_ships.has(s["ship"]):
-		if LoadSeats.starts(first + k, ships):
+		# Every crew seat says Ready once; with no host, one seat per ship then asks for Start
+		# every second until the whole fleet is Ready and covered (#37 C1).
+		if not s.get("ready_sent", false) and StationCatalogue.is_crew(s["seat"]):
 			c.set_ready(true)
+			s["ready_sent"] = true
+		elif LoadSeats.starts(first + k, ships):
+			c.start()
 		s["next_us"] = now + READY_EVERY_US
 		return
 	if not commands:

@@ -57,8 +57,8 @@ func test_a_new_site_reaches_the_client_and_hidden_ones_do_not() -> void:
 	var crew: Array[NetClient] = await h.crew3(server)
 	var helm: NetClient = crew[0]
 	assert_bool(await h.until(func() -> bool: return helm.snap.sites.size() == 1)).is_true()
-	for c: NetClient in crew:
-		c.set_ready(true)
+	h.all_ready(server)
+	crew[0].start()
 	assert_bool(await h.until(func() -> bool: return server.world.tick > 3)).is_true()
 	var w: SimWorld = server.world
 	var at: Vector3 = Vector3(120000.0, -40000.5, 60000.03)

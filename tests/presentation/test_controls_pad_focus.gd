@@ -77,8 +77,9 @@ func test_the_menu_its_settings_and_its_picker_have_pad_focus() -> void:
 	m.settings = ClientSettings.new("user://test_pad_focus.cfg")
 	add_child(m)
 	var roots: Array = _focus_of(m).map(func(f: PadFocus) -> Control: return f.root)
-	assert_int(roots.size()).is_equal(3)
+	assert_int(roots.size()).is_equal(4)
 	assert_bool(roots.any(func(r: Control) -> bool: return r is TrainingPicker)).is_true()
+	assert_bool(roots.any(func(r: Control) -> bool: return r is CalloutsQuiz)).is_true()
 	assert_bool(roots.any(func(r: Control) -> bool: return r is SettingsScreen)).is_true()
 
 

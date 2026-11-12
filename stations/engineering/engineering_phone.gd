@@ -12,13 +12,13 @@ extends RefCounted
 const NARROW: float = 760.0
 ## Under this width (a phone, D195) the cutaway, the board and the lists stack and scroll.
 const PHONE_W: float = 560.0
+## Narrow and under this height (px, a desktop at 150 %), the faults list is compact.
+const SHORT_H: float = 520.0
 ## The docked thumb rail's width at the screen's left edge (the screen's radar column stays,
-## P28-E2).
-const PHONE_RAIL_W: float = 168.0
-## The rail buttons' text size on a phone (two to a row).
-const RAIL_FONT: int = 14
+## P28-E2): two buttons to a row, wide enough for a verb and its object (C3).
+const PHONE_RAIL_W: float = 224.0
 ## Upright, the rail's buttons in a grid of this many columns.
-const GRID_COLUMNS: int = 4
+const GRID_COLUMNS: int = 3
 
 var panel: EngineeringPanel
 ## The phone arrangement on its side (#28 follow-up): the docked rail and the pages; hidden
@@ -83,7 +83,8 @@ func build_pages() -> void:
 	panel.pages.page_changed.connect(panel._on_page)
 
 
-## The rail on its side (rows of two) and the upright grid, each a full set of the buttons.
+## The rail on its side (two to a row) and the upright grid, each a full set of the buttons;
+## a hidden button (EngineeringRail.update) leaves no gap: the grids close up in order.
 func _build_rails() -> void:
 	touch_layout = RailLayout.new()
 	touch_layout.name = "TouchLayout"
@@ -93,14 +94,17 @@ func _build_rails() -> void:
 	panel.add_child(touch_layout)
 	var rail: TouchRail = touch_layout.rail(SIDE_LEFT)
 	rail.custom_minimum_size.x = PHONE_RAIL_W
-	var row: Array = []
+	var pairs: GridContainer = GridContainer.new()
+	pairs.name = "RailGrid"
+	pairs.columns = 2
+	pairs.add_theme_constant_override("h_separation", UiTheme.TOUCH_GAP)
+	pairs.add_theme_constant_override("v_separation", UiTheme.TOUCH_GAP)
+	rail.add(pairs)
 	for a: Array in EngineeringPanel.TOUCH_ACTIONS:
 		var b: RailButton = rail_button(panel, a)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		touch_buttons[a[0]] = b
-		row.append(b)
-		if row.size() == 2:
-			rail.add_row(row)
-			row = []
+		pairs.add_child(b)
 	_upright = VBoxContainer.new()
 	_upright.name = "Upright"
 	_upright.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -124,10 +128,9 @@ func _build_rails() -> void:
 static func rail_button(p: EngineeringPanel, a: Array) -> RailButton:
 	var b: RailButton = RailButton.make(TouchText.of(a[1], a[2]))
 	b.name = "Touch_" + str(a[0])
-	# Two lines of text (the part or the reason under the label) in a 48 px row.
+	# Two lines of text (the part or the reason under the label) in a 48 px row; the text
+	# size fits the widest line (EngineeringRail.fit).
 	b.theme_type_variation = "RailCompactButton"
-	# Two to a 168 px rail: the longest label fits at 14 px.
-	b.add_theme_font_size_override("font_size", RAIL_FONT)
 	b.pressed.connect(p.press_touch.bind(str(a[0])))
 	return b
 
@@ -188,6 +191,7 @@ func _from_phone() -> void:
 	var board: EngineeringBoard = panel.board
 	var cutaway: EngineeringCutaway = panel.cutaway
 	var side: PanelContainer = panel._side
+	var box: MarginContainer = panel._side_box
 	var left: VBoxContainer = panel._left
 	var row: BoxContainer = panel._row
 	if touch_layout != null and (touch_layout.visible or _upright.visible):
@@ -203,9 +207,10 @@ func _from_phone() -> void:
 		left.move_child(cutaway, 0)
 		row.add_child(board)
 		row.move_child(board, left.get_index() + 1)
-		row.add_child(side)
+		box.add_child(side)
 		cutaway.visible = not panel.docked
 		side.visible = not panel.docked
+		box.visible = not panel.docked
 	var narrow: bool = panel.size.x < NARROW
 	var phone: bool = panel.size.x < PHONE_W
 	row.vertical = phone
@@ -214,10 +219,18 @@ func _from_phone() -> void:
 	board.custom_minimum_size = (Vector2(0, 460) if phone else Vector2(270, board.content_height()))
 	side.custom_minimum_size = Vector2(0, 220) if phone else Vector2(210, 0)
 	var parent: Control = left if narrow else row
-	side.size_flags_stretch_ratio = 1.0 if narrow else 2.2
-	if side.get_parent() != parent:
-		side.get_parent().remove_child(side)
-		parent.add_child(side)
+	# Under the cutaway (narrow) the faults share the column's height evenly with it, so
+	# they show more than their first line at 150 %.
+	box.size_flags_stretch_ratio = cutaway.size_flags_stretch_ratio if narrow else 2.2
+	panel.compact_lists = narrow and not phone and panel.size.y < SHORT_H
+	# Under the cutaway the box sits at the screen's left and bottom edges: keep it off them.
+	var gap: int = UiTheme.TOUCH_GAP if narrow else 0
+	for m: String in ["margin_left", "margin_right", "margin_bottom"]:
+		if box.get_theme_constant(m) != gap:
+			box.add_theme_constant_override(m, gap)
+	if box.get_parent() != parent:
+		box.get_parent().remove_child(box)
+		parent.add_child(box)
 
 
 ## The pages start under the view-top row (top_reserve) and end above the gesture band.

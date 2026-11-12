@@ -46,6 +46,11 @@
       "id": "computer.shields_low_plain", "role": "computer", "priority": 1, "max_age_ms": 4000,
       "coalesce": "shields", "resume": false,
       "text": {"en": "Shields low.", "pt_PT": "Escudos fracos.", "it": "Scudi bassi."}
+    },
+    {
+      "id": "computer.missile_lock", "role": "computer", "priority": 0, "max_age_ms": 3000,
+      "coalesce": "missile", "resume": false,
+      "text": {"en": "Missile lock.", "pt_PT": "Míssil a seguir-nos.", "it": "Missile agganciato."}
     }
   ]
 }

@@ -1,7 +1,8 @@
 extends GdUnitTestSuite
-## StationAlerts and AlertTones (T056): sim events, pings and alert-level changes show
-## (toast, edge flash) and sound (AlertTones.played, the audio spy) on the stations they
-## affect, through the same CrewState.handle_event path the client shell feeds.
+## StationAlerts and AlertTones (T056, C5): sim events, pings and alert-level changes show
+## and sound (AlertTones.played, the audio spy) on the stations they affect, through the same
+## CrewState.handle_event path the client shell feeds. The critical tier (hull critical, a
+## fault, shields down, a missile lock) is the banner and the edge flash; the rest a toast.
 
 const SHIP: int = StationFixture.SHIP
 
@@ -40,6 +41,10 @@ func _flashing(s: StationScreen) -> bool:
 	return s.flash.strength(s.ctx.now_ms()) > 0.0
 
 
+func _banner(s: StationScreen) -> String:
+	return s.critical.shown()
+
+
 # FT: FT-STN-004, FT-SIM-032, FT-M1-011
 func test_a_hit_shows_and_sounds_on_every_station_with_its_direction() -> void:
 	for seat: String in ["helm", "weapons", "engineering", "relay", "captain", "viewer"]:
@@ -47,8 +52,9 @@ func test_a_hit_shows_and_sounds_on_every_station_with_its_direction() -> void:
 		# Starboard, level: 3 o'clock (ship frame, -Z is the bow).
 		_event(s, "hit", {"vector": Vector3(20.0, 0.0, 0.0)})
 		assert_array(_played(s)).is_equal([&"hit"])
-		assert_bool(_flashing(s)).is_true()
-		assert_object(s.flash.color).is_equal(Palette.color("danger"))
+		# A hit is a toast: no flash, no banner (ux-12).
+		assert_bool(_flashing(s)).is_false()
+		assert_str(_banner(s)).is_empty()
 		assert_array(s.toasts.texts()).is_equal(["Hit, 3 level"])
 
 
@@ -70,13 +76,18 @@ func test_low_shields_reach_helm_and_engineering_only() -> void:
 		var s: StationScreen = _screen(seat)
 		_event(s, "shield_low", {"value": 0.38})
 		assert_array(_played(s)).is_equal([&"shield_low"])
-		assert_array(s.toasts.texts()).is_equal(["Shields 38 %"])
-		assert_object(s.flash.color).is_equal(Palette.color("warn"))
+		# Critical: the banner and the flash, not a toast.
+		assert_str(_banner(s)).is_equal("Shields 38 %")
+		assert_array(s.toasts.texts()).is_empty()
+		assert_object(s.flash.color).is_equal(Palette.color("danger"))
+		_advance(s, CriticalBanner.SHOW_MS)
+		s.critical.update(s.ctx.now_ms())
+		assert_str(_banner(s)).is_empty()
 	for seat: String in ["weapons", "relay", "viewer"]:
 		var s: StationScreen = _screen(seat)
 		_event(s, "shield_low", {"value": 0.38})
 		assert_array(_played(s)).is_empty()
-		assert_array(s.toasts.texts()).is_empty()
+		assert_str(_banner(s)).is_empty()
 		assert_bool(_flashing(s)).is_false()
 
 
@@ -85,19 +96,34 @@ func test_a_fault_sounds_on_engineering_and_shows_on_the_station_that_needs_it()
 	var eng: StationScreen = _screen("engineering")
 	_event(eng, "fault", {"value": 120.0, "tag": "weapons"})
 	assert_array(_played(eng)).is_equal([&"fault"])
-	assert_array(eng.toasts.texts()).is_equal(["Weapons fault"])
+	assert_str(_banner(eng)).is_equal("Weapons fault")
 	# Weapons depends on its mounts: it sees the fault; the tone is Engineering's.
 	var weapons: StationScreen = _screen("weapons")
 	_event(weapons, "fault", {"value": 120.0, "tag": "weapons"})
 	assert_array(_played(weapons)).is_empty()
-	assert_array(weapons.toasts.texts()).is_equal(["Weapons fault"])
+	assert_str(_banner(weapons)).is_equal("Weapons fault")
 	assert_bool(_flashing(weapons)).is_true()
 	var helm: StationScreen = _screen("helm")
 	_event(helm, "fault", {"value": 120.0, "tag": "weapons"})
-	assert_array(helm.toasts.texts()).is_empty()
+	assert_str(_banner(helm)).is_empty()
 	_event(helm, "fault", {"value": 120.0, "tag": "thrusters"})
-	assert_array(helm.toasts.texts()).is_equal(["Thrusters fault"])
+	assert_str(_banner(helm)).is_equal("Thrusters fault")
 	assert_array(_played(helm)).is_empty()
+
+
+# FT: FT-STN-004, FT-AUD-006
+# The server's critical alerts (ServerVoice.critical_events): every screen of the ship gets
+# the banner and the flash, with the red-alert tone.
+func test_hull_critical_and_missile_lock_are_critical_on_every_screen() -> void:
+	for seat: String in ["helm", "comms", "captain", "viewer"]:
+		var s: StationScreen = _screen(seat)
+		_event(s, "hull_critical", {})
+		assert_str(_banner(s)).override_failure_message(seat).is_equal("Hull critical")
+		assert_bool(_flashing(s)).is_true()
+		_event(s, "missile_lock", {"other": 3})
+		assert_str(_banner(s)).is_equal("Missile lock")
+		assert_array(_played(s)).is_equal([&"alert_red", &"alert_red"])
+		assert_array(s.toasts.texts()).is_empty()
 
 
 # FT: FT-STN-004, FT-M1-011
@@ -108,7 +134,7 @@ func test_proximity_warns_helm_once_while_it_repeats() -> void:
 		_advance(s, 500)
 	assert_array(_played(s)).is_equal([&"proximity"])
 	assert_array(s.toasts.texts()).is_equal(["Collision course"])
-	assert_bool(_flashing(s)).is_true()
+	assert_bool(_flashing(s)).is_false()
 	var w: StationScreen = _screen("weapons")
 	_event(w, "proximity", {"other": 3, "value": 4.0})
 	assert_array(_played(w)).is_empty()
@@ -143,7 +169,9 @@ func test_pings_chime_and_alert_changes_sound_their_level() -> void:
 	alert = {"ship": SHIP, "level": CrewState.ALERT_NORMAL, "by": "Bea"}
 	s.ctx.crew.handle_event({"type": "alert", "payload": alert}, s.ctx.now_ms())
 	assert_array(_played(s)).is_equal([&"ping", &"alert_red", &"alert_normal"])
-	assert_object(s.flash.color).is_equal(Palette.color("alert_normal"))
+	# A toast names the level and its setter; no flash (ux-12).
+	assert_array(s.toasts.texts()).is_equal(["Normal · Bea", "Red alert · Ana"])
+	assert_bool(_flashing(s)).is_false()
 
 
 # FT: FT-AUD-009

@@ -3,8 +3,9 @@ extends PanelContainer
 ## The Shakedown's step banner and Next button (FT-MIS-039, D235), shown on every station
 ## while a training run goes. The server says each station's step as a ship-computer line
 ## (content/dialogue/shakedown.json); the shell keeps the latest one per station in
-## StationContext.training. The banner shows the focused station's step: the line's text
-## with the player's current binding, its worked example, and Next. Next sends
+## StationContext.training. The banner shows the focused station's step: its worked example
+## with the player's current binding (the voice keeps the line, R25-15; the line's text only
+## when the step has no example), and Next. Next sends
 ## TrainingNextCommand; on a step that ends on a command it does nothing, and a player may
 ## press it anyway. Next has a key (the training_next intent), a pad chord and a tap.
 ##
@@ -25,9 +26,14 @@ const PAIR_PREFIX: String = "pair_"
 ## Seconds between two looks for room on a touch layout, and the step of the look (px).
 const LOOK_S: float = 0.3
 const STEP_PX: float = 8.0
+## Where no spot is free, covering a button costs this many times covering a picture.
+const BUTTON_COST: float = 8.0
 const SETTLE_FRAMES: int = 4
 ## A radar under this share of the window is a picture the card keeps clear of.
 const INSET_SHARE: float = 0.2
+## Tablet stations whose docked rails carry every action under its phone label, so a lesson
+## step reads in touch words there too (a step that names a phone page reads its own line).
+const TABLET_WORDS: Array[String] = ["engineering"]
 ## The widths a touch card tries, widest first, and the least.
 const WIDTHS: Array[float] = [400.0, 360.0, 320.0, 280.0]
 const MIN_WIDTH: float = 240.0
@@ -44,8 +50,8 @@ var ctx: StationContext
 var station: String = ""
 
 var _title: Label
+## The step: its example (or the line), in one label (R25-15).
 var _text: Label
-var _example: Label
 var _next: Button
 var _skip: Button
 var _col: VBoxContainer
@@ -76,7 +82,8 @@ func setup(context: StationContext) -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	dock(false)
 	_col = VBoxContainer.new()
-	_col.add_theme_constant_override("separation", 6)
+	# (the touch gap: the fold button sits right above Next)
+	_col.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
 	add_child(_col)
 	_title = Label.new()
 	_title.theme_type_variation = "HeadingLabel"
@@ -95,9 +102,6 @@ func setup(context: StationContext) -> void:
 	_fold.pressed.connect(_toggle_fold)
 	_fold.visible = false
 	_head.add_child(_fold)
-	_example = Label.new()
-	_example.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_col.add_child(_example)
 	_next = Button.new()
 	_next.name = "Next"
 	_next.custom_minimum_size = Vector2(0.0, 52.0)
@@ -114,6 +118,11 @@ func setup(context: StationContext) -> void:
 
 func _process(_delta: float) -> void:
 	refresh()
+	# A wrapped text can settle a frame after the card was placed: the card grows to hold it.
+	if visible and _moved:
+		var want: float = get_combined_minimum_size().y
+		if size.y + 0.5 < want:
+			size.y = want
 
 
 ## Docked, the card sits at the top of a desktop screen's side column, in the layout, so it
@@ -148,18 +157,27 @@ func refresh() -> void:
 	var intent: String = str(entry.get("intent", ""))
 	var example: String = ""
 	if words:
-		text = strip_markers(text)
 		example = touch_text(station, intent)
+		if example != "" and not LayoutMode.is_phone(LayoutMode.form_of(self)):
+			if names_page(station, intent):
+				example = strip_markers(drop_unbound(text, ctx.settings.bindings, device))
 	if example == "":
 		var key: String = str(entry.get("example", ""))
 		if key != "":
-			example = BindingText.fill_markers(tr(key), ctx.settings.bindings, device)
+			var raw: String = drop_unbound(tr(key), ctx.settings.bindings, device)
+			example = BindingText.fill_markers(raw, ctx.settings.bindings, device)
 	if not words:
 		var route: String = BindingText.radial_route(intent, ctx.settings.bindings, device)
 		if route != "" and ctx.settings.bindings.bindings(intent, device).is_empty():
 			example = tr("train.ex.radial") % route
-	_text.text = text if words else BindingText.fill_markers(text, ctx.settings.bindings, device)
-	_example.text = example
+	if example == "":
+		text = drop_unbound(text, ctx.settings.bindings, device)
+		example = (
+			strip_markers(text)
+			if words
+			else BindingText.fill_markers(text, ctx.settings.bindings, device)
+		)
+	_text.text = example
 	var done: bool = bool(entry.get("done", false))
 	_next.visible = not done
 	if words:
@@ -169,7 +187,6 @@ func refresh() -> void:
 	_set_touch_layout(touch)
 	_skip.text = tr("train.skip")
 	_skip.visible = not done and not touch and is_command_step(station, intent)
-	_example.visible = example != "" and not (touch and is_folded())
 	if touch:
 		var key: Array = _layout_key()
 		if key != _key:
@@ -193,13 +210,26 @@ func touch_layout() -> bool:
 
 
 ## True when the step reads in touch words: a phone, whose stations have the rails, sticks and
-## tabs the words name (a tablet shows the desktop panels), unless a pad is in use.
+## tabs the words name, or a tablet station whose docked rails name every action (TABLET_WORDS;
+## the other tablets show the desktop panels), unless a pad is in use.
 func touch_wording() -> bool:
-	if not is_inside_tree() or not LayoutMode.is_phone(LayoutMode.form_of(self)):
+	if not is_inside_tree():
+		return false
+	var form: LayoutMode.Form = LayoutMode.form_of(self)
+	if not (
+		LayoutMode.is_phone(form) or (form == LayoutMode.Form.TABLET and station in TABLET_WORDS)
+	):
 		return false
 	return not (
 		ctx.matcher.device == IntentTable.PAD and not Input.get_connected_joypads().is_empty()
 	)
+
+
+## True when the touch words of the step name a phone page ("Open Ship", "on the Power
+## page"), which a tablet doesn't have.
+static func names_page(for_station: String, intent: String) -> bool:
+	var t: String = _touch_raw(for_station, intent)
+	return t.contains("{t:page.") or t.contains("{t:eng.touch.ship}") or t.contains("{t:eng.power}")
 
 
 ## `text` without its `{binding:...}` markers (a touch layout has no binding to show).
@@ -208,13 +238,42 @@ static func strip_markers(text: String) -> String:
 	return re.sub(text, "", true).strip_edges()
 
 
+## `text` without the clause of each `{binding:...}` marker whose control has no binding on
+## `device` (R25-19): "Shields forward: press {binding:shield_fore}." reads "Shields
+## forward." instead of "press -". A pad's Helm-radial control keeps its marker (its route).
+static func drop_unbound(text: String, bindings: Bindings, device: String) -> String:
+	if not "{binding:" in text:
+		return text
+	var re: RegEx = RegEx.create_from_string("\\{binding:([a-z][a-z0-9_]*)\\}")
+	for m: RegExMatch in re.search_all(text):
+		var id: String = m.get_string(1)
+		if not bindings.bindings(id, device).is_empty():
+			continue
+		if device == IntentTable.PAD and id in HelmPanel.RADIAL:
+			continue
+		# The first item of a list after a colon gives its colon to the next one.
+		var first: RegEx = RegEx.create_from_string(":\\s*[^,:;.]*\\{binding:%s\\}\\s*,\\s*" % id)
+		var clause: RegEx = RegEx.create_from_string("[,:;]?\\s*[^,:;.]*\\{binding:%s\\}" % id)
+		text = (
+			first.sub(text, ": ", true)
+			if first.search(text) != null
+			else clause.sub(text, "", true)
+		)
+	return text.strip_edges()
+
+
 ## The touch how-to of a step: `train.touch.<station>.<intent>`, else `train.touch.<intent>`,
 ## its `{t:key}` names translated; "" when the step has none (a pair step, a finished track).
 static func touch_text(for_station: String, intent: String) -> String:
+	return fill_names(_touch_raw(for_station, intent))
+
+
+## touch_text before its `{t:key}` names are filled in, or "".
+static func _touch_raw(for_station: String, intent: String) -> String:
 	for key: String in ["train.touch.%s.%s" % [for_station, intent], "train.touch.%s" % intent]:
 		var t: String = TranslationServer.translate(key)
 		if t != key:
-			return fill_names(t)
+			return t
 	return ""
 
 
@@ -249,14 +308,38 @@ func _set_touch_layout(touch: bool) -> void:
 				_head.move_child(_next, _fold.get_index())
 			else:
 				_col.move_child(_next, _col.get_child_count() - 1)
-		_text.autowrap_mode = (
-			TextServer.AUTOWRAP_OFF if is_folded() else TextServer.AUTOWRAP_WORD_SMART
-		)
-		_text.clip_text = is_folded()
-		_example.custom_minimum_size.x = width - 24.0
-		_text.custom_minimum_size.x = (
-			96.0 if is_folded() else width - 24.0 - UiTheme.TOUCH_PRIMARY - 8.0
-		)
+		# Folded, the step wraps onto two lines beside Next; a step that needs more never folds
+		# by itself (place: _folded_fits), so it is never cut.
+		_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_text.max_lines_visible = 2 if is_folded() else -1
+		_text.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+		_text.clip_text = false
+		var beside: float = UiTheme.TOUCH_PRIMARY + UiTheme.TOUCH_GAP
+		if is_folded():
+			# Next's width from its words (its combined size may not have caught up yet), so the
+			# text's width below is the one it gets.
+			var next_w: float = (
+				(
+					_next
+					. get_theme_font("font")
+					. get_string_size(
+						_next.text,
+						HORIZONTAL_ALIGNMENT_LEFT,
+						-1,
+						_next.get_theme_font_size("font_size")
+					)
+					. x
+				)
+				+ _next.get_theme_stylebox("normal").get_minimum_size().x
+				+ 2.0
+			)
+			_next.custom_minimum_size.x = ceilf(next_w)
+			beside += ceilf(next_w) + UiTheme.TOUCH_GAP
+		var pad: float = get_theme_stylebox("panel").get_minimum_size().x
+		_text.custom_minimum_size.x = maxf(width - pad - beside, 96.0)
+		# The text's wrapped height from its words at that width: the Label's own size catches
+		# up a frame later, and a card placed with a stale height cut its last line.
+		_text.custom_minimum_size.y = _text_height()
 	else:
 		if _moved:
 			_moved = false
@@ -269,6 +352,9 @@ func _set_touch_layout(touch: bool) -> void:
 		if _next.get_parent() != _col:
 			_next.reparent(_col, false)
 		_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_text.max_lines_visible = -1
+		_text.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+		_text.custom_minimum_size.y = 0.0
 		_text.clip_text = false
 
 
@@ -299,10 +385,14 @@ func place() -> Rect2:
 	var taken: Array[Rect2] = []
 	for t: Dictionary in TapAudit.targets(screen, self):
 		taken.append((t["rect"] as Rect2).grow(UiTheme.TOUCH_GAP))
+	# The rotate banner and the top bar (ship, alert, the goal line) are never covered.
+	for name: String in ["rotate_banner", "top_bar"]:
+		var c: Variant = screen.get(name)
+		if c is Control and (c as Control).is_visible_in_tree():
+			taken.append((c as Control).get_global_rect())
+	# The buttons and the banner come first: covering them costs more than a picture.
+	var buttons: int = taken.size()
 	_add_pickers(screen, taken)
-	var banner: Variant = screen.get("rotate_banner")
-	if banner is Control and (banner as Control).is_visible_in_tree():
-		taken.append((banner as Control).get_global_rect())
 	var size_now: Vector2 = Vector2.ZERO
 	var spot: Variant = null
 	# The whole card first, at the widest width that finds room; else one line.
@@ -312,28 +402,86 @@ func place() -> Rect2:
 		_squeezed = squeeze
 		for w: float in WIDTHS:
 			_width = w
+			if squeeze and not _folded_fits():
+				continue
 			size_now = _arrange()
 			spot = _free_spot(room, taken, size_now)
 			if spot != null:
 				break
 		if spot != null:
 			break
-	var at: Vector2 = spot if spot != null else Vector2(room.position.x, room.end.y - size_now.y)
+	if spot == null:
+		# Nowhere free: the widest one-line card that holds the whole step, else the whole
+		# card at its narrowest, where it covers the least.
+		_squeezed = false
+		_width = WIDTHS[-1]
+		for w: float in WIDTHS:
+			_width = w
+			_squeezed = true
+			if _folded_fits():
+				break
+			_squeezed = false
+		if not _squeezed:
+			_width = WIDTHS[-1]
+		size_now = _arrange()
+	var at: Vector2 = spot if spot != null else _least_covered(room, taken, buttons, size_now)
 	_moved = true
 	size = size_now
 	global_position = at
 	return Rect2(at, size_now)
 
 
+## Whether the step's text fits the folded card's one row (two lines beside Next and the
+## fold button) at the card width being tried, measured from its words (the containers'
+## sizes catch up a frame later, so they can't tell yet).
+func _folded_fits() -> bool:
+	var next_font: Font = _next.get_theme_font("font")
+	var next_w: float = (
+		(
+			next_font
+			. get_string_size(
+				_next.text, HORIZONTAL_ALIGNMENT_LEFT, -1, _next.get_theme_font_size("font_size")
+			)
+			. x
+		)
+		+ _next.get_theme_stylebox("normal").get_minimum_size().x
+		+ 2.0
+	)
+	var room: float = (
+		card_width()
+		- get_theme_stylebox("panel").get_minimum_size().x
+		- UiTheme.TOUCH_PRIMARY
+		- ceilf(next_w)
+		- 2.0 * UiTheme.TOUCH_GAP
+	)
+	var font: Font = _text.get_theme_font("font")
+	var h: float = (
+		font
+		. get_multiline_string_size(
+			_text.text, HORIZONTAL_ALIGNMENT_LEFT, room, _text.get_theme_font_size("font_size"), 3
+		)
+		. y
+	)
+	return h <= UiTheme.TOUCH_PRIMARY
+
+
 ## Adds the rectangles of the pictures a finger taps (the radar, the shield ring), which are
-## not buttons, under `node`, with the touch gap around them.
+## not buttons, and of the docked rails, under `node`, with the touch gap around them.
 func _add_pickers(node: Node, taken: Array[Rect2]) -> void:
 	if node == self:
 		return
 	var c: Control = node as Control
 	if c != null and not c.is_visible_in_tree():
 		return
-	if c is ShieldRing or (c is DiscRadar and _is_inset(c)):
+	# A docked rail (a tablet's) is an opaque column drawn over the view: the card would hide
+	# under it.
+	# Engineering's cutaway is a picture the finger works on (crews dragged, the hull turned).
+	if (
+		c is ShieldRing
+		or c is EngineeringCutaway
+		or (c is DiscRadar and _is_inset(c))
+		or (c is TouchRail and c.docked)
+	):
 		taken.append(c.get_global_rect().grow(UiTheme.TOUCH_GAP))
 		return
 	for ch: Node in node.get_children():
@@ -365,9 +513,37 @@ func _layout_key() -> Array:
 ## Lays the card out for its fold and returns its size.
 func _arrange() -> Vector2:
 	_set_touch_layout(true)
-	_example.visible = _example.text != "" and not is_folded()
 	reset_size()
-	return Vector2(card_width(), maxf(get_combined_minimum_size().y, 1.0))
+	# Measured from the parts' own sizes, not the containers' cached ones (a frame behind): the
+	# text row (beside the fold button, and Next when folded), then Next under it.
+	var row: float = maxf(_text.custom_minimum_size.y, UiTheme.TOUCH_PRIMARY)
+	if not is_folded():
+		row += UiTheme.TOUCH_GAP + UiTheme.TOUCH_PRIMARY
+	var h: float = maxf(
+		get_combined_minimum_size().y, row + get_theme_stylebox("panel").get_minimum_size().y
+	)
+	return Vector2(card_width(), maxf(h, 1.0))
+
+
+## The step text's height at its width: its wrapped lines (two at most when folded), each a
+## font line and the Label's line spacing.
+func _text_height() -> float:
+	var font: Font = _text.get_theme_font("font")
+	var fs: int = _text.get_theme_font_size("font_size")
+	var line: float = font.get_height(fs)
+	var h: float = (
+		font
+		. get_multiline_string_size(
+			_text.text,
+			HORIZONTAL_ALIGNMENT_LEFT,
+			_text.custom_minimum_size.x,
+			fs,
+			2 if is_folded() else -1
+		)
+		. y
+	)
+	var lines: int = maxi(roundi(h / line), 1)
+	return lines * line + (lines - 1) * _text.get_theme_constant("line_spacing")
 
 
 ## The highest spot of `size_now` inside `room` clear of `taken` (the current one while it
@@ -388,6 +564,29 @@ func _free_spot(room: Rect2, taken: Array[Rect2], size_now: Vector2) -> Variant:
 				return Vector2(x, y)
 		y += STEP_PX
 	return null
+
+
+## Where no spot is free: the spot of `size_now` inside `room` that covers the least of
+## `taken`, its first `buttons` rectangles (buttons, tabs, the banner) weighing BUTTON_COST
+## times a picture's (a radar the lesson doesn't use).
+func _least_covered(room: Rect2, taken: Array[Rect2], buttons: int, size_now: Vector2) -> Vector2:
+	var best: Vector2 = Vector2(room.position.x, room.end.y - size_now.y)
+	var least: float = INF
+	var y: float = room.position.y
+	while y + size_now.y <= room.end.y + 0.5:
+		var x: float = room.position.x + UiTheme.TOUCH_GAP
+		while x + size_now.x <= room.end.x - UiTheme.TOUCH_GAP + 0.5:
+			var r: Rect2 = Rect2(x, y, size_now.x, size_now.y)
+			var covered: float = 0.0
+			for i: int in taken.size():
+				var cost: float = BUTTON_COST if i < buttons else 1.0
+				covered += cost * r.intersection(taken[i]).get_area()
+			if covered < least:
+				least = covered
+				best = r.position
+			x += STEP_PX
+		y += STEP_PX
+	return best
 
 
 static func _clear(r: Rect2, taken: Array[Rect2]) -> bool:

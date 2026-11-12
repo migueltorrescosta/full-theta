@@ -82,6 +82,7 @@ func _samples() -> Dictionary:
 		NetProtocol.Type.CLIENT_FRAME: {"ms": 812, "what": "build station:0:helm"},
 		NetProtocol.Type.TRAINING: {"station": "helm"},
 		NetProtocol.Type.RENAME: {"name": "Ana"},
+		NetProtocol.Type.START: {},
 	}
 
 

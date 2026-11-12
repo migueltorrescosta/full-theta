@@ -320,7 +320,6 @@ func test_comfort_locks_the_cockpit_roll_and_narrows_the_view() -> void:
 	assert_float(cam.fov).is_equal(HelmScene.FOV_DEG)
 	s.comfort = true
 	s.roll_lock = "target"
-	s.reduced_fov = true
 	_ctx().crew.select("contact", StationFixture.H2)
 	_frame()
 	assert_float(cam.fov).is_equal_approx(HelmScene.FOV_DEG * ComfortCamera.REDUCED_FOV, 1e-4)

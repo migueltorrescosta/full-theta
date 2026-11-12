@@ -62,8 +62,13 @@ func test_selected_item_wins_a_tie() -> void:
 func test_chip_is_clickable() -> void:
 	var items: Array[Dictionary] = [_it("contact", 5, "H5", "H", Vector3(0, 0, -3000))]
 	radar.set_picture(_pic(items), {})
-	# A point on the chip text, right of the blip and outside the blip's hit radius.
-	var p: Vector2 = radar.project(items[0]["local"]) + Vector2(40, 0)
+	# A point on the chip text, at its far end, outside the blip's hit radius.
+	var chip: Rect2 = radar._layout()[0]["callout_rect"]
+	var blip: Vector2 = radar.project(items[0]["local"])
+	var p: Vector2 = Vector2(chip.end.x - 2.0, chip.get_center().y)
+	if chip.get_center().x < blip.x:
+		p.x = chip.position.x + 2.0
+	assert_float(p.distance_to(blip)).is_greater(DiscRadar.HIT_PX)
 	assert_dict(radar.item_at(p)).is_equal({"kind": "contact", "id": 5})
 	radar.chips = false
 	assert_dict(radar.item_at(p)).is_empty()

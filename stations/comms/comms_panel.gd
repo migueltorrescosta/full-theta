@@ -315,13 +315,19 @@ func _refresh_buttons() -> void:
 	var item: String = claim_item()
 	var holder: String = ctx.crew.claimer(item) if item != "" else ""
 	var mine: bool = holder == ctx.settings.player_name
-	(_buttons["claim"] as Button).disabled = not live or item == ""
+	# Claim shows only while it can matter (C3, D412): a live conversation card with a second
+	# player at Comms, or the Shakedown's claim step naming it; never a dead button. A claim
+	# this player holds always shows, as Release.
+	(_buttons["claim"] as Button).visible = (
+		(item != "" and (mine or (live and players_here() >= 2))) or lesson_wants("claim")
+	)
 	(_buttons["claim"] as Button).text = (
 		tr("comms.release")
 		if mine
 		else (tr("comms.claimed_by") % holder if holder != "" else tr("comms.claim"))
 	)
-	(_buttons["hold_fire"] as Button).disabled = request_chips().is_empty()
+	# Hidden, not greyed, while no chip can go (the chips toggle off): no dead button.
+	(_buttons["hold_fire"] as Button).visible = not request_chips().is_empty()
 
 
 ## Controls help on touch (P28-Help): per page, the boxes of its controls in the 844x390
@@ -385,18 +391,8 @@ static func touch_help() -> Array:
 			[
 				[
 					Rect2(191, 132, 207, 48),
-					TranslationServer.translate("comms.hold_fire"),
-					TouchText.of("help.comms.hold_fire", "Ask Weapons to hold fire on the contact"),
-				],
-				[
-					Rect2(406, 132, 207, 48),
-					TranslationServer.translate("intent.ping"),
-					TouchText.of("help.comms.ping", "Ping the selection for the crew"),
-				],
-				[
-					Rect2(191, 188, 207, 48),
-					TranslationServer.translate("intent.mark"),
-					TouchText.of("help.comms.mark", "Mark the selection"),
+					TranslationServer.translate("share.drawer"),
+					TranslationServer.translate("help.crew_share"),
 				],
 			],
 		},

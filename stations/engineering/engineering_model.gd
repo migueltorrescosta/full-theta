@@ -174,6 +174,43 @@ func why_not(id: String, i: int = selected) -> String:
 	return why
 
 
+## Whether rail action `id` shows now (C3): the rare actions hide while they can't matter
+## and the others always show, in a fixed order. Cause shows while a part has a fault of
+## unknown cause, Probe while the spare parts pay for one, Claim while the ship has repair
+## crews and a second player shares this station (or this player still holds a crew).
+## A shown action that can't act on the picked part still greys with its why_not reason.
+func shown(id: String) -> bool:
+	if ship_def == null:
+		return true
+	match id:
+		"cause_next":
+			return any_fault()
+		"fabricate_probe":
+			return spare_parts() >= ship_def.probe_parts
+		"claim":
+			return (
+				crew_count() > 0 and (StationPanel.seated(ctx, "engineering") >= 2 or holds_crew())
+			)
+	return true
+
+
+## Whether any part has a fault of unknown cause to guess (FT-ENG-006).
+func any_fault() -> bool:
+	for i: int in count():
+		if has_fault(i) and not ship_def.subsystems[i].fault_causes.is_empty():
+			return true
+	return false
+
+
+## Whether this player holds a repair crew's claim (FT-NET-023).
+func holds_crew() -> bool:
+	for c: int in crew_count():
+		var item: String = "%s:%d" % [StationCatalogue.CLAIM_CREW, c]
+		if int(ctx.crew.claims.get(item, {}).get("session", -1)) == ctx.crew.session:
+			return true
+	return false
+
+
 ## Power + and - on subsystem i (why_not).
 func _pip_reason(i: int, add: bool) -> String:
 	if ship_def.subsystems[i].kind == KIND.REACTOR:

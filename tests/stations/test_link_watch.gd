@@ -97,5 +97,5 @@ func test_the_goal_chip_shows_the_objective_and_its_progress() -> void:
 	bar.show_goal("Goal: x", "3 foes")
 	assert_str((bar.find_child("Goal", true, false) as Label).text).is_equal("Goal: x")
 	assert_float(bar.goal_height()).is_equal(TopBar.GOAL_H)
-	bar.set_phone(true)
+	bar.apply(LayoutMode.Form.PHONE_LANDSCAPE, false)
 	assert_float(bar.goal_height()).is_equal(0.0)

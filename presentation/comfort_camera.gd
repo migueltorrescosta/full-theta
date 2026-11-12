@@ -6,7 +6,7 @@ extends RefCounted
 ## the plane picked in Settings: the deck plane, the selected target's deck plane (from
 ## its NEAR orientation, else the own deck), or the player's cosmetic reference plane.
 ## The cosmetic plane is never spoken or used by rules. Comfort also narrows the field
-## of view when reduced FOV is set.
+## of view (one switch, ux-17).
 
 ## The reduced field of view, as a share of the camera's normal one (PROVISIONAL).
 const REDUCED_FOV: float = 0.75
@@ -39,7 +39,7 @@ static func target_rot(ctx: StationContext) -> Variant:
 
 ## The field of view (degrees) for a camera whose normal one is `normal_deg`.
 static func fov_deg(settings: ClientSettings, normal_deg: float) -> float:
-	return normal_deg * REDUCED_FOV if settings.comfort and settings.reduced_fov else normal_deg
+	return normal_deg * REDUCED_FOV if settings.comfort else normal_deg
 
 
 ## A camera basis looking along `forward` (world, unit) with its up as close to `up` as

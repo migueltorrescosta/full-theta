@@ -17,7 +17,7 @@ func dock_reserve() -> Vector2:
 
 
 ## The radar column hides for a lone full-screen panel (which may depend on the form). A
-## joint view or the dev seat on a phone on its side (#28) shows only the focused panel,
+## joint view or the dev seat on a phone (#28; upright too, w-yk5) shows only the focused panel,
 ## which gets the whole width when it draws its own rails and radar, and the station chip
 ## in the top bar's tab strip instead of the docked panels (FT-JNT-001: tap to focus). On
 ## a phone on its side the share buttons move into a drawer
@@ -34,12 +34,14 @@ func show_side() -> void:
 	)
 	var sideways: bool = form_now == LayoutMode.Form.PHONE_LANDSCAPE
 	var phone_form: bool = LayoutMode.is_phone(form_now)
-	# Upright a joint view keeps its docked panels until the stations' upright layouts
-	# leave room for the bottom tab bar (#28 follow-up, wave 2).
-	var phone_alone: bool = s.panels.size() >= 2 and sideways
+	var phone_alone: bool = s.panels.size() >= 2 and phone_form
 	var alone: bool = s.panels.size() == 1 or phone_alone
 	s._side.visible = not (alone and s.focused_panel().full_screen())
 	s._dock.visible = not phone_alone
+	for p: StationPanel in s.panels:
+		if p.docked:
+			var least: float = StationScreen.DOCK_MIN_HEIGHT if p.shows_docked() else 0.0
+			p.custom_minimum_size.y = least
 	if s._tabs != null:
 		s._tabs.visible = not phone_form
 	s.frame.show_tabs(form_now, phone_alone)
@@ -57,11 +59,22 @@ func show_side() -> void:
 			s._extras.move_child(s.share_bar, s._extras_pad.get_index() + 1)
 	if in_drawer:
 		s.share_bar.min_width = TouchDrawer.WIDTH - 2.0 * UiTheme.TOUCH_GAP
+	elif home != null and s.focused_panel().share_home_width > 0.0:
+		# A tablet's rail (C14): as wide as the rail, at the touch sizes (D274).
+		s.share_bar.min_width = s.focused_panel().share_home_width
+		s.share_bar.button_h = UiTheme.TOUCH_PRIMARY
+		s.share_bar.gap = UiTheme.TOUCH_GAP
 	sync_share()
 	_place_phone_bar()
 	_place_training(
 		not phone_form and s._side.visible and s.training != null and not s.training.touch_layout()
 	)
+
+
+## True while the radar column shows (a full-screen panel alone hides it and, on a tablet,
+## draws its radar as an inset on its view, C14).
+func side_shown() -> bool:
+	return s._side != null and s._side.visible
 
 
 ## The side column scrolls in whole rows: the room under the last row that fits is a margin.
@@ -302,6 +315,22 @@ func build() -> void:
 	s._main.add_child(s.sheet)
 	s.frame.build(s, s._main, rows)
 	s.top_bar.menu_pressed.connect(s._open_menu)
+	# After a handover the bar names the ship this player now watches (R24-18).
+	# (a method, not a lambda: a lambda would keep this layout alive with the crew state)
+	s.ctx.crew.changed.connect(_on_crew_changed)
+	show_watching()
+
+
+func _on_crew_changed(_what: StringName) -> void:
+	show_watching()
+
+
+## The top bar names the watched ship while the player's own ship is out (a handover to
+## another ship, D91, R24-18).
+func show_watching() -> void:
+	var h: Dictionary = s.ctx.crew.handover
+	var to: int = int(h.get("to_ship", FleetMessages.TO_SCOREBOARD))
+	s.top_bar.watching = "" if to == FleetMessages.TO_SCOREBOARD else s.ctx.crew.ship_name(to)
 
 
 ## P28-Band: on a phone on its side a panel in the frame (StationPanel.in_frame) draws into
@@ -345,6 +374,7 @@ func relayout() -> void:
 		s.tablet_dock.place(Rect2(m.x, m.y, size_now.x, size_now.y))
 	var touch: bool = LayoutMode.is_touch(kind)
 	var portrait: bool = LayoutMode.portrait(size_now)
+	var kind_form: LayoutMode.Form = LayoutMode.Form.TABLET if touch else LayoutMode.Form.DESKTOP
 	s.phone = s.phone_frame()
 	s.frame.band_guard.visible = s.phone
 	s.frame.band_guard.offset_top = -bottom
@@ -371,8 +401,10 @@ func relayout() -> void:
 	if s.phone:
 		# The phone's one-row bar (design 1.2).
 		two_rows = false
-	s.top_bar.set_compact(two_rows, bar, s.phone)
-	s.top_bar.set_phone(s.phone, bar)
+	# (the screen's phone frame decides the phone bar; a headless window too small to be a
+	# phone still gets a desktop bar)
+	var bar_form: LayoutMode.Form = LayoutMode.Form.PHONE_LANDSCAPE if s.phone else kind_form
+	s.top_bar.apply(bar_form, two_rows, bar)
 	s.top_bar.custom_minimum_size.y = bar * (2.0 if two_rows else 1.0) + s.top_bar.goal_height()
 	var disc: float = StationScreen.RADAR_HEIGHT
 	var short: bool = size_now.y < StationScreen.SHORT_H and not s.phone

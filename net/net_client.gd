@@ -177,8 +177,14 @@ func release_pick() -> void:
 	_send(NetProtocol.Type.RELEASE, {})
 
 
+## Ready on or off in the lobby (#37 C1).
 func set_ready(ready: bool) -> void:
 	_send(NetProtocol.Type.READY, {"ready": ready})
+
+
+## Start: the host's, or any Ready crew player's with no host connected (#37 C1).
+func start() -> void:
+	_send(NetProtocol.Type.START, {})
 
 
 func claim(item: String) -> void:

@@ -55,7 +55,8 @@ func test_engineering_rail_boxes_match_the_rail() -> void:
 		var a: Array = EngineeringPanel.TOUCH_ACTIONS[i]
 		assert_str(str(power[i][1])).is_equal(TouchText.of(a[1], a[2]))
 	var pages: Array = EngineeringPanel.touch_help()
-	assert_int(pages.size()).is_equal(4)
+	# Power, Ship and Faults: Engineering alone has nothing to share, so no Crew page (C4).
+	assert_int(pages.size()).is_equal(3)
 	for p: int in range(1, pages.size()):
 		assert_int((pages[p]["boxes"] as Array).size()).is_less(5)
 

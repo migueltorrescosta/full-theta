@@ -90,8 +90,10 @@ func test_scoreboard_title_names_the_winner() -> void:
 
 # FT: FT-MIS-030
 # A handover to a friendly ship's main screen shows a notice naming the ship that is out, why,
-# and the ship now watched; OK hides it. A handover to the scoreboard shows no notice.
+# and the ship now watched; it hides by itself after a few seconds and lets clicks through
+# (R24-18). A handover to the scoreboard shows no notice.
 func test_handover_notice_names_both_ships() -> void:
+	HandoverNotice.seen.clear()
 	var ctx: StationContext = _ctx("teams")
 	var n: HandoverNotice = auto_free(HandoverNotice.new())
 	n.setup(ctx)
@@ -103,12 +105,38 @@ func test_handover_notice_names_both_ships() -> void:
 	assert_str(_label(n, "Text").text).is_equal(
 		"Heron is out: gave up. You're watching Osprey now."
 	)
-	(n.find_child("Ok", true, false) as Button).pressed.emit()
+	assert_int(n.mouse_filter).is_equal(Control.MOUSE_FILTER_IGNORE)
+	assert_object(n.find_child("Ok", true, false)).is_null()
+	n.tick(HandoverNotice.SHOW_S - 1.0)
+	assert_bool(n.visible).is_true()
+	n.tick(1.0)
 	assert_bool(n.visible).is_false()
 	n.refresh()
 	assert_bool(n.visible).is_false()
 	_event(ctx, NetProtocol.EVENT_HANDOVER, FleetMessages.handover(1, FleetMessages.TO_SCOREBOARD))
 	assert_bool(n.visible).is_false()
+
+
+# FT: FT-MIS-030
+# A shell rebuilt after a reconnect gets the same handover again: the new notice doesn't show
+# it a second time (R24-18); a different handover still shows.
+func test_handover_notice_shows_once_across_a_rebuild() -> void:
+	HandoverNotice.seen.clear()
+	var ctx: StationContext = _ctx("teams")
+	var first: HandoverNotice = HandoverNotice.new()
+	first.setup(ctx)
+	add_child(first)
+	_event(ctx, NetProtocol.EVENT_ELIMINATED, FleetMessages.eliminated(1, "destroyed", 0))
+	_event(ctx, NetProtocol.EVENT_HANDOVER, FleetMessages.handover(1, 2))
+	assert_bool(first.visible).is_true()
+	# The shell goes and a new one is built.
+	first.free()
+	var again: HandoverNotice = auto_free(HandoverNotice.new())
+	again.setup(ctx)
+	add_child(again)
+	assert_bool(again.visible).is_false()
+	_event(ctx, NetProtocol.EVENT_HANDOVER, FleetMessages.handover(1, 0))
+	assert_bool(again.visible).is_true()
 
 
 # FT: FT-MIS-016

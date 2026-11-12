@@ -263,7 +263,6 @@ func _draw() -> void:
 			_placed.append(_arrow_box(font, e))
 	for m: Dictionary in velocity_markers():
 		_placed.append(_marker_box(m["pos"], 14.0))
-	_draw_velocity(font)
 	_draw_thrust(font)
 	_draw_routes(font)
 	_draw_lanes(font)
@@ -276,6 +275,9 @@ func _draw() -> void:
 			_draw_marker(font, e, e["selected"])
 		elif e["arrow"]:
 			_draw_arrow(font, e, e["selected"])
+	# The velocity labels go anywhere on the view (no reach): after the marker labels, which
+	# must stay within reach of their markers (w-dcc: "Kappa 4.7 km" lost its range to "Drift").
+	_draw_velocity(font)
 	if panel.chase:
 		_text(font, a.position + Vector2(16.0, 24.0), tr("helm.chase"), Palette.color("text_dim"))
 	var tablet: bool = panel.tablet_ui != null
@@ -530,7 +532,12 @@ func _draw_marker(font: Font, e: Dictionary, selected: bool) -> void:
 		var tip: Vector2 = Vector2(
 			clampf(p.x, at.position.x, at.end.x), clampf(p.y, at.position.y, at.end.y)
 		)
-		draw_line(p, tip, Color(col, 0.5), 1.0)
+		# From the bracket's edge to a little short of the text (w-dcc: at 150 % the stem ran
+		# into the last letter).
+		var d: Vector2 = tip - p
+		if d.length() > r + 4.0:
+			var u: Vector2 = d.normalized()
+			draw_line(p + u * r, tip - u * 3.0, Color(col, 0.5), 1.0)
 	_text(font, at.position + Vector2(0.0, font.get_ascent(FONT_SIZE)), text, col)
 
 
@@ -641,17 +648,28 @@ static func _marker_box(p: Vector2, r: float) -> Rect2:
 	return Rect2(p - Vector2(r, r) * 1.3, Vector2(r, r) * 2.6)
 
 
-## What marker labels keep clear of: the panel's shield ring (with its caption), the target
-## compass (with its chip) and the flight read-out.
+## What marker labels keep clear of: the panel's shield ring (with its caption), a tablet's
+## radar inset, the target compass (with its chip) and the flight read-out.
 func reserved() -> Array[Rect2]:
 	var out: Array[Rect2] = []
 	if _ring_rect().has_area():
 		out.append(_ring_rect().grow(2.0))
+	if _inset_rect().has_area():
+		out.append(_inset_rect().grow(2.0))
 	out.append_array(compass_boxes())
-	# The flight read-out: mode, speed, active modes and the three bars.
-	out.append(readout_rect())
+	# The flight read-out, line by line: a label may sit in the gap under the speed line
+	# while no assist mode is on (w-dcc: "Kappa 4.7 km" kept its range there).
+	out.append_array(_readout_lines())
 	out.append(thrust_rect())
 	return out
+
+
+## A tablet's radar inset in this HUD's coordinates while it shows (C14), else empty.
+func _inset_rect() -> Rect2:
+	if panel == null or not panel.radar_inset_rect().has_area():
+		return Rect2()
+	var xf: Transform2D = get_global_transform().affine_inverse() * panel.get_global_transform()
+	return xf * panel.radar_inset_rect()
 
 
 ## The shield ring's box in this HUD's coordinates while it sits on the view, else empty.
@@ -664,6 +682,39 @@ func _ring_rect() -> Rect2:
 	):
 		return Rect2()
 	return get_global_transform().affine_inverse() * panel.ring.get_global_rect()
+
+
+## The flight read-out's drawn lines (mode, speed, the active modes when any, the bars), each
+## as wide as its text, inside readout_rect().
+func _readout_lines() -> Array[Rect2]:
+	var font: Font = get_theme_default_font()
+	var a: Rect2 = area()
+	var at: Vector2 = Vector2(a.position.x + 16.0, a.end.y - 150.0)
+	var fs: int = _fs()
+	var h: Dictionary = panel.helm_block() if panel != null and panel.ctx != null else {}
+	var texts: Array[String] = [
+		tr("helm.decoupled_mode") if bool(h.get("decoupled", false)) else tr("helm.assist"),
+		(tr("helm.speed") % 9999) + "  " + tr("helm.setpoint") % 9999,
+	]
+	var on: bool = (
+		["all_stop", "approach", "face"].any(func(k: String) -> bool: return bool(h.get(k, false)))
+		or int(h.get("align", 0)) != 0
+		or int(h.get("jump_left", 0)) > 0
+		or int(h.get("docked_site", -1)) >= 0
+	)
+	var out: Array[Rect2] = []
+	var full: Rect2 = readout_rect()
+	for i: int in 3:
+		if i == 2 and not on:
+			continue
+		var w: float = full.size.x
+		if i < texts.size():
+			w = font.get_string_size(texts[i], HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 8.0
+		var top: float = at.y + 20.0 * i - font.get_ascent(fs)
+		out.append(Rect2(full.position.x, top, minf(w, full.size.x), font.get_height(fs)))
+	var bars: float = at.y + 62.0 - 4.0
+	out.append(Rect2(full.position.x, bars, full.size.x, full.end.y - bars))
+	return out
 
 
 ## The flight read-out's box: mode, speed, active modes and the three bars.
@@ -702,9 +753,9 @@ func _edge_point(dir: Vector2) -> Vector2:
 	return c + dir * minf(tx, ty)
 
 
-## An arrow tip moved off the read-outs and the shield ring, along the view's edge: the
-## nearest spot on its edge clear of them (above or below on a side edge, beside on the top
-## or bottom edge); where none is clear it stays. Used on a phone.
+## An arrow tip moved off the read-outs, the shield ring and the velocity markers, along the view's
+## edge: the nearest spot on its edge clear of them (above or below on a side edge, beside on the
+## top or bottom edge); where none is clear it stays. Used on a phone.
 func arrow_tip(tip: Vector2) -> Vector2:
 	var a: Rect2 = area().grow(-EDGE)
 	# A view not yet laid out is narrower than two edges: nothing to move along.
@@ -714,6 +765,10 @@ func arrow_tip(tip: Vector2) -> Vector2:
 	for r: Rect2 in [readout_rect(), thrust_rect(), _ring_rect()] + compass_boxes():
 		if r.has_area():
 			keeps.append(r.grow(ARROW_CLEAR))
+	# Nor on the velocity markers (w-dcc: "H2" sat on the Drift reticle).
+	for m: Dictionary in velocity_markers():
+		# (with room for the arrow's label, which sits 30 px back from its tip)
+		keeps.append(_marker_box(m["pos"], 14.0).grow(ARROW_CLEAR + 16.0))
 	if not keeps.any(func(k: Rect2) -> bool: return k.has_point(tip)):
 		return tip
 	var side: bool = is_equal_approx(tip.x, a.position.x) or is_equal_approx(tip.x, a.end.x)
@@ -742,10 +797,26 @@ func arrow_tip(tip: Vector2) -> Vector2:
 func compass_boxes() -> Array[Rect2]:
 	var c: Vector2 = _compass_centre()
 	var chip_y: float = -COMPASS_R - 24.0 if _chip_above() else COMPASS_R
+	# (the chip is centred under the disc: its box is as wide as its text, w-dcc)
+	var font: Font = get_theme_default_font()
+	var w: float = minf(
+		font.get_string_size(_compass_label(), HORIZONTAL_ALIGNMENT_LEFT, -1, _small()).x + 8.0,
+		4.0 * COMPASS_R
+	)
 	return [
 		Rect2(c - Vector2(COMPASS_R, COMPASS_R), Vector2(2.0, 2.0) * COMPASS_R),
-		Rect2(c + Vector2(-2.0 * COMPASS_R, chip_y), Vector2(4.0 * COMPASS_R, 24.0)),
+		Rect2(c + Vector2(-w / 2.0, chip_y), Vector2(w, 24.0)),
 	]
+
+
+## The compass chip's text: the selection's callout, or "Nothing selected".
+func _compass_label() -> String:
+	if panel == null or panel.ctx == null:
+		return tr("helm.no_selection")
+	var local: Variant = panel.ctx.selection_local()
+	if local is Vector3:
+		return CalloutText.callout(selection_label(), local)
+	return tr("helm.no_selection")
 
 
 ## True when, on a phone, the selection's compass dot is in the disc's upper half: its chip
@@ -773,6 +844,19 @@ func _arrow(e: Dictionary) -> Array[Vector2]:
 	var tip: Vector2 = _edge_point(dir)
 	if touch_layout() or size.x < PHONE_W:
 		tip = arrow_tip(tip)
+	# Never on a tablet's radar inset (C14): an arrow there slides along its edge to just
+	# below the inset or left of it, its label with it.
+	var inset: Rect2 = _inset_rect()
+	if inset.has_area():
+		# (then off the shield ring under it, the same way)
+		for box: Rect2 in [inset, _ring_rect()]:
+			var keep: Rect2 = box.grow(30.0 + 16.0)
+			if box.has_area() and keep.has_point(tip):
+				# (whichever way is shorter)
+				if keep.end.y - tip.y < tip.x - keep.position.x:
+					tip.y = keep.end.y
+				else:
+					tip.x = keep.position.x
 	return [dir, tip]
 
 
@@ -812,7 +896,7 @@ func _draw_compass(font: Font, c: Vector2) -> void:
 	draw_line(c - Vector2(5.0, 0.0), c + Vector2(5.0, 0.0), dim)
 	draw_line(c - Vector2(0.0, 5.0), c + Vector2(0.0, 5.0), dim)
 	var local: Variant = panel.ctx.selection_local()
-	var label: String = tr("helm.no_selection")
+	var label: String = _compass_label()
 	if local is Vector3:
 		var p: Vector2 = c + compass_point(local, COMPASS_R - 6.0)
 		var col: Color = Palette.item_color(_selected_item())
@@ -820,7 +904,6 @@ func _draw_compass(font: Font, c: Vector2) -> void:
 			draw_circle(p, 5.0, col)
 		else:
 			draw_arc(p, 5.0, 0.0, TAU, 16, col, 2.0)
-		label = CalloutText.callout(selection_label(), local)
 	var w: float = 4.0 * COMPASS_R
 	var chip_dy: float = -COMPASS_R - 8.0 if _chip_above() else COMPASS_R + 18.0
 	Palette.draw_outlined(

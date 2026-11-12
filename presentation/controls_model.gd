@@ -16,6 +16,8 @@ extends RefCounted
 const STATION: String = "station"
 const COMMON: String = "common"
 const OTHER: String = "other"
+## The binding the matcher accepts from any key that types it (input/README.md).
+const TYPED: String = "?"
 
 ## Stick and click tokens that sit on one drawn stick, and spelled-out key names.
 const ALIASES: Dictionary = {
@@ -27,7 +29,6 @@ const ALIASES: Dictionary = {
 	"RS_Y": "RS",
 	"MouseX": "Mouse",
 	"MouseY": "Mouse",
-	"Slash": "?",
 }
 
 var device: String = IntentTable.KBM
@@ -100,11 +101,19 @@ func on_part(id: String) -> Array[Dictionary]:
 
 ## Entries with no part on the drawing.
 func unmapped() -> Array[Dictionary]:
-	return entries.filter(func(e: Dictionary) -> bool: return e["parts"].is_empty())
+	return entries.filter(
+		func(e: Dictionary) -> bool: return e["parts"].is_empty() and e["binding"] != TYPED
+	)
+
+
+## Entries bound to the typed "?" (R25-14): any key that types it on the player's layout,
+## so the drawing has no place for it and the note names it instead.
+func typed() -> Array[Dictionary]:
+	return entries.filter(func(e: Dictionary) -> bool: return e["binding"] == TYPED)
 
 
 ## Ids of the screen's stations' and the common intents that have no binding here and no
-## other route either (a radial item or the alert chords are routes, `radial_here`).
+## other route either (`covered`).
 func unbound_here() -> Array[String]:
 	return unbound.filter(
 		func(id: String) -> bool:
@@ -112,21 +121,47 @@ func unbound_here() -> Array[String]:
 	)
 
 
-## True when a controller reaches the unbound intent `id` another way (D1, R25-12): it is an
-## item of the Helm radial, or the alert cycle, which View+d-pad sets level by level.
+## True when the unbound intent `id` is reached another way on this device (D1, R25-12): an
+## item of the Helm radial (pad), a sibling of the same family that is bound (alert_red by
+## the alert cycle or the other levels; mount_3 by mount_prev / mount_next on a pad, and the
+## other way round on a keyboard: `family`), a radial on a keyboard (its items have keys of
+## their own), or an axis on a keyboard (the mouse drags it on the station's view).
 func covered(id: String) -> bool:
-	if device != IntentTable.PAD or id not in unbound:
+	if id not in unbound:
 		return false
-	if id in HelmPanel.RADIAL:
+	if device == IntentTable.PAD and id in HelmPanel.RADIAL:
 		return "helm_radial" not in unbound
-	if id != "alert_cycle":
-		return false
-	# The chords View+Up, Right and Down set the alert level by level.
-	for r: Dictionary in IntentTable.INTENTS:
-		var other: String = r["id"]
-		if other.begins_with("alert_") and other != id and other not in unbound:
+	if (
+		device == IntentTable.KBM
+		and (id.ends_with("_radial") or IntentTable.row(id)["kind"] == IntentTable.AXIS)
+	):
+		return true
+	for other: String in family(id):
+		if other != id and other not in unbound:
 			return true
 	return false
+
+
+## The intents that reach the same things as `id`: the alert levels and cycle, or a numbered
+## set with its previous / next ("mount_1" .. "mount_4", "mount_prev", "mount_next"); [] for
+## any other intent.
+static func family(id: String) -> Array[String]:
+	var out: Array[String] = []
+	var stem: String = "alert_" if id.begins_with("alert_") else ""
+	if stem == "":
+		var tail: String = id.get_slice("_", id.get_slice_count("_") - 1)
+		if tail in ["prev", "next"] or tail.is_valid_int():
+			stem = id.left(id.length() - tail.length())
+	if stem == "":
+		return out
+	for r: Dictionary in IntentTable.INTENTS:
+		var other: String = r["id"]
+		if not other.begins_with(stem) or r["group"] != IntentTable.row(id)["group"]:
+			continue
+		var rest: String = other.substr(stem.length())
+		if stem == "alert_" or rest in ["prev", "next"] or rest.is_valid_int():
+			out.append(other)
+	return out
 
 
 ## The screen's unbound intents that sit in the Helm radial, in the radial's order.

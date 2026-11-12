@@ -19,6 +19,9 @@ const CHIP_W: float = 72.0
 var screen: StationScreen
 var selection_bar: SelectionBar = SelectionBar.new()
 var request_chips: RequestChips = RequestChips.new()
+## Ask (ux-13): the focused station's own requests, one tap away in a sheet, at the right of
+## the selection chip's row; "Ask · 12 s" while one waits. Hidden when there is none to send.
+var ask: RailButton = RailButton.make("")
 var glance: PartnerGlance = PartnerGlance.new()
 var ping_toast: PingToast = PingToast.new()
 ## The bottom tab bar upright (the top bar holds the tabs on its side).
@@ -104,7 +107,10 @@ func build(owner_screen: StationScreen, main: Control, rows: VBoxContainer) -> v
 	glance.action_pressed.connect(_partner_intent)
 	ping_toast.name = "PingToast"
 	ping_toast.tapped.connect(func() -> void: screen.ctx.crew.select_pinged(screen.ctx.now_ms()))
-	for c: Control in [selection_bar, request_chips, glance, ping_toast]:
+	ask.name = "Ask"
+	ask.visible = false
+	ask.pressed.connect(open_request_sheet)
+	for c: Control in [selection_bar, ask, request_chips, glance, ping_toast]:
 		c.set_anchors_preset(Control.PRESET_TOP_LEFT)
 		view_top.add_child(c)
 	# The bottom tab bar keeps UiTheme.TOUCH_GAP from the panel's targets above it.
@@ -148,17 +154,24 @@ func show_tabs(form_now: LayoutMode.Form, alone: bool) -> void:
 		s.joint_switch.clip_text = false
 		s.joint_switch.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 		s.joint_switch.pressed.connect(_on_station_chip)
+	var sideways: bool = form_now == LayoutMode.Form.PHONE_LANDSCAPE
+	var upright: bool = form_now == LayoutMode.Form.PHONE_PORTRAIT
 	var chip: RailButton = s.joint_switch
 	if chip != null:
 		chip.visible = alone
 		chip.custom_minimum_size = Vector2(CHIP_W, UiTheme.TOUCH_PRIMARY)
 		if s.panels.size() == 2:
-			chip.text = "%s %s" % [JOINT_ARROW, tr("station." + s.stations[1 - s.focus_index])]
+			var other: String = tr("station." + s.stations[1 - s.focus_index])
+			chip.text = "%s %s" % [JOINT_ARROW, other]
+			chip.tooltip_text = other
+			if upright:
+				# Upright the bottom tabs have no room for the name: the partner glance under
+				# the selection chip names the other station (w-yk5).
+				chip.text = JOINT_ARROW
+				chip.custom_minimum_size.x = UiTheme.TOUCH_PRIMARY
 		else:
 			chip.text = "%s %s" % [tr("station." + s.focused_station()), DEV_ARROW]
 	var pages: PageHost = s.focused_panel().pages
-	var sideways: bool = form_now == LayoutMode.Form.PHONE_LANDSCAPE
-	var upright: bool = form_now == LayoutMode.Form.PHONE_PORTRAIT
 	s.top_bar.tabs.bind(pages if sideways else null)
 	bottom_tabs.bind(pages if upright else null)
 	var strip: PageTabs = s.top_bar.tabs if sideways else bottom_tabs
@@ -211,9 +224,10 @@ func _over_view(pos: Vector2) -> bool:
 	return not (hovered is BaseButton)
 
 
-## Each frame on a phone: the view-top row's contents and places (framed only); `left` is
-## every share's seconds left (CrewState.shares_left).
-func process(now: int, left: Dictionary) -> void:
+## Each frame on a phone: the view-top row's contents and places (framed only). Its request
+## chips are the only ones a phone shows (ux-13): Comms, the Captain and the Viewer, outside
+## the frame, receive none.
+func process(now: int) -> void:
 	view_top.visible = framed()
 	if not view_top.visible:
 		armed_ring.hide_ring()
@@ -244,13 +258,41 @@ func process(now: int, left: Dictionary) -> void:
 					}
 				)
 			)
-	request_chips.show_chips(rows, ShareBar.incoming_lines(screen.stations, left), now)
+	request_chips.show_chips(rows)
+	var ask_text: String = _ask_text(crew)
+	if ask.text != ask_text:
+		ask.text = ask_text
+	ask.visible = ask_text != ""
 	if screen.panels.size() == 2:
 		var other: String = screen.stations[1 - screen.focus_index]
 		glance.show_for(ctx, other, screen.focused_station())
 	else:
 		glance.visible = false
 	_place_view_top()
+
+
+## Ask's text for the view-top row (ux-13): "" when the focused panel has no request to
+## send, "Ask · 12 s" while one of its requests waits for an answer.
+func _ask_text(crew: bool) -> String:
+	var p: StationPanel = screen.focused_panel()
+	if not crew or p == null or p.request_chips().is_empty():
+		return ""
+	var left: float = 0.0
+	for w: Dictionary in ChipsReader.outgoing(screen.ctx.snap, [p.station]):
+		left = maxf(left, ChipsReader.left_s(screen.ctx.snap, w))
+	var text: String = tr("chip.ask_button")
+	return "%s · %d s" % [text, ceili(left)] if left > 0.0 else text
+
+
+## The focused panel's requests in the screen's sheet (Ask, ux-13): a pick sends it, or runs
+## it at once when the asked station is on this screen (StationPanel.send_chip).
+func open_request_sheet() -> void:
+	var p: StationPanel = screen.focused_panel()
+	if p == null:
+		return
+	var chips: Array[ChipDef] = p.request_chips()
+	var labels: Array = chips.map(func(c: ChipDef) -> String: return p.chip_label(c))
+	screen.sheet.open(tr("chip.menu"), labels, func(i: int) -> void: p.send_chip(chips[i]))
 
 
 ## The view-top row (design 1.3) at the top of the focused panel's view: the selection
@@ -271,22 +313,45 @@ func _place_view_top() -> void:
 	if banner != null and banner.is_visible_in_tree():
 		var origin: float = (selection_bar.get_parent() as Control).get_global_rect().position.y
 		y = maxf(y, banner.get_global_rect().end.y - origin + gap)
-	selection_bar.fit(x1 - x0)
+	# Ask shares the selection chip's row, the chip giving up its width (ux-13); where the
+	# chip can't shrink that far, Ask heads the column instead.
+	var ask_w: float = ask.get_combined_minimum_size().x + gap if ask.visible else 0.0
+	selection_bar.fit(x1 - x0 - ask_w)
 	var chip_w: float = selection_bar.get_combined_minimum_size().x
+	var in_row: bool = ask.visible and chip_w + ask_w <= x1 - x0
+	if not in_row:
+		ask_w = 0.0
 	var col: Array[Control] = []
 	var col_w: float = 0.0
-	for c: Control in [request_chips, glance, ping_toast]:
-		if c.visible:
+	for c: Control in [ask, request_chips, glance, ping_toast]:
+		if c.visible and not (c == ask and in_row):
 			col.append(c)
 			col_w = maxf(col_w, c.get_combined_minimum_size().x)
-	var side_by_side: bool = col.is_empty() or x1 - x0 >= chip_w + gap + col_w
+	var side_by_side: bool = col.is_empty() or x1 - x0 >= chip_w + ask_w + gap + col_w
+	if ask.visible and not in_row and not side_by_side:
+		# No room beside the chip or the column (a joint view's collapsed view): Ask would
+		# take the panel's height, so it waits for a page with room.
+		ask.visible = false
+		col.erase(ask)
+		col_w = 0.0
+		for c: Control in col:
+			col_w = maxf(col_w, c.get_combined_minimum_size().x)
+		side_by_side = col.is_empty() or x1 - x0 >= chip_w + gap + col_w
 	var row_h: float = 0.0
+	var right: float = x1 - (col_w + gap if side_by_side and not col.is_empty() else 0.0)
+	if not in_row:
+		# Ask left the row (it heads the column, or waits): the chip takes the row's width back.
+		selection_bar.fit(right - x0)
+		chip_w = selection_bar.get_combined_minimum_size().x
+	if in_row:
+		ask.size = ask.get_combined_minimum_size()
+		ask.position = Vector2(roundf(right - ask.size.x), y)
+		row_h = ask.size.y + gap
 	if selection_bar.visible:
-		var right: float = x1 - (col_w + gap if side_by_side and not col.is_empty() else 0.0)
-		var cx: float = maxf(x0, (x0 + right - chip_w) / 2.0)
+		var cx: float = maxf(x0, (x0 + right - ask_w - chip_w) / 2.0)
 		selection_bar.position = Vector2(roundf(cx), y)
 		selection_bar.size = selection_bar.get_combined_minimum_size()
-		row_h = selection_bar.size.y + gap
+		row_h = maxf(row_h, selection_bar.size.y + gap)
 	var cy: float = y if side_by_side else y + row_h
 	if not side_by_side:
 		# Under the chip the column takes the view's width: a chip's effect line wraps less
@@ -294,12 +359,12 @@ func _place_view_top() -> void:
 		col_w = x1 - x0
 	for c: Control in col:
 		var sz: Vector2 = c.get_combined_minimum_size()
-		c.size = Vector2(col_w, sz.y)
-		c.position = Vector2(roundf(x1 - col_w), cy)
+		c.size = Vector2(sz.x if c == ask else col_w, sz.y)
+		c.position = Vector2(roundf(x1 - c.size.x), cy)
 		cy += sz.y + gap
 	var reserve: float = row_h if side_by_side else maxf(row_h, cy - y)
 	if reserve > 0.0:
-		reserve += y - (r.position.y + VIEW_TOP_Y)
+		reserve = roundf(reserve + y - (r.position.y + VIEW_TOP_Y))
 	if p.top_reserve != reserve:
 		p.top_reserve = reserve
 		p.queue_redraw()
@@ -417,3 +482,12 @@ static func row(controls: Array) -> HBoxContainer:
 		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		r.add_child(c)
 	return r
+
+
+## Hides each row (a `row` holding one of `controls`) whose controls all hide, so a hidden
+## button leaves no empty row and gap behind (C3).
+static func hide_empty_rows(controls: Array) -> void:
+	for c: Control in controls:
+		var r: HBoxContainer = c.get_parent() as HBoxContainer
+		if r != null:
+			r.visible = r.get_children().any(func(k: Node) -> bool: return (k as Control).visible)

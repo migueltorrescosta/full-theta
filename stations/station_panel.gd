@@ -36,6 +36,9 @@ var share_slot: Container = null
 ## Off a phone, where a full_screen() panel alone (the radar column hidden) puts the screen's
 ## share buttons, or null (#35 A11, D217).
 var share_home: Container = null
+## The share buttons' width (px) in share_home, at the touch sizes (a tablet's rail, C14); 0
+## keeps the column's width and sizes.
+var share_home_width: float = 0.0
 ## Height (px) at the bottom of the panel that the screen's joint switch and Share opener
 ## cover on a phone on its side (#28); a hand-drawn view keeps its read-outs above it.
 var bottom_reserve: float = 0.0
@@ -94,10 +97,11 @@ func sync_tablet(dock: TabletDock, want: bool, drop: Callable, make: Callable) -
 	want = want and s != null
 	var portrait: bool = want and LayoutMode.portrait(s.size)
 	if dock != null and (not want or dock.portrait != portrait):
+		# (the rails go first: the screen's relayout then sees the panel without them)
+		drop.call()
 		if s != null and s.tablet_dock == dock:
 			s.set_tablet_dock(null)
 		dock.queue_free()
-		drop.call()
 		ctx.matcher.release_all()
 		dock = null
 	if want and dock == null:
@@ -192,6 +196,45 @@ func view_rect() -> Rect2:
 	if layout != null:
 		return layout.content_rect_in(self)
 	return Rect2(Vector2.ZERO, size)
+
+
+## True while this station's Shakedown step asks for `intent` (ctx.training): a control
+## that hides while it can't work (C3) shows then, so the lesson never names a hidden button.
+func lesson_wants(intent: String) -> bool:
+	return ctx != null and str(ctx.training.get(station, {}).get("intent", "")) == intent
+
+
+## The players seated at this station on this ship (a joint seat holding it counts), from
+## the lobby's seats: a claim matters only with two or more (C3, D412).
+func players_here() -> int:
+	return seated(ctx, station)
+
+
+## The players `ctx`'s lobby seats put at `station_id` on its ship (a joint seat counts).
+static func seated(ctx: StationContext, station_id: String) -> int:
+	var n: int = 0
+	for seat: Variant in ctx.crew.ship_state(ctx.crew.ship).get("seats", []):
+		if station_id in StationCatalogue.stations_of(str((seat as Dictionary).get("seat", ""))):
+			n += 1
+	return n
+
+
+## True when the docked panel shows something of its own: a visible control that is no bare
+## container. A docked panel with nothing to show (Science in a joint view: the screen's radar
+## is its radar) keeps no least height in the side column, so the column doesn't scroll to a
+## blank (w-dcc); it still fills the room left as the tap target that focuses it.
+func shows_docked() -> bool:
+	return _shows_any(self)
+
+
+static func _shows_any(node: Node) -> bool:
+	for c: Node in node.get_children():
+		var k: Control = c as Control
+		if k == null or not k.visible:
+			continue
+		if not k is Container or _shows_any(k):
+			return true
+	return false
 
 
 ## True when the panel draws its own radar and wants the whole screen when it is alone

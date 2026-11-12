@@ -67,7 +67,7 @@ func test_start_session_once_at_the_first_start_with_the_closed_set() -> void:
 	server.game.language = "it"
 	assert_array(_spy.starts).is_empty()
 	assert_bool(await h.start(server, crew[0])).is_true()
-	crew[1].set_ready(true)
+	crew[1].start()
 	await h.wait(200)
 	assert_int(_spy.starts.size()).is_equal(1)
 	assert_str(_spy.starts[0][0]).is_equal("it")
@@ -169,3 +169,34 @@ func test_run_reset_flushes_lines_and_rearms_the_hull_alert() -> void:
 	server.game.after_ticks([_event(server, &"hit", PLAYER)])
 	assert_str(_spy.said.back()[0]).is_equal("computer.hull_critical")
 	assert_int(_spy.said.size()).is_equal(3)
+
+
+# FT: FT-AUD-006, FT-WPN-008
+# C5: the critical tier's alerts the sim has no event for. A guided shot is a missile lock
+# on the contact it follows (other: the shooter); a beam or a cannon shot is none. The lock
+# on a crewed ship is said to every crew station.
+func test_a_guided_shot_is_a_missile_lock_on_its_target() -> void:
+	var setup: Array = await _crewed()
+	var server: NetServer = setup[0]
+	var crew: Array[NetClient] = setup[1]
+	var world: SimWorld = server.world
+	var row: int = world.mounts.row_for(PLAYER, 0)
+	var fired: SimEvent = _event(server, &"fired", PLAYER, 0.0)
+	# The bow's cannon: not guided.
+	assert_array(server.game.voice.critical_events([fired])).is_empty()
+	world.mounts.ammo_type[row] = 1
+	assert_bool(WeaponSystem.weapon_of(world, row).is_guided()).is_true()
+	var at: PackedFloat64Array = world.kin.point(PLAYER)
+	var k: int = world.projectiles.spawn(PLAYER, 0, at, Vector3.FORWARD, 1.0, 10.0, 100)
+	world.projectiles.set_payload(k, &"explosive", 1.2, ENEMY)
+	var out: Array[SimEvent] = server.game.voice.critical_events([fired])
+	assert_int(out.size()).is_equal(1)
+	assert_str(String(out[0].kind)).is_equal("missile_lock")
+	assert_int(out[0].ship_id).is_equal(ENEMY)
+	assert_int(out[0].other_id).is_equal(PLAYER)
+	assert_int(out[0].faction).is_equal(world.faction_of(ENEMY))
+	# A lock on the crewed ship: "Missile lock" to every crew station.
+	_spy.said.clear()
+	server.game.after_ticks([_event(server, &"missile_lock", PLAYER)])
+	var all: Array = [crew[0].session_id, crew[1].session_id, crew[2].session_id]
+	assert_array(_spy.said).is_equal([["computer.missile_lock", {}, all]])

@@ -45,21 +45,24 @@ static func callout_forms(font: Font, callout: String, font_size: int = 13) -> A
 	return [variants, sizes]
 
 
-## Places each callout next to its own blip, then moves it by the least that clears what it
-## must not cover (spots tried: beside the default, right, left, above, below, a line off).
-## Hard obstacles: the clock numbers and other boxes in `fixed`, every blip's box (entries
-## with a "pos"), the callouts already placed and the other items' stems; a spot also has to
-## keep inside `limit` and within CALLOUT_REACH of its own blip. When no spot is free, the
-## callout is shortened (its "variants", longest first, with their "sizes"), then may cross
-## other stems (soft, as is leaving `disc`'s ellipse, charged as a cost), then takes the
-## free spot nearest its blip with the callsign alone. Selected callouts are placed first,
-## then top to bottom. Without a blip a callout with no free spot drops below what it overlaps.
+## Places each callout next to its own blip, then moves it by the least that clears what it must not
+## cover (spots tried: beside the default, right, left, above, below, a line off). Hard obstacles:
+## the clock numbers and other boxes in `fixed`, every blip's box (entries with a "pos"), the
+## callouts already placed and the other items' stems; a spot also has to keep inside `limit` and
+## within CALLOUT_REACH of its own blip. Crossing the line of `disc`'s rim, its half-range ring or
+## one of `rings` (the selection's range ring) only costs, as leaving `disc`'s ellipse does: a
+## callout never moves away or shortens for a line (D319). When no spot is free, the callout is
+## shortened (its "variants", longest first, with their "sizes"), then may cross other stems (soft),
+## then takes the free spot nearest its blip with the callsign alone. Selected callouts are placed
+## first, then top to bottom. Without a blip a callout with no free spot drops below what it
+## overlaps.
 static func declutter(
 	entries: Array[Dictionary],
 	fixed: Array = [],
 	limit: Rect2 = Rect2(),
 	disc: Rect2 = Rect2(),
-	blip: float = 9.0
+	blip: float = 9.0,
+	rings: Array[Rect2] = []
 ) -> void:
 	var boxes: Array[Rect2] = []
 	var blocked: Array[Rect2] = []
@@ -115,7 +118,7 @@ static func declutter(
 				if not homes.has(k):
 					homes[k] = home if k == 0 else _home_for(home, e["pos"], sizes[k])
 					frees[k] = _free_spots(e, homes[k], blocked, placed, limit, blip)
-				pick = _best_spot(e, homes[k], frees[k], stems, disc, step[1], step[0])
+				pick = _best_spot(e, homes[k], frees[k], stems, disc, step[1], step[0], rings)
 				if pick.has_area():
 					text = variants[k] if k > 0 else text
 					break
@@ -204,7 +207,8 @@ static func _free_spots(
 
 ## The cheapest of the free `spots` for a callout whose default box is `home`, or an empty
 ## Rect2. With a blip, a spot is within `reach` of it; `hard_stems` makes the other items'
-## stems obstacles too.
+## stems obstacles too. Crossing a line of the disc's rim, its half-range ring or `rings` is a
+## cost, never a reason to move the callout away or shorten it (D319: near and whole first).
 static func _best_spot(
 	e: Dictionary,
 	home: Rect2,
@@ -212,7 +216,8 @@ static func _best_spot(
 	stems: Array[Dictionary],
 	disc: Rect2,
 	hard_stems: bool,
-	reach: float = CALLOUT_REACH
+	reach: float = CALLOUT_REACH,
+	rings: Array[Rect2] = []
 ) -> Rect2:
 	var best: Rect2 = Rect2()
 	var best_cost: float = INF
@@ -237,13 +242,14 @@ static func _best_spot(
 		if not free or cost >= best_cost:
 			continue
 		if disc.has_area():
+			# (a ring's line through the text strikes it out)
+			var crosses: int = 0
+			for ring: Rect2 in [disc, half] + rings:
+				# (the text box has room above and below its letters: a line through that room is clear)
+				crosses += int(_crosses_ellipse(ring, spot.grow_individual(0.0, -2.0, 0.0, -2.0)))
 			if not in_ellipse(disc, spot):
 				cost += 10.0
-			# (a ring's line through the text strikes it out)
-			if _crosses_ellipse(disc, spot):
-				cost += 6.0
-			if _crosses_ellipse(half, spot):
-				cost += 6.0
+			cost += 6.0 * crosses
 		if cost < best_cost:
 			best_cost = cost
 			best = spot

@@ -6,13 +6,14 @@ extends RefCounted
 ## GameRules, answers ShipAdd, ShipTeam, GameMode and Relaunch, and sends the `fleet`,
 ## `takeover`, `handover`, `scoreboard`, `eliminated`, `relaunch_votes`, `relaunched` and
 ## `game_over` events (FleetMessages).
-## - Lobby: ShipAdd (any player, up to GameRules.MAX_SHIPS), ShipTeam (a session on the
-##   ship, teams and holdout only) and GameMode (the host) change the ships while no ship
+## - Lobby: ShipAdd (any player, up to GameRules.MAX_SHIPS), ShipTeam (the host, or a session
+##   on the ship; teams and holdout only) and GameMode (the host) change the ships while no ship
 ##   has started. Each change rebuilds a lobby world of allied placeholder ships, one per slot
 ##   with stable ids (`rebuild`, NetServer.rebuild_fleet), and sends the Catalogue again.
-## - Start: the universe starts once every crewed ship has pressed Start and passes coverage
-##   (press_start, M4-Q4). The world is then built from start_slots(), the ships with a crew
-##   pick in lobby order, with the mode's factions and teams; a ship nobody crewed vanishes and
+## - Start: the universe starts all together when the host presses Start, every crewed ship
+##   passing coverage and every crew player Ready (NetLobby.start, start_ships, M4-Q4,
+##   #37 C1). The world is then built from start_slots(), the ships with a crew pick in lobby
+##   order, with the mode's factions and teams; a ship nobody crewed vanishes and
 ##   its sessions are moved to the new ids (M4-Q3).
 ## - Elimination: the sim's &"eliminated" event for a started ship (destroyed, abandoned, or
 ##   forfeited by the abandon vote in PvP, M4-Q10; the event carries the reason and the lives
@@ -52,8 +53,6 @@ var slots: Array[ShipSlot] = []
 var rules: GameRules = GameRules.new()
 ## Rebuilds the world from (slots, rules): NetServer.rebuild_fleet. Invalid for a fixed world.
 var rebuild: Callable
-## Ships whose crew pressed Start, waiting for the others (M4-Q4).
-var pressed: Dictionary[int, bool] = {}
 ## Eliminated ships -> the `eliminated` reason: "destroyed" (the hull reached 0), "abandoned"
 ## (the crew or host gave up in a pause, FT-NET-041) or "forfeit" (a PvP crew's abandon vote,
 ## M4-Q10).
@@ -103,7 +102,6 @@ func start_slots() -> Array[ShipSlot]:
 
 ## The run reset (NetGame.restart): the session's progress goes, the lobby stays.
 func reset() -> void:
-	pressed.clear()
 	eliminated.clear()
 	outcome = null
 	_crews.clear()
@@ -148,44 +146,36 @@ func is_over() -> bool:
 	return outcome != null
 
 
-## The crewed ships not yet ready to start together: a crew pick but no Start pressed, or a
-## coverage check that fails again. Empty once the universe started.
+## The crewed ships not yet ready to start together: coverage fails or a crew player is not
+## Ready (#37 C1). Empty once the universe started.
 func waiting() -> Array[int]:
 	var out: Array[int] = []
 	if game.lobby.any_launched():
 		return out
-	for id: int in _crewed():
-		if not (
-			pressed.has(id) and NetCoverage.passes(game.lobby.seats_of(id), game.lobby.min_crew())
-		):
+	for id: int in crewed():
+		if not game.lobby.covered(id) or not game.lobby.unready(id).is_empty():
 			out.append(id)
 	return out
 
 
-## Start pressed by `s`, whose ship passes coverage (NetGame._on_ready checked it). Returns
-## the ships to launch now, all together, or [] while others wait (M4-Q4). With the mode's slot
-## errors (GameRules.slot_errors) the press is refused `bad_mode` with the errors. On a
-## fixed world a ship crewed after the universe started starts alone.
-func press_start(s: NetSession) -> Array[int]:
+## The ships to launch for an accepted Start (NetLobby.start checked coverage and Ready): every
+## crewed ship, all together (M4-Q4), or [] when the mode's slot errors
+## (GameRules.slot_errors) refuse it `bad_mode` with the errors. On a fixed world a ship crewed
+## after the universe started starts alone.
+func start_ships(s: NetSession) -> Array[int]:
 	if game.lobby.any_launched():
 		return [s.ship]
-	pressed[s.ship] = true
-	_dirty = true
-	if not waiting().is_empty():
-		return []
 	if rebuild.is_valid():
 		var errors: Array[String] = rules.slot_errors(start_slots())
 		if not errors.is_empty():
-			pressed.erase(s.ship)
 			var extra: Dictionary = {"errors": Array(errors)}
-			game.refuse(s, NetProtocol.Type.READY, FleetMessages.BAD_MODE, extra)
+			game.refuse(s, NetProtocol.Type.START, FleetMessages.BAD_MODE, extra)
 			return []
 		var kept: Array[int] = _kept()
 		if not _world_current or kept.size() < slots.size():
 			_rebuild_for_start(kept)
-	pressed.clear()
 	start_tick = game.world.tick
-	return _crewed()
+	return crewed()
 
 
 ## Why `s` may not take over `seat` on the paused `ship`, whose open stations are `uncovered`,
@@ -361,7 +351,7 @@ func _on_ship_team(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var ship: int = msg["ship"]
 	var team: int = msg["team"]
 	var reason: String = _lobby_refusal(s, false)
-	if reason == "" and (ship < 0 or ship >= slots.size() or s.ship != ship):
+	if reason == "" and (ship < 0 or ship >= slots.size() or (s.ship != ship and not s.is_host)):
 		reason = NetGame.NOT_CREW
 	elif reason == "" and (not rules.has_teams() or team < 0 or team > 1):
 		reason = FleetMessages.BAD_TEAM
@@ -447,7 +437,6 @@ func _apply(split: bool) -> void:
 	var placeholders: Array[ShipSlot] = []
 	for s: ShipSlot in slots:
 		placeholders.append(ShipSlot.of(s.name, 0))
-	pressed.clear()
 	rebuild.call(placeholders, GameRules.new())
 	_world_current = false
 	_dirty = true
@@ -489,7 +478,7 @@ func _kept() -> Array[int]:
 
 
 ## Crewable ships with a crew pick.
-func _crewed() -> Array[int]:
+func crewed() -> Array[int]:
 	var out: Array[int] = []
 	for c: Dictionary in game.crew_ships():
 		if NetCoverage.crew_count(game.lobby.seats_of(c["id"])) > 0:
@@ -595,8 +584,8 @@ func _fleet_payload() -> Dictionary:
 				lobby["seats"],
 				lobby["crew"],
 				Array(lobby["uncovered"]),
-				lobby["ready"],
-				pressed.has(id) or game.lobby.is_launched(id)
+				lobby["covered"],
+				game.lobby.is_launched(id)
 			)
 		)
 	var lives: int = -1
@@ -606,7 +595,10 @@ func _fleet_payload() -> Dictionary:
 	var mode: String = GameRules.MODE_NAMES[rules.mode]
 	var team_win: String = GameRules.TEAM_WIN_NAMES[rules.team_win]
 	var max_ships: int = GameRules.MAX_SHIPS
-	return FleetMessages.fleet(ships, mode, team_win, max_ships, lives, Array(waiting()), started)
+	var host: bool = game.lobby.host_here()
+	return FleetMessages.fleet(
+		ships, mode, team_win, max_ships, lives, Array(waiting()), started, host
+	)
 
 
 ## The scoreboard to the sessions without a pick: on a change of state or progress, and once a

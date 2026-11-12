@@ -7,17 +7,23 @@ extends RefCounted
 ##   set (FT-AUD-018): every ship's name, and every callsign a contact can get in the
 ##   encounter (KnowledgeSystem.callsign: U, H, F or N and a number up to the count of
 ##   ships of other factions); M1 has no NPCs.
+## - critical_events(): the critical tier's alerts the sim has no event for (C5), derived
+##   from the tick's events on every server, voice or not: `hull_critical` once the hull is
+##   at or under HULL_CRITICAL after a hit (re-armed above it), `missile_lock` on the
+##   target of a guided shot (`other` the shooter). NetGame posts them like sim events.
 ## - on_event(): the ship computer's alert lines from the sim events of a crewed ship, to
 ##   the stations concerned (FT-AUD-006; VoiceService.computer_audience): "Hull
-##   critical" to every station once the hull is at or under HULL_CRITICAL (re-armed
-##   above it), shields low with the percentage, subsystem fault, collision warning.
-##   Coalescing and max age come from the line data (content/dialogue/computer.json).
+##   critical" and "Missile lock" to every station, shields low with the percentage,
+##   subsystem fault, collision warning. Coalescing and max age come from the line data
+##   (content/dialogue/computer.json).
 
 ## PROVISIONAL.
 const HULL_CRITICAL: float = 0.25
 ## Sim event kind -> [line id, stations concerned]; hull critical goes to every crew
 ## station (FT-AUD-006, owner-approved in #7).
 const LINES: Dictionary = {
+	&"hull_critical": ["computer.hull_critical", StationCatalogue.CREW],
+	&"missile_lock": ["computer.missile_lock", StationCatalogue.CREW],
 	&"fault": ["computer.subsystem_fault", ["engineering"]],
 	&"proximity": ["computer.collision_warning", ["helm"]],
 	&"jump_arrive": ["computer.jump_ready", ["helm"]],
@@ -72,19 +78,58 @@ func on_event(e: SimEvent) -> void:
 		return
 	if e.kind == &"say":
 		_say(e)
-	elif e.kind == &"hit" and world.kin.is_alive(e.ship_id):
-		var critical: bool = DamageSystem.hull_fraction(world, e.ship_id) <= HULL_CRITICAL
-		if critical and not _hull_warned.has(e.ship_id):
-			_hull_warned[e.ship_id] = true
-			var all: PackedStringArray = PackedStringArray(StationCatalogue.CREW)
-			voice.say_computer(e.ship_id, all, "computer.hull_critical")
-		elif not critical:
-			_hull_warned.erase(e.ship_id)
 	elif e.kind == &"shield_low":
 		_say_shields_low(e)
 	elif LINES.has(e.kind):
 		var line: Array = LINES[e.kind]
 		voice.say_computer(e.ship_id, PackedStringArray(line[1]), line[0])
+
+
+## The critical alerts the tick's `events` imply that the sim doesn't emit (C5), in order:
+## `hull_critical` on a ship whose hull a hit took to HULL_CRITICAL or under (once, re-armed
+## by a hit that leaves it above), `missile_lock` on the contact a guided shot follows.
+func critical_events(events: Array[SimEvent]) -> Array[SimEvent]:
+	var out: Array[SimEvent] = []
+	for e: SimEvent in events:
+		if e.kind == &"hit" and world.has_ship(e.ship_id) and world.kin.is_alive(e.ship_id):
+			var critical: bool = DamageSystem.hull_fraction(world, e.ship_id) <= HULL_CRITICAL
+			if critical and not _hull_warned.has(e.ship_id):
+				_hull_warned[e.ship_id] = true
+				out.append(_derived(e, &"hull_critical", e.ship_id))
+			elif not critical:
+				_hull_warned.erase(e.ship_id)
+		elif e.kind == &"fired":
+			var target: int = guided_target(world, e.ship_id, int(e.value))
+			if target >= 0 and world.has_ship(target) and world.kin.is_alive(target):
+				var lock: SimEvent = _derived(e, &"missile_lock", target)
+				lock.other_id = e.ship_id
+				out.append(lock)
+	return out
+
+
+## The contact the newest guided shot of `ship`'s mount `index` follows, or -1 when the
+## mount's weapon is not guided (a just-fired shot has the most time to live).
+static func guided_target(sim: SimWorld, ship: int, index: int) -> int:
+	var row: int = sim.mounts.row_for(ship, index)
+	if row < 0 or not WeaponSystem.weapon_of(sim, row).is_guided():
+		return -1
+	var proj: ProjectileTable = sim.projectiles
+	var best: int = -1
+	for k: int in proj.size():
+		if proj.owner_ship[k] != ship or proj.turn_rate[k] <= 0.0:
+			continue
+		if best < 0 or proj.ttl[k] > proj.ttl[best]:
+			best = k
+	return proj.guide_target[best] if best >= 0 else -1
+
+
+func _derived(from: SimEvent, kind: StringName, ship: int) -> SimEvent:
+	var e: SimEvent = SimEvent.new()
+	e.tick = from.tick
+	e.kind = kind
+	e.ship_id = ship
+	e.faction = world.faction_of(ship)
+	return e
 
 
 ## A spoken line from the sim (SayCommand): an NPC line (role npc in the dialogue data)

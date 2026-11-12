@@ -91,3 +91,31 @@ func test_declutter_is_repeatable_on_a_crowd() -> void:
 			)
 		)
 	assert_array(runs[0]).is_equal(runs[1])
+
+
+# FT: FT-STN-002
+# D319(2): a ring's line only costs: a callout near the rim keeps its full text beside its
+# blip (it never shortens or moves away for a line), and takes a spot clear of the line when
+# one is as near.
+func test_a_ring_line_never_shortens_a_callout() -> void:
+	var font: Font = ThemeDB.fallback_font
+	var disc: Rect2 = Rect2(0, 0, 300, 120)
+	var pos: Vector2 = Vector2(270, 60)
+	var forms: Array = CalloutLayout.callout_forms(font, "H2 · 4 high · mid")
+	var variants: Array[String] = []
+	variants.assign(forms[0])
+	var sizes: Array[Vector2] = []
+	sizes.assign(forms[1])
+	var e: Dictionary = {
+		"pos": pos,
+		"callout": variants[0],
+		"callout_rect": Rect2(pos + Vector2(10, -9), sizes[0]),
+		"variants": variants,
+		"sizes": sizes,
+	}
+	var entries: Array[Dictionary] = [e]
+	CalloutLayout.declutter(entries, [], Rect2(0, 0, 400, 200), disc, 9.0)
+	assert_str(e["callout"]).is_equal(variants[0])
+	assert_float(CalloutLayout.gap_to(e["callout_rect"], pos)).is_less_equal(
+		CalloutLayout.CALLOUT_NEAR
+	)

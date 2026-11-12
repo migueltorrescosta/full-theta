@@ -39,6 +39,7 @@ var _current: int = -1
 var _titles: Array[String] = []
 var _parts: Array[Array] = []
 var _badges: Array[bool] = []
+var _shown: Array[bool] = []
 
 
 ## Adds a page titled `title` holding `parts` (controls anywhere in the panel); the first
@@ -55,6 +56,7 @@ func add_page(title: String, parts: Array) -> int:
 			own.append(p)
 	_parts.append(own)
 	_badges.append(false)
+	_shown.append(true)
 	if _current < 0:
 		_current = 0
 	_show()
@@ -102,9 +104,40 @@ func badge(index: int) -> bool:
 	return index >= 0 and index < _badges.size() and _badges[index]
 
 
-## Shows page `index`; nothing for an unknown index, the current one, or during a session.
+## Whether page `index` has a tab: a page with nothing to show (a Crew page with no share,
+## C4) hides its tab and, when current, gives way to the first page.
+func set_shown(index: int, on: bool) -> void:
+	if index < 0 or index >= _shown.size() or _shown[index] == on:
+		return
+	_shown[index] = on
+	if not on and index == _current:
+		select(0)
+	tabs_changed.emit()
+
+
+func shown(index: int) -> bool:
+	return index >= 0 and index < _shown.size() and _shown[index]
+
+
+## The page whose parts are or hold `control`, or -1.
+func page_of(control: Control) -> int:
+	for i: int in _parts.size():
+		for c: Control in _parts[i]:
+			if is_instance_valid(c) and (c == control or c.is_ancestor_of(control)):
+				return i
+	return -1
+
+
+## Shows page `index`; nothing for an unknown or hidden index, the current one, or during a
+## session.
 func select(index: int) -> void:
-	if index < 0 or index >= _titles.size() or index == _current or minigame_title != "":
+	if (
+		index < 0
+		or index >= _titles.size()
+		or index == _current
+		or minigame_title != ""
+		or not _shown[index]
+	):
 		return
 	_current = index
 	_show()

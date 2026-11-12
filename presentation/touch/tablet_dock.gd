@@ -44,6 +44,15 @@ func _init(is_portrait: bool = false, bar: float = 0.0) -> void:
 	for r: TouchRail in [left, right]:
 		r.custom_minimum_size.x = 0.0 if bar_h > 0.0 else RAIL_W
 		add_child(r)
+		# (a wrapped label is tall until it gets its width: once it shrinks, the rail goes back
+		# to its place, or it stays taller and runs into the gesture band)
+		r.minimum_size_changed.connect(_reput.bind(r), CONNECT_DEFERRED)
+
+
+## A side rail's width inside its padding (px; the DockedRail panel's 4 px each side): what a
+## control filling the rail gets.
+static func inner_width() -> float:
+	return RAIL_W - 8.0
 
 
 ## True when a window of `dp` device-independent px is big enough for a dock.
@@ -71,8 +80,14 @@ func place(area: Rect2) -> void:
 
 func _put(r: TouchRail, rect: Rect2) -> void:
 	r.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	r.set_meta(&"place", rect)
 	r.position = rect.position
 	r.size = rect.size
+
+
+func _reput(r: TouchRail) -> void:
+	if r.has_meta(&"place"):
+		r.size = (r.get_meta(&"place") as Rect2).size
 
 
 ## Makes `s` a stick of `side` px that sits at its rail's lower corner: at the bottom of a

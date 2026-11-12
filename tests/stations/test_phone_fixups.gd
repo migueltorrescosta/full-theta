@@ -62,54 +62,34 @@ func _share_buttons(s: StationScreen) -> Array[Button]:
 
 
 # FT: FT-STN-005, FT-PAIR-007, FT-JNT-001
-# On a phone on its side the share buttons don't fit under the 180 px disc: a Share opener
-# (beside the joint switch) opens a drawer of 48 px buttons 8 px apart, at the top of the
-# radar column or, with the column hidden (Weapons' rails), at the bottom of the view.
-func test_share_buttons_sit_in_a_drawer_on_a_phone_on_its_side() -> void:
-	# (Engineering, Comms and Science put their shares on their Crew page, shows_shares: no
-	# opener.)
-	for c: Array in [["systems", 0], ["quartermaster", 1], ["comms", 0], ["science", 0]]:
-		var p: StationScreen = await _screen(Vector2i(844, 390), c[0], LANDSCAPE, c[1])
-		assert_bool(p.focused_panel().shows_shares).override_failure_message(c[0]).is_true()
-		assert_bool(p.share_opener.is_visible_in_tree()).override_failure_message(c[0]).is_false()
-		_drop(p)
+# On a phone every station with share buttons holds them on its Crew page (shows_shares): no
+# Share opener and no second set beside the radar, on its side or upright, alone or in a
+# joint view (w-yk5: Survey showed "Share: Weak points" twice).
+func test_phone_panels_keep_their_shares_on_the_crew_page() -> void:
 	var cases: Array = [
-		["approach", 0, false],
+		["systems", 0],
+		["quartermaster", 1],
+		["comms", 0],
+		["science", 0],
+		["approach", 0],
+		["survey", 0],
+		["survey", 1],
+		["targeting", 0],
+		["targeting", 1],
 	]
-	for c: Array in cases:
-		var what: String = "%s/%d" % [c[0], c[1]]
-		var s: StationScreen = await _screen(Vector2i(844, 390), c[0], LANDSCAPE, c[1])
-		assert_bool(s.share_opener.is_visible_in_tree()).override_failure_message(what).is_true()
-		assert_bool(s.share_drawer.visible).is_false()
-		assert_bool(s.share_bar.is_visible_in_tree()).is_false()
-		# The opener sits in the radar column when it shows, else in the view or, for
-		# Science, under the contacts in its left rail.
-		assert_bool(s.radar.is_visible_in_tree()).override_failure_message(what).is_equal(c[2])
-		var slot: Container = s.focused_panel().share_slot
-		if slot != null:
-			assert_object(s.share_opener.get_parent()).is_same(slot)
-		_assert_clean(s, what)
-		s.share_opener.button_pressed = true
-		s.share_opener.pressed.emit()
-		await _frames(2)
-		assert_bool(s.share_drawer.is_open()).override_failure_message(what).is_true()
-		var buttons: Array[Button] = _share_buttons(s)
-		assert_array(buttons).override_failure_message(what).is_not_empty()
-		for b: Button in buttons:
-			assert_bool(b.is_visible_in_tree()).is_true()
-			assert_float(b.size.y).is_greater_equal(UiTheme.TOUCH_PRIMARY)
-		# The drawer covers the panel under it; its own targets keep the rules, and it keeps
-		# 8 px from the opener and the switch.
-		_assert_clean(s.share_drawer, what + " open")
-		var drawer: Rect2 = s.share_drawer.get_global_rect()
-		for b: Control in [s.share_opener, s.joint_switch]:
-			if b != null and b.is_visible_in_tree():
-				assert_float(TapAudit.gap(drawer, b.get_global_rect())).is_greater_equal(
-					UiTheme.TOUCH_GAP
-				)
-		buttons[0].pressed.emit()
-		assert_int(StationFixture.sent(s.ctx).of("share").size()).is_equal(1)
-		_drop(s)
+	for size: Vector2i in [Vector2i(844, 390), Vector2i(390, 844)]:
+		for c: Array in cases:
+			var what: String = "%s/%d %s" % [c[0], c[1], size]
+			var insets: Array = LANDSCAPE if size.x > size.y else PORTRAIT
+			var p: StationScreen = await _screen(size, c[0], insets, c[1])
+			assert_bool(p.focused_panel().shows_shares).override_failure_message(what).is_true()
+			(
+				assert_bool(p.share_opener.is_visible_in_tree())
+				. override_failure_message(what)
+				. is_false()
+			)
+			assert_bool(p.share_bar.is_visible_in_tree()).override_failure_message(what).is_false()
+			_drop(p)
 
 
 # FT: FT-STN-005, FT-PAIR-007
@@ -121,22 +101,42 @@ func test_panels_with_their_own_share_place_keep_one_opener() -> void:
 	_drop(r)
 
 
+# FT: FT-STN-005, FT-JNT-001
+# Upright a joint view shows the focused station alone, as on its side (w-yk5): the station
+# chip leads the bottom tabs, the other panel and the screen's radar column hide, and the
+# partner glance under the selection chip keeps clear of Helm's read-out and of Weapons'
+# aim point at the view's centre.
+func test_joint_views_upright_show_the_focused_station_alone() -> void:
+	for c: Array in [["survey", 0], ["survey", 1], ["targeting", 0], ["targeting", 1]]:
+		var what: String = "%s/%d" % [c[0], c[1]]
+		var s: StationScreen = await _screen(Vector2i(390, 844), c[0], PORTRAIT, c[1])
+		assert_bool(s.joint_switch.is_visible_in_tree()).override_failure_message(what).is_true()
+		(
+			assert_bool(s.panels[1 - c[1]].is_visible_in_tree())
+			. override_failure_message(what)
+			. is_false()
+		)
+		assert_bool(s.radar.is_visible_in_tree()).override_failure_message(what).is_false()
+		var glance: Rect2 = s.frame.glance.get_global_rect()
+		assert_bool(s.frame.glance.is_visible_in_tree()).override_failure_message(what).is_true()
+		var p: StationPanel = s.focused_panel()
+		if p is HelmPanel:
+			var hud: HelmHud = (p as HelmPanel).hud
+			var readout: Rect2 = hud.get_global_transform() * hud.readout_rect()
+			assert_bool(readout.intersects(glance)).override_failure_message(what).is_false()
+		elif p is WeaponsPanel:
+			var view: Rect2 = p.get_global_transform() * p.view_rect()
+			(
+				assert_float(view.get_center().y - glance.end.y)
+				. override_failure_message(what)
+				. is_greater_equal(UiTheme.TOUCH_PRIMARY)
+			)
+		_drop(s)
+
+
 # FT: FT-STN-005, FT-PAIR-007
-# Upright the share buttons stay in the column beside the radar, 48 px and 8 px apart; on a
-# desktop they keep their place and there is no opener.
-func test_share_buttons_stay_in_the_column_upright_and_on_a_desktop() -> void:
-	var up: StationScreen = await _screen(Vector2i(390, 844), "approach", PORTRAIT)
-	assert_bool(up.share_opener.visible).is_false()
-	assert_bool(up.share_bar.is_visible_in_tree()).is_true()
-	for b: Button in _share_buttons(up):
-		assert_float(b.size.y).is_greater_equal(UiTheme.TOUCH_PRIMARY)
-	_assert_clean(up.share_bar, "upright")
-	_assert_clean(up, "upright screen")
-	_drop(up)
-	# Engineering keeps its shares on its Crew page: none beside the radar.
-	var eng: StationScreen = await _screen(Vector2i(390, 844), "systems", PORTRAIT)
-	assert_array(_share_buttons(eng).filter(func(b: Button) -> bool: return b.visible)).is_empty()
-	_drop(eng)
+# On a desktop the share buttons keep their place in the radar column, with no opener.
+func test_share_buttons_stay_in_the_column_on_a_desktop() -> void:
 	var desk: StationScreen = await _screen(Vector2i(1280, 720), "systems", [])
 	assert_bool(desk.share_opener.visible).is_false()
 	assert_bool(desk.share_bar.is_visible_in_tree()).is_true()
@@ -165,40 +165,19 @@ func test_weapons_keeps_its_rail_radar_in_a_joint_view() -> void:
 		_drop(s)
 
 
-# FT: FT-STN-002, FT-SPA-007, FT-STN-005
-# The phone's 180 px disc and Weapons' rail radar keep every chip inside: a chip that would
-# cross the edge moves to the blip's other side, drops its range band and then its clock
-# until it fits beside the blip; only a callsign alone may slide over it.
-func test_small_radar_keeps_chips_inside() -> void:
-	var cases: Array = [
-		[Vector2i(844, 390), "engineering", LANDSCAPE],
-		[Vector2i(390, 844), "engineering", PORTRAIT],
-		[Vector2i(844, 390), "weapons", LANDSCAPE],
-	]
-	for c: Array in cases:
-		var s: StationScreen = await _screen(c[0], c[1], c[2])
-		var r: DiscRadar = s.radar
-		if c[1] == "weapons":
-			r = (s.focused_panel() as WeaponsPanel).touch().radar
-		assert_float(r.size.x).is_less_equal(StationScreen.PHONE_RADAR + 1.0)
-		var view: Rect2 = Rect2(Vector2.ZERO, r.size)
-		var chips: int = 0
-		for e: Dictionary in r._layout():
-			if e["callout"] == "":
-				continue
-			chips += 1
-			var box: Rect2 = e["callout_rect"]
-			var what: String = "%s %s at %s" % [c[1], e["callout"], box]
-			assert_bool(view.encloses(box)).override_failure_message(what).is_true()
-			if (e["callout"] as String).contains(CalloutText.SEP):
-				var x: float = (e["pos"] as Vector2).x
-				(
-					assert_bool(box.position.x > x or box.end.x < x)
-					. override_failure_message(what + " covers its blip")
-					. is_true()
-				)
-		assert_int(chips).override_failure_message(str(c)).is_greater(2)
-		_drop(s)
+# FT: FT-STN-002, FT-WPN-002
+# R08-7: the chip rules of a small radar (inside it, near and clear of its blip, of the clock
+# numbers and of each other) live in test_hud_rules, for every radar a layout shows; here only
+# that Weapons' phone inset still has room for its chips.
+func test_small_radar_keeps_its_chips() -> void:
+	var s: StationScreen = await _screen(Vector2i(844, 390), "weapons", LANDSCAPE)
+	var r: DiscRadar = (s.focused_panel() as WeaponsPanel).touch().radar
+	assert_bool(r.small()).is_true()
+	var chips: int = 0
+	for e: Dictionary in r._layout():
+		chips += 1 if e["callout"] != "" else 0
+	assert_int(chips).is_greater(2)
+	_drop(s)
 
 
 # FT: FT-ENG-002, FT-ENG-003, FT-STN-005
@@ -377,8 +356,8 @@ func test_science_alone_upright_reaches_its_share_buttons() -> void:
 
 # FT: FT-STN-005, FT-JNT-001, FT-SCI-001, FT-RLY-001
 # Focused in a joint view on a phone, Science and Relay use their phone rails: on its side
-# Science draws its own radar and the screen's column hides; upright and on a desktop the
-# screen's radar stays the Science radar.
+# and upright (w-yk5) Science draws its own radar and the screen's column hides; on a desktop
+# the screen's radar stays the Science radar.
 func test_science_and_relay_use_their_rails_in_a_joint_view() -> void:
 	var sci: StationScreen = await _screen(Vector2i(844, 390), "survey", LANDSCAPE, 1)
 	var sp: SciencePanel = sci.focused_panel() as SciencePanel
@@ -390,8 +369,8 @@ func test_science_and_relay_use_their_rails_in_a_joint_view() -> void:
 	var up: StationScreen = await _screen(Vector2i(390, 844), "survey", PORTRAIT, 1)
 	var upp: SciencePanel = up.focused_panel() as SciencePanel
 	assert_object(upp.phone).is_not_null()
-	assert_bool(upp.own_radar()).is_false()
-	assert_bool(up.radar.is_visible_in_tree()).is_true()
+	assert_bool(upp.own_radar()).is_true()
+	assert_bool(up.radar.is_visible_in_tree()).is_false()
 	_drop(up)
 	var desk: StationScreen = await _screen(Vector2i(1280, 720), "survey", [], 1)
 	var dp: SciencePanel = desk.focused_panel() as SciencePanel

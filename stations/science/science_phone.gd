@@ -312,7 +312,11 @@ func update(minigame: int) -> void:
 		var src: Button = panel._buttons[k]
 		actions[k].text = _short(k, src.text)
 		actions[k].disabled = src.disabled
-	actions["hack"].disabled = not panel.can_open_hack()
+		actions[k].visible = src.visible
+	# Hack opens the sheet of the nearest hackable contact: it shows while there is one (or
+	# the hack step names it), never as a dead button (C3).
+	actions["hack"].visible = panel.can_open_hack() or panel.lesson_wants("sci_hack")
+	PhoneFrame.hide_empty_rows(actions.values())
 	var playing: bool = minigame != SciencePanel.MINIGAME_NONE
 	var scan: bool = minigame == SciencePanel.MINIGAME_SCAN
 	pages.minigame_title = panel.minigame_title() if playing else ""

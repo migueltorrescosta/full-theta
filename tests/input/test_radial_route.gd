@@ -52,3 +52,40 @@ func test_the_pad_diagram_does_not_call_radial_actions_unbound() -> void:
 	b.rebind("helm_radial", IntentTable.PAD, PackedStringArray())
 	m.build(b, ["helm"], IntentTable.PAD)
 	assert_array(m.unbound_here()).contains(["align"])
+
+
+# FT: FT-STN-011
+# R25-12: an action a sibling reaches is no "Not bound here": a pad's mounts, subsystems and
+# Captain views by the d-pad's previous / next, a keyboard's alert levels by the alert cycle,
+# its previous / next by the number keys, the radials and the axes by keys and the mouse.
+func test_actions_a_sibling_reaches_are_not_unbound() -> void:
+	var cases: Dictionary = {
+		IntentTable.PAD: {"weapons": [], "engineering": [], "captain": []},
+		IntentTable.KBM:
+		{"helm": [], "weapons": [], "engineering": [], "science": [], "relay": [], "captain": []},
+	}
+	for device: String in cases:
+		for st: String in cases[device]:
+			var m: ControlsModel = ControlsModel.new()
+			m.build(Bindings.new(), [st], device)
+			(
+				assert_array(m.unbound_here())
+				. override_failure_message("%s %s" % [device, st])
+				. is_empty()
+			)
+	# Mount 3 is one of the mounts and goes with them; with the d-pad's cycle unbound, all four
+	# are unbound again.
+	assert_array(ControlsModel.family("mount_3")).is_equal(
+		["mount_1", "mount_2", "mount_3", "mount_4", "mount_prev", "mount_next"]
+	)
+	assert_array(ControlsModel.family("alert_red")).contains(["alert_cycle", "alert_normal"])
+	assert_array(ControlsModel.family("fire")).is_empty()
+	var b: Bindings = Bindings.new()
+	b.rebind("mount_prev", IntentTable.PAD, PackedStringArray())
+	b.rebind("mount_next", IntentTable.PAD, PackedStringArray())
+	var pad: ControlsModel = ControlsModel.new()
+	pad.build(b, ["weapons"], IntentTable.PAD)
+	assert_array(pad.unbound_here()).contains(["mount_1", "mount_2", "mount_3", "mount_4"])
+	# Genuinely unbound pad actions stay listed.
+	pad.build(Bindings.new(), ["relay"], IntentTable.PAD)
+	assert_array(pad.unbound_here()).contains(["mark_rename", "main_view_1"])

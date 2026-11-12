@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## The in-game menu (FT-STN-011, P28 menu): Game, Controls (with Change keys) and Settings
+## The in-game menu (FT-STN-011, P28 menu): Game, Controls (with Change keys) and Display
 ## tabs; the Pause and Abandon controls change in place, never rebuilding the menu (load
 ## fix 2); Leave and the host's Abandon or Give up ask to confirm in place; a phone has no
 ## Change keys.
@@ -180,12 +180,78 @@ func test_the_controls_tab_shows_controls_then_change_keys() -> void:
 	assert_object(keys).is_not_null()
 	var first: Label = keys.find_child("Row_*", true, false).get_parent().get_child(1)
 	assert_str(first.text).is_equal(tr("settings.group_helm"))
-	for id: String in ["cycle_target", "fire", "approach"]:
-		(
-			assert_object(keys.find_child("Row_" + id, true, false))
-			. override_failure_message(id)
-			. is_not_null()
-		)
+	# ux-18: the seat's stations and the common actions; "Show all stations" adds the rest.
+	for id: String in ["approach", "menu", "ping", "mark", "alert_cycle", "share", "cycle_target"]:
+		assert_object(_row(keys, id)).override_failure_message(id).is_not_null()
+	for id: String in ["fire", "select", "focus_1", "radar_strip"]:
+		assert_object(_row(keys, id)).override_failure_message(id).is_null()
+	var all: CheckBox = keys.find_child("ShowAll", true, false)
+	assert_bool(all.visible).is_true()
+	all.button_pressed = true
+	assert_bool(m.controls_pane.all_stations).is_true()
+	for id: String in ["fire", "select", "focus_1", "radar_strip"]:
+		assert_object(_row(keys, id)).override_failure_message(id).is_not_null()
+	# The pane's own filter is the same switch.
+	(m.controls_pane.find_child(ControlsPane.ALL_STATIONS, true, false) as Button).toggled.emit(
+		false
+	)
+	assert_bool(all.button_pressed).is_false()
+	assert_object(_row(keys, "fire")).is_null()
+	# Outside a session there is no seat: every intent, no toggle.
+	var main: SettingsScreen = _menu(false)
+	main.open(SettingsScreen.TAB_CONTROLS)
+	var main_keys: Control = main.controls_pane.find_child("ChangeKeys", true, false)
+	assert_bool((main_keys.find_child("ShowAll", true, false) as Control).visible).is_false()
+	for id: String in ["fire", "select", "focus_1", "approach"]:
+		assert_object(_row(main_keys, id)).override_failure_message(id).is_not_null()
+
+
+## The live Change keys row of `id` (rebuilt rows are freed later), or null.
+func _row(keys: Control, id: String) -> Node:
+	var row: Node = keys.find_child("Row_" + id, true, false)
+	return row if row != null and not row.is_queued_for_deletion() else null
+
+
+# FT: FT-STN-017, FT-STN-011
+# ux-17: one Comfort switch; with it on, a collapsed Advanced group holds the roll lock, and
+# Set reference plane shows only in a session with the reference lock. The tab is called
+# Display, not Settings (R24-17).
+func test_comfort_is_one_switch_with_a_collapsed_advanced_group() -> void:
+	var m: SettingsScreen = _menu()
+	m.open(SettingsScreen.TAB_SETTINGS)
+	var tab: Control = m.tabs.get_node(SettingsScreen.TAB_SETTINGS)
+	assert_str(m.tabs.get_tab_title(tab.get_index())).is_equal("Display")
+	var on: CheckBox = tab.find_child("Comfort", true, false)
+	var more: Button = tab.find_child("Advanced", true, false)
+	var group: Control = tab.find_child("AdvancedGroup", true, false)
+	var reference: Control = tab.find_child("SetReference", true, false)
+	assert_bool(on.button_pressed).is_false()
+	assert_bool(more.visible or group.visible).is_false()
+	on.button_pressed = true
+	assert_bool(m.settings.comfort).is_true()
+	assert_bool(more.visible).is_true()
+	assert_str(more.text).is_equal("Show advanced")
+	assert_bool(group.visible).is_false()
+	more.button_pressed = true
+	assert_bool(group.visible).is_true()
+	assert_str(more.text).is_equal("Hide advanced")
+	assert_bool(reference.visible).is_false()
+	(tab.find_child("RollLock", true, false) as OptionButton).item_selected.emit(
+		ClientSettings.ROLL_LOCKS.find("reference")
+	)
+	assert_str(m.settings.roll_lock).is_equal("reference")
+	assert_bool(reference.visible).is_true()
+	on.button_pressed = false
+	assert_bool(more.visible or group.visible).is_false()
+	# Outside a session there is no deck to capture.
+	var main: SettingsScreen = _menu(false)
+	main.settings.comfort = true
+	main.settings.roll_lock = "reference"
+	main._build()
+	var main_tab: Node = main.tabs.get_node(SettingsScreen.TAB_SETTINGS)
+	(main_tab.find_child("Advanced", true, false) as Button).button_pressed = true
+	assert_bool((main_tab.find_child("AdvancedGroup", true, false) as Control).visible).is_true()
+	assert_bool((main_tab.find_child("SetReference", true, false) as Control).visible).is_false()
 
 
 # FT: FT-AUD-010
@@ -266,3 +332,31 @@ func test_the_game_tab_renames_the_player() -> void:
 	assert_str(m.settings.player_name).is_equal("Bea")
 	if FileAccess.file_exists(CFG):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(CFG))
+
+
+# FT: FT-STN-011
+# #28: on a touch layout the check boxes and the Advanced toggle are 44 px tall with a
+# bigger box, and the tabs are 44 px tall; on a desktop they keep the theme's sizes.
+func test_touch_layouts_get_44_px_check_boxes() -> void:
+	var m: SettingsScreen = _menu()
+	LayoutMode.forced = LayoutMode.Kind.TOUCH
+	m._fit_safe_area()
+	for n: String in ["Comfort", "Advanced", "ShowAll", "InvertPitch"]:
+		var c: Control = m.find_child(n, true, false)
+		assert_float(c.custom_minimum_size.y).override_failure_message(n).is_equal(
+			float(UiTheme.TOUCH_MIN)
+		)
+	var comfort: CheckBox = m.find_child("Comfort", true, false)
+	assert_int(comfort.get_theme_icon("unchecked").get_height()).is_equal(UiTheme.CHECK_ICON_TOUCH)
+	var tab: StyleBox = m.tabs.get_theme_stylebox("tab_selected")
+	var line: float = m.tabs.get_theme_font("font").get_height(
+		m.tabs.get_theme_font_size("font_size")
+	)
+	assert_float(line + tab.content_margin_top + tab.content_margin_bottom).is_greater_equal(
+		float(UiTheme.TOUCH_MIN)
+	)
+	LayoutMode.forced = LayoutMode.Kind.DESKTOP
+	m._fit_safe_area()
+	assert_float(comfort.custom_minimum_size.y).is_zero()
+	assert_bool(comfort.has_theme_icon_override("unchecked")).is_false()
+	assert_bool(m.tabs.has_theme_stylebox_override("tab_selected")).is_false()

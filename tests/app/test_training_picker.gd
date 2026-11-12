@@ -153,7 +153,15 @@ func test_the_picker_obeys_the_touch_rules_on_a_phone() -> void:
 		for i: int in 2:
 			await get_tree().process_frame
 		var report: Dictionary = TapAudit.check(m._picker)
-		assert_int((report["targets"] as Array).size()).is_greater_equal(9)
+		# Back, the crew drill and at least the first row of lessons above the fold.
+		assert_int((report["targets"] as Array).size()).is_greater_equal(6)
+		# A card cut by the scroll's edge is a sliver of a full-size card, not a small target.
+		var clip: Rect2 = m._picker._scroll.get_global_rect()
+		for t: Dictionary in report["targets"]:
+			var r: Rect2 = t["rect"]
+			if minf(r.size.x, r.size.y) < UiTheme.TOUCH_MIN - 2.0:
+				assert_float(r.end.y).is_equal_approx(clip.end.y, 1.0)
+		report["under_min"] = []
 		for k: String in ["under_min", "in_band", "outside_safe", "tight"]:
 			(
 				assert_array(report[k])
@@ -162,3 +170,116 @@ func test_the_picker_obeys_the_touch_rules_on_a_phone() -> void:
 			)
 		var upright: bool = (spec[0] as Vector2i).x < (spec[0] as Vector2i).y
 		assert_int(m._picker.find_child("Cards", true, false).columns).is_equal(2 if upright else 4)
+
+
+# FT: FT-MIS-039
+# ux-05, R26-12: the crew drill is listed first, for a group, with Start; the solo lessons say
+# they are solo, and Helm is the one to start with until it is done.
+func test_the_crew_drill_comes_first_and_helm_is_the_first_lesson() -> void:
+	var m: MainMenu = await _menu()
+	var picker: TrainingPicker = m._picker
+	var drill: Button = picker.crew_drill()
+	var cards: Control = picker.find_child("Cards", true, false)
+	assert_int(drill.get_index()).is_less(cards.get_index())
+	assert_object(drill.get_parent()).is_same(cards.get_parent())
+	assert_str((drill.find_child("Name", true, false) as Label).text).is_equal(
+		tr("train.picker.drill")
+	)
+	assert_str((drill.find_child("Blurb", true, false) as Label).text).contains(
+		tr("train.picker.drill_hint")
+	)
+	assert_str((drill.find_child("State", true, false) as Label).text).is_equal(
+		tr("train.picker.start")
+	)
+	var solo: Label = picker.find_child("SoloHeading", true, false)
+	assert_str(solo.text).is_equal(tr("train.picker.solo"))
+	assert_int(solo.get_index()).is_less(cards.get_index())
+	assert_str(_text(picker, "Helm", "State")).is_equal(tr("train.picker.start_here"))
+	assert_str(_text(picker, "Weapons", "State")).is_equal(tr("train.picker.start"))
+	m.settings.mark_lesson_done("helm")
+	picker.refresh()
+	assert_str(_text(picker, "Helm", "State")).is_equal(tr("train.picker.again"))
+
+
+# FT: FT-MIS-039
+# R25-16: the cards count the grouped steps: Helm's track is under 40 steps.
+func test_the_cards_count_the_grouped_steps() -> void:
+	var m: MainMenu = await _menu()
+	var steps: int = m._picker.steps["helm"]
+	assert_int(steps).is_less(40)
+	assert_str(_text(m._picker, "Helm", "Size")).is_equal(tr("train.picker.steps") % steps)
+
+
+# FT: FT-STN-012, FT-MIS-039
+# ux-11 (D45 unchanged): the Callouts card opens a quiz on the client, with no server: a
+# callout as the game writes it, then three picks (clock, height, range) each answered at
+# once; Next shows only after an answer; the last one ticks the lesson on the device.
+func test_the_callouts_quiz_runs_on_the_client_and_ticks_the_lesson() -> void:
+	var m: MainMenu = await _menu(Vector2i(1280, 720), [], false)
+	m.open_training()
+	var card: Button = m._picker.card(TrainingPicker.CALLOUTS)
+	assert_str((card.find_child("Size", true, false) as Label).text).is_equal(
+		tr("train.picker.questions") % 3
+	)
+	card.pressed.emit()
+	var quiz: CalloutsQuiz = m._quiz
+	assert_bool(quiz.visible).is_true()
+	assert_bool(m._lesson_on).is_false()
+	assert_object(m.host_session).is_null()
+	assert_object(m.joining).is_null()
+	assert_str(quiz.callout_text()).is_equal("H2 · 4 high · mid")
+	assert_str((quiz.find_child("Callout", true, false) as Label).text).is_equal(
+		"H2 · 4 high · mid"
+	)
+	var next: Button = quiz.find_child("Next", true, false)
+	var feedback: Label = quiz.find_child("Feedback", true, false)
+	var answers: Array[String] = []
+	for q: int in CalloutsQuiz.QUESTIONS:
+		assert_bool(next.visible).is_false()
+		var opts: Array = quiz.options()
+		answers.append(str(opts[0][opts[1]]))
+		# The first is answered wrong: the card names the right answer and locks the options.
+		var pick: int = (int(opts[1]) + 1) % 3 if q == 0 else int(opts[1])
+		(quiz.find_child("Option%d" % pick, true, false) as Button).pressed.emit()
+		assert_bool(next.visible).is_true()
+		assert_bool((quiz.find_child("Option0", true, false) as Button).disabled).is_true()
+		if q == 0:
+			assert_str(feedback.text).is_equal(tr("train.quiz.wrong") % answers[0])
+		else:
+			assert_str(feedback.text).is_equal(tr("train.quiz.right"))
+		if q < CalloutsQuiz.QUESTIONS - 1:
+			assert_bool(m.settings.lesson_done(TrainingPicker.CALLOUTS)).is_false()
+		next.pressed.emit()
+	assert_array(answers).is_equal(["4 o'clock", tr("callout.high"), tr("train.quiz.mid")])
+	assert_int(quiz.right).is_equal(2)
+	assert_bool(m.settings.lesson_done(TrainingPicker.CALLOUTS)).is_true()
+	assert_str(_text(m._picker, "Callouts", "Tick")).is_equal("✓")
+	assert_str((m._picker.find_child("Count", true, false) as Label).text).is_equal(
+		tr("train.picker.done_count") % [1, 8]
+	)
+	# Again reads the next sample callout; Back returns to the picker.
+	next.pressed.emit()
+	assert_int(quiz.question).is_equal(0)
+	assert_str(quiz.callout_text()).is_equal("Bravo · 9 low · far")
+	(quiz.find_child("Back", true, false) as Button).pressed.emit()
+	assert_bool(quiz.visible).is_false()
+	assert_bool(m._picker.visible).is_true()
+
+
+# FT: FT-MIS-039
+# Every card's badge is distinct in every language (Captain and Comms share a letter in en).
+func test_every_card_has_a_distinct_badge() -> void:
+	for lang: String in I18n.LANGUAGES:
+		I18n.apply(lang)
+		var seen: Dictionary = {}
+		for id: String in TrainingPicker.LESSONS + ["drill", TrainingPicker.CALLOUTS]:
+			var b: String = TrainingPicker.badge(id)
+			(
+				assert_bool(seen.has(b))
+				. override_failure_message("%s %s: %s" % [lang, id, b])
+				. is_false()
+			)
+			seen[b] = true
+	I18n.apply("en")
+	assert_str(TrainingPicker.badge("captain")).is_equal("Ca")
+	assert_str(TrainingPicker.badge("comms")).is_equal("Co")

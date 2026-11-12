@@ -91,7 +91,7 @@ func test_launch_arms_the_next_click_and_the_stock_is_finite() -> void:
 	s.ctx.snap.blocks[StationCatalogue.Section.RELAY] = _block(2, false, out)
 	p.refresh()
 	assert_str(p.hud._probes.text).is_equal("Probes: 2 left, 1 out")
-	assert_bool(p.hud.launch.disabled).is_false()
+	assert_bool(p.hud.launch.visible).is_true()
 	p.hud.launch.pressed.emit()
 	assert_str(p.armed).is_equal("probe")
 	assert_str(p._hint.text).contains("Probe")
@@ -101,10 +101,12 @@ func test_launch_arms_the_next_click_and_the_stock_is_finite() -> void:
 	assert_str(cmds[0][0]["kind"]).is_equal("launch_probe")
 	assert_bool(is_finite(float(cmds[0][0]["z"]))).is_true()
 	assert_str(p.armed).is_equal("")
-	# Out of stock: the button is off, the key toasts.
+	# Out of stock: the button hides (no dead button, C3; the line says "0 left"), the key
+	# toasts.
 	s.ctx.snap.blocks[StationCatalogue.Section.RELAY] = _block(0, false, out)
 	p.refresh()
-	assert_bool(p.hud.launch.disabled).is_true()
+	assert_bool(p.hud.launch.visible).is_false()
+	assert_str(p.hud._probes.text).is_equal("Probes: 0 left, 1 out")
 	var toasts: Array = []
 	s.ctx.crew.toast.connect(func(key: String, _a: Dictionary) -> void: toasts.append(key))
 	p._place("probe", Vector3.ZERO)
@@ -243,12 +245,16 @@ func test_inbox_accept_decline_and_send() -> void:
 	s.ctx.crew.toast.connect(func(key: String, _a: Dictionary) -> void: toasts.append(key))
 	assert_bool(p.handle_intent(_ev("accept", s))).is_false()
 	assert_str(p.hud._mail.text).is_equal("No marks waiting")
+	# Nothing waiting: no Accept or Decline to press (C3).
+	assert_bool(p.hud.accept.visible).is_false()
+	assert_bool(p.hud.decline.visible).is_false()
 	var item: Dictionary = {
 		"id": 7, "from_ship": ALLY, "from": "Wren", "name": "Rock", "x": 1.0, "y": 2.0, "z": 3.0
 	}
 	_event(s, "inbox", {"ship": SHIP, "items": [item, item.merged({"id": 8})]})
 	assert_str(p.hud._mail.text).is_equal("Incoming: Rock from Wren (Relay) +1")
-	assert_bool(p.hud.accept.disabled).is_false()
+	assert_bool(p.hud.accept.visible).is_true()
+	assert_bool(p.hud.decline.visible).is_true()
 	p.handle_intent(_ev("accept", s))
 	assert_array(_sent(s, "accept_mark")).is_equal([[7, -1]])
 	p.hud.decline.pressed.emit()
@@ -276,7 +282,8 @@ func test_inbox_accept_decline_and_send() -> void:
 	assert_array(_sent(s, "accept_mark")[1]).is_equal([7, 5])
 	# SEND: the ally is listed and the selected mark goes to it.
 	assert_int(p.hud.send_target()).is_equal(ALLY)
-	assert_bool(p.hud.send.disabled).is_false()
+	assert_bool(p.hud.send.visible).is_true()
+	assert_bool(p.hud.send_to.visible).is_true()
 	p.hud.send.pressed.emit()
 	assert_array(_sent(s, "send_mark")).is_equal([[5, ALLY]])
 	p.handle_intent(_ev("mark_send", s))
@@ -646,3 +653,25 @@ func test_probe_bubbles_are_selectable_and_pingable_zones() -> void:
 	s.ctx.crew.select("zone", 4)
 	_event(s, "zones", {"ship": SHIP, "zones": []})
 	assert_bool(s.ctx.crew.selection.is_empty()).is_true()
+
+
+# FT: FT-STN-005
+# A short HUD (150 %) says what waits even with no button row: "No marks waiting" under the
+# heading; with Accept and Decline showing, the heading carries the waiting mark.
+func test_a_short_inbox_still_reads() -> void:
+	var s: StationScreen = await _screen()
+	var p: RelayPanel = _relay(s)
+	p.hud.set_short(true)
+	p.refresh()
+	assert_bool(p.hud._mail.visible).is_true()
+	assert_str(p.hud._mail.text).is_equal("No marks waiting")
+	var item: Dictionary = {
+		"id": 7, "from_ship": ALLY, "from": "Wren", "name": "Rock", "x": 1.0, "y": 2.0, "z": 3.0
+	}
+	_event(s, "inbox", {"ship": SHIP, "items": [item]})
+	p.refresh()
+	assert_bool(p.hud.accept.visible).is_true()
+	assert_bool(p.hud._mail.visible).is_false()
+	assert_str(p.hud._inbox_heading.text).contains("Rock from Wren")
+	p.hud.set_short(false)
+	assert_bool(p.hud._mail.visible).is_true()

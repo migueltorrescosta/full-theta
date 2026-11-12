@@ -7,7 +7,8 @@ extends RefCounted
 ##
 ## A part is {"id", "shape" ("rect", "round" or "circle"), "rect", "caption"}. Its `id`
 ## is the binding token that lands on it ("W", "Kp 1", "LMB", "LB", "Up"); "" for
-## decorative parts. Several parts may share an id (the two Shift keys): the first is
+## decorative parts. "?" has no part: it is whichever key types it
+## (ControlsModel.typed, R25-14). Several parts may share an id (the two Shift keys): the first is
 ## the callout anchor. `body` is the outline drawn behind the parts.
 
 ## The hardware zone's width and the keyboard's key pitch.
@@ -95,7 +96,7 @@ static func _kbm(dy: float) -> Dictionary:
 	_letters(parts, "ZXCVBNM", 2.25, 4.5)
 	parts.append(_key("Comma", 9.25, 4.5, 1, ","))
 	parts.append(_key("Period", 10.25, 4.5, 1, "."))
-	parts.append(_key("?", 11.25, 4.5))
+	parts.append(_key("Slash", 11.25, 4.5, 1, "/"))
 	parts.append(_key("Shift", 12.25, 4.5, 2.75))
 	# Space row.
 	parts.append(_key("Ctrl", 0, 5.5, 1.25))

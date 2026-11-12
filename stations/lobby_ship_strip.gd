@@ -5,34 +5,43 @@ extends ScrollContainer
 ## the gesture band. The buttons share one width (the widest label's, or stretched so the
 ## whole buttons that fit fill the row), so none shows cut at the edge before the player
 ## scrolls; the chosen ship scrolls into view. A finger drags the row over the buttons
-## (they pass the drag on). Off a phone the buttons go back to the lobby's flow.
+## (they pass the drag on). When some don't fit, the next one peeks in at the edge (a
+## PEEK of its width) instead of a scrollbar. Off a phone the buttons go back to the lobby's
+## flow.
+
+## The share of a button that peeks in at the edge when more ships scroll.
+const PEEK: float = 0.4
 
 ## The row of buttons inside.
 var row: HBoxContainer = HBoxContainer.new()
+## The buttons live here (a phone); the lobby shows the strip only with a second ship.
+var on: bool = false
 
 
 func _init() -> void:
 	name = "ShipScroll"
 	vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
 	size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	visible = false
 	row.name = "ShipStrip"
 	add_child(row)
 
 
-## Moves the ship buttons and `new_ship` between the lobby's `flow` and the strip.
-func use(phone: bool, flow: Container, new_ship: Button) -> void:
+## Moves the ship buttons between the lobby's `flow` and the strip.
+func use(phone: bool, flow: Container) -> void:
 	var from: Container = flow if phone else row
 	var to: Container = row if phone else flow
 	var moving: Array[Button] = []
 	for c: Node in from.get_children():
-		if str(c.name).begins_with("Ship_") or c == new_ship:
+		if str(c.name).begins_with("Ship_"):
 			moving.append(c as Button)
 	for i: int in moving.size():
 		from.remove_child(moving[i])
 		to.add_child(moving[i])
 		to.move_child(moving[i], i)
 		adopt(moving[i], phone)
+	on = phone
 	visible = phone
 
 
@@ -58,11 +67,13 @@ func fit(width: float) -> void:
 			w = maxf(w, ceilf(text.x + b.get_theme_stylebox("normal").get_minimum_size().x))
 	var gap: float = UiTheme.TOUCH_GAP
 	var n: int = clampi(floori((width + gap) / (w + gap)), 1, maxi(buttons.size(), 1))
-	if n < buttons.size():
-		# Some scroll: the whole buttons that fit share the full width.
-		w = floorf((width - (n - 1) * gap) / n)
+	var peek: bool = n < buttons.size()
+	if peek:
+		# Some scroll: the whole buttons that fit and a peek of the next share the width.
+		n = maxi(1, floori((width - PEEK * w) / (w + gap)))
+		w = floorf((width - n * gap) / (n + PEEK))
 	for b: Button in buttons:
 		b.custom_minimum_size = Vector2(w, UiTheme.TOUCH_PRIMARY)
 		if b.button_pressed:
 			ensure_control_visible.call_deferred(b)
-	custom_minimum_size.x = n * w + (n - 1) * gap
+	custom_minimum_size.x = width if peek else n * w + (n - 1) * gap

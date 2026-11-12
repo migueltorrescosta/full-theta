@@ -140,12 +140,10 @@ func _apply_form() -> void:
 			screen.rotate_banner.label.text = TouchText.of(
 				HelmTouch.ROTATE_KEY, HelmTouch.ROTATE_TEXT
 			)
-	# In the frame with the phone layout only. Upright, a joint view keeps its docked panels
-	# (the lead's call), which leave the cockpit too short for the view-top row: there Helm
-	# keeps the chip strip.
-	var screen_now: StationScreen = screen()
-	var docked_upright: bool = portrait and screen_now != null and screen_now.panels.size() >= 2
-	in_frame = touch_ui != null and not docked_upright
+	# In the frame with the phone layout only, its Crew page holding the share buttons
+	# (w-yk5: no second set behind the share opener).
+	in_frame = touch_ui != null
+	shows_shares = touch_ui != null
 	var inset: float = touch_ui.view_bottom_inset() if touch_ui != null else 0.0
 	_container.offset_bottom = -inset
 	hud.offset_bottom = -inset
@@ -161,11 +159,15 @@ func _apply_tablet() -> void:
 		func() -> void:
 			remove_child(tablet_ui)
 			tablet_ui.queue_free()
-			tablet_ui = null,
+			tablet_ui = null
+			share_home = null
+			share_home_width = 0.0,
 		func(portrait: bool) -> TabletDock:
 			tablet_ui = HelmTouch.new(self, _dispatch, portrait, true)
 			add_child(tablet_ui)
 			_captured = false
+			share_home = tablet_ui.share_home
+			share_home_width = TabletDock.inner_width()
 			return tablet_ui.dock
 	)
 
@@ -177,7 +179,7 @@ func _show_pages() -> void:
 	if screen == null or not screen.is_inside_tree() or screen.focused_panel() != self:
 		return
 	var form_now: LayoutMode.Form = LayoutMode.form_of(screen)
-	var alone: bool = screen.panels.size() >= 2 and form_now == LayoutMode.Form.PHONE_LANDSCAPE
+	var alone: bool = screen.panels.size() >= 2 and LayoutMode.is_phone(form_now)
 	screen.frame.show_tabs(form_now, alone)
 
 
@@ -260,7 +262,43 @@ func _place_ring(compact: bool) -> void:
 		var top: float = hud.area().position.y + (90.0 if size.x < 520.0 else 8.0)
 		ring.position = Vector2(size.x - ring.size.x - 8.0, top)
 	else:
-		ring.position = Vector2(size.x - ring.size.x - 12.0, (size.y - ring.size.y) / 2.0)
+		_mode_changed_ring()
+		var y: float = (size.y - ring.size.y) / 2.0
+		var inset: Rect2 = radar_inset_rect()
+		if inset.has_area():
+			# Under a tablet's radar inset (C14).
+			y = maxf(y, inset.end.y + UiTheme.TOUCH_GAP)
+		var x: float = size.x - ring.size.x - 12.0
+		# Where it would meet the target compass (a narrow view, 150 %: w-dcc) the ring takes
+		# its small size, centred, then moves up as little as it must; never over the inset.
+		# (docked, the HUD draws its compact compass and read-out instead: nothing to clear)
+		var open_view: bool = focused
+		if open_view and _meets_compass(Rect2(x, y, ring.size.x, ring.size.y)):
+			ring.size = Vector2(190.0, 110.0 + 2.0 * ShieldRing.FONT_SIZE)
+			x = size.x - ring.size.x - 12.0
+			y = (size.y - ring.size.y) / 2.0
+			if inset.has_area():
+				y = maxf(y, inset.end.y + UiTheme.TOUCH_GAP)
+		for box: Rect2 in hud.compass_boxes() if open_view else []:
+			if Rect2(x, y, ring.size.x, ring.size.y).intersects(box.grow(UiTheme.TOUCH_GAP)):
+				y = box.position.y - UiTheme.TOUCH_GAP - ring.size.y
+		if inset.has_area():
+			y = maxf(y, inset.end.y + UiTheme.TOUCH_GAP)
+		ring.position = Vector2(x, maxf(y, 0.0))
+
+
+func _meets_compass(r: Rect2) -> bool:
+	for box: Rect2 in hud.compass_boxes():
+		if r.intersects(box.grow(UiTheme.TOUCH_GAP)):
+			return true
+	return false
+
+
+## The tablet's radar inset in this panel's coordinates while it shows (C14), else empty.
+func radar_inset_rect() -> Rect2:
+	if tablet_ui == null or not tablet_ui.radar_box.visible:
+		return Rect2()
+	return tablet_ui.radar_box.get_rect()
 
 
 # --- Intents. ---
@@ -345,17 +383,64 @@ func _jump() -> void:
 	ctx.intents.command(cmd)
 
 
-## H: undock when docked, else dock at the selected site (FT-HLM-013).
+## H: undock when docked, else dock at _dock_site() (FT-HLM-013); with no dock to go to (only
+## a key reaches that: the rails show Dock only near one, C3) a toast says so.
 func _dock() -> void:
-	if int(helm_block().get("docked_site", -1)) >= 0:
+	if at_dock():
 		ctx.intents.command({"kind": "helm_undock"})
 		return
-	var s: Dictionary = ctx.crew.selection
-	var site: Dictionary = ctx.picture().find(s)
-	if s.get("kind", "") != "site" or not bool(site.get("dockable", false)):
-		ctx.crew.toast.emit("toast.dock_select", {})
+	var site: int = _dock_site()
+	if site < 0:
+		ctx.crew.toast.emit("toast.dock_none", {})
 		return
-	ctx.intents.command({"kind": "helm_dock", "site_id": int(s["id"])})
+	ctx.intents.command({"kind": "helm_dock", "site_id": site})
+
+
+## True while the HELM block says the ship is docked.
+func at_dock() -> bool:
+	return int(helm_block().get("docked_site", -1)) >= 0
+
+
+## The site Dock docks at: the selected dockable site while the ship is in its zone, else the
+## nearest dockable site whose zone (radius) holds the ship, else the selected dockable site
+## however far (the sim checks the dock range and speed); -1 for none.
+func _dock_site() -> int:
+	var near: int = near_dock()
+	var sel: Dictionary = ctx.picture().find(ctx.crew.selection)
+	if sel.get("kind", "") != "site" or not bool(sel.get("dockable", false)):
+		return near
+	if near < 0 or _in_zone(sel):
+		return int(sel["id"])
+	return near
+
+
+## The nearest dockable site whose zone holds the ship, or -1: the rails show Dock only then
+## (or while docked, to undock; C3, ux-07).
+func near_dock() -> int:
+	var best: int = -1
+	var best_d: float = INF
+	for it: Dictionary in ctx.picture().sites:
+		var d: float = (it["world"] as Vector3).length()
+		if bool(it.get("dockable", false)) and _in_zone(it) and d < best_d:
+			best_d = d
+			best = int(it["id"])
+	return best
+
+
+## A jump target is selected (a named site, or a mark that is still there): the rails show
+## Jump only then (C3, ux-07).
+func has_jump_target() -> bool:
+	var s: Dictionary = ctx.crew.selection
+	match s.get("kind", ""):
+		"site":
+			return true
+		"mark":
+			return not ctx.crew.mark_in_slot(int(s["id"])).is_empty()
+	return false
+
+
+static func _in_zone(site: Dictionary) -> bool:
+	return (site["world"] as Vector3).length() <= float(site.get("radius", 0.0))
 
 
 ## Sends helm_select when the shared selection (or the selected free mark's
@@ -513,9 +598,10 @@ func marks_attach_only() -> bool:
 	return focused
 
 
-## A phone drops the radar column: the radar is a page (#28).
+## A phone drops the radar column: the radar is a page (#28); a tablet's rails too: the
+## radar is an inset in the view's corner (C14).
 func full_screen() -> bool:
-	return is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self))
+	return tablet_ui != null or (is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self)))
 
 
 ## The part of the view the HUD may draw its read-outs in, in `control`'s coordinates:
@@ -665,11 +751,12 @@ static func touch_help() -> Array:
 		var boxes: Array = []
 		for c: Array in (persistent if p == HelmTouch.PAGE_FLY else []) + pages[p]:
 			var key: String = c[0]
-			var text: String = (
-				TouchText.t("touch.helm.help." + key)
-				if key in texts
-				else TouchText.t(IntentTable.label_key(key))
-			)
+			var text: String = TouchText.t(IntentTable.label_key(key))
+			if key == "radar":
+				# (one text with Weapons' radar inset, R05-13)
+				text = TouchText.t("help.radar")
+			elif key in texts:
+				text = TouchText.t("touch.helm.help." + key)
 			boxes.append(TouchText.named(c[1], text))
 		out.append({"page": titles[p], "boxes": boxes})
 	return out

@@ -33,6 +33,42 @@ const NOT_BUTTONS: Array[String] = [
 	"intent.route_clear",
 	"sci.short_active",
 	"touch.fullscreen_exit",
+	# The selection sheet's options: the sheet opens from the target's name (C4).
+	"intent.ping",
+	"sheet.mark_here",
+	# Shown only while they can work or their own step is on (C3, StationPanel.lesson_wants;
+	# tests/stations/helm/test_helm_tablet.gd checks that the step shows them).
+	"touch.helm.dock",
+	# Requests are picked in the sheet Ask opens (ux-13, PhoneFrame.open_request_sheet).
+	"chip.boost",
+	"chip.power",
+	"chip.sensor_power",
+	"chip.fabricate_probe",
+	"comms.hold_fire",
+	"eng.touch.cause",
+	"eng.touch.claim",
+	"touch.helm.jump",
+	"weapons.touch_claim",
+	# (test_a_step_shows_the_hidden_control_it_names checks these.)
+	"comms.claim",
+	"sci.claim",
+	"sci.hack",
+	"relay.launch",
+	"relay.accept",
+	"relay.decline",
+	"relay.send_to",
+]
+## [station, intent, the control's name key] of the controls that hide while they can't act
+## (C3) and that a Shakedown step names: the step shows them.
+const LESSON_SHOWS: Array = [
+	["comms", "claim", "comms.claim"],
+	["science", "claim", "sci.claim"],
+	["science", "sci_hack", "sci.hack"],
+	["relay", "claim", "relay.launch"],
+	["relay", "probe_launch", "relay.launch"],
+	["relay", "accept", "relay.accept"],
+	["relay", "decline", "relay.decline"],
+	["relay", "mark_send", "relay.send_to"],
 ]
 
 var _vp: SubViewport
@@ -181,6 +217,42 @@ func test_every_control_a_step_names_is_on_the_stations_phone_screen() -> void:
 	)
 
 
+# FT: FT-STN-005
+# C3: a control hidden while it can't act (Claim with one player, Hack without access, Launch
+# with no probe, Accept and Decline with nothing waiting, Send with no ally) shows while a
+# Shakedown step names it, on a phone either way up and on a tablet, and hides again after.
+func test_a_step_shows_the_hidden_control_it_names() -> void:
+	var missing: Array[String] = []
+	for c: Array in LESSON_SHOWS:
+		for form: Array in FORMS:
+			var s: StationScreen = await _screen(c[0], form)
+			var here: String = "%s %s %s" % [c[0], c[1], form[0]]
+			# (a tablet's HUD says "Send >" where a phone says "Send ▸")
+			var label: String = tr(c[2]).trim_suffix(" ▸")
+			if _shown(s, label):
+				missing.append(here + ": shown before the step")
+			s.ctx.training[c[0]] = {
+				"line": "", "intent": c[1], "text": "", "example": "", "done": false
+			}
+			await _frames(3)
+			if not _shown(s, label):
+				missing.append(here + ": hidden during the step")
+			s.ctx.training.erase(c[0])
+			await _frames(3)
+			if _shown(s, label):
+				missing.append(here + ": still shown after the step")
+			s.queue_free()
+			_vp.queue_free()
+	assert_array(missing).override_failure_message("%s" % [missing]).is_empty()
+
+
+## Whether a visible tap target of the screen's current page starts with `label`.
+func _shown(s: StationScreen, label: String) -> bool:
+	return TapAudit.targets(s).any(
+		func(t: Dictionary) -> bool: return str(t["text"]).begins_with(label)
+	)
+
+
 func _raw(key: String) -> String:
 	I18n.apply("en")
 	var t: String = TranslationServer.translate(key)
@@ -196,7 +268,7 @@ func test_a_touch_layout_gets_touch_words_and_a_desktop_gets_keys() -> void:
 	s.training.refresh()
 	await _frames(2)
 	assert_bool(s.training.touch_wording()).is_true()
-	assert_str(s.training._example.text).contains("All stop")
+	assert_str(s.training._text.text).contains("All stop")
 	assert_bool("{" in s.training._text.text).is_false()
 	assert_str(s.training._next.text).is_equal("Next")
 	# A pad in use gets the pad's words (only with a pad connected).
@@ -215,7 +287,7 @@ func test_a_touch_layout_gets_touch_words_and_a_desktop_gets_keys() -> void:
 	d.training.refresh()
 	assert_bool(d.training.touch_wording()).is_false()
 	assert_str(d.training._next.text).contains("(")
-	assert_str(d.training._example.text).contains("All stop")
+	assert_str(d.training._text.text).contains("All stop")
 
 
 # FT: FT-MIS-039
@@ -224,17 +296,28 @@ func test_the_card_folds_to_one_line_and_back() -> void:
 	_show_step(s, "weapons", "fire")
 	await _frames(6)
 	var card: TrainingBanner = s.training
-	assert_bool(card._example.visible).is_true()
+	assert_bool(card._text.clip_text).is_false()
 	var tall: float = card.size.y
 	card._fold.pressed.emit()
 	await _frames(6)
-	assert_bool(card._example.visible).is_false()
+	# Folded, the step reads in up to two wrapped lines beside Next.
+	assert_int(card._text.max_lines_visible).is_equal(2)
 	assert_float(card.size.y).is_less(tall)
 	assert_bool(card._next.visible).is_true()
 	assert_bool(card._next.is_visible_in_tree()).is_true()
+	# A step that needs more than the folded row never folds by itself, so it is never cut.
+	card._folded = false
+	card._text.text = "Tap a part's column, then Add power, then tap Next to go on."
+	card._width = TrainingBanner.WIDTHS[-1]
+	card._squeezed = true
+	assert_bool(card._folded_fits()).is_false()
+	card._text.text = "Tap Next."
+	assert_bool(card._folded_fits()).is_true()
+	card._squeezed = false
+	card._folded = true
 	card._fold.pressed.emit()
 	await _frames(6)
-	assert_bool(card._example.visible).is_true()
+	assert_int(card._text.max_lines_visible).is_equal(-1)
 
 
 # --- the card covers nothing -----------------------------------------------------------

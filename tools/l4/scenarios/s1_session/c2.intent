@@ -19,6 +19,7 @@ expect_rejected id=aim2 reason=paused   # the holder passes the claim check; the
 barrier name=c2_claimed n=3
 barrier name=checked n=3
 pick ship=0 seat=ops
+ready
 barrier name=covered n=3
 expect_event type=started payload.ship=0
 barrier name=started n=3

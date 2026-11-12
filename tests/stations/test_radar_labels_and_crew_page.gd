@@ -1,6 +1,7 @@
 extends GdUnitTestSuite
-## C11 (R22-8, R22-10, R26-6): the radar's two boxes say what they are, every station's Crew
-## page starts with Ping and Mark, and the radar legend shows once per client.
+## C11 (R22-8, R26-6): the radar's two boxes say what they are, every station's Crew page
+## holds its shares only (C4: Ping and Mark are on the selection sheet; ux-13: requests at
+## the top of the view), and the radar legend shows once per client.
 
 const SETTINGS: String = "user://test_radar_labels.cfg"
 
@@ -34,16 +35,44 @@ func test_radar_boxes_are_labelled() -> void:
 	assert_str(SiteBanner.text({"label": "Kappa"})).is_equal("Zone: Kappa")
 
 
-# FT: FT-STN-012
-# Ping and Mark are the first two buttons of every station's Crew page; a station's own
-# requests follow them.
-func test_crew_pages_start_with_ping_and_mark() -> void:
-	for seat: String in ["science", "comms", "relay"]:
+# FT: FT-STN-012, FT-PAIR-007
+# Every station's Crew page holds its Share buttons and nothing else: no Ping, no Mark, no
+# request chip.
+func test_crew_pages_hold_the_shares_only() -> void:
+	for seat: String in ["science", "comms", "relay", "engineering", "helm", "weapons"]:
 		var s: StationScreen = await _screen(seat)
 		var page: CrewPage = CrewPage.new(s.focused_panel())
 		var kinds: Array = page.entries().map(func(e: Array) -> String: return str(e[0]))
-		assert_array(kinds.slice(0, 2)).override_failure_message(seat).is_equal(["ping", "mark"])
+		if seat in ["science", "relay"]:
+			assert_array(kinds).override_failure_message(seat).is_not_empty()
+		assert_array(kinds.filter(func(k: String) -> bool: return k != "share")).is_empty()
 		page.free()
+
+
+# FT: FT-STN-012, FT-STN-005, FT-PAIR-007
+# The Crew page rebuilds its buttons only when what it shows changes (R20-12): a frame with
+# nothing new keeps the same buttons and fits nothing again; a share's seconds left update
+# the text in place.
+func test_crew_page_refits_only_on_a_change() -> void:
+	var s: StationScreen = await _screen("relay")
+	var host: VBoxContainer = auto_free(VBoxContainer.new())
+	host.size = Vector2(300, 300)
+	add_child(host)
+	var page: CrewPage = CrewPage.new(s.focused_panel())
+	host.add_child(page)
+	page.refresh()
+	await get_tree().process_frame
+	page.refresh()
+	var first: RailButton = page.button("share")
+	var fitted: Array = page._fitted
+	page.refresh()
+	assert_object(page.button("share")).is_same(first)
+	assert_bool(page._fitted == fitted).is_true()
+	var id: String = page.entries()[0][1]
+	s.ctx.crew.shares[StringName(id)] = s.ctx.now_ms() + 12000
+	page.refresh()
+	assert_object(page.button("share")).is_same(first)
+	assert_str(first.text).ends_with("· 12 s")
 
 
 # FT: FT-STN-012
@@ -70,8 +99,8 @@ func test_radar_legend_shows_once_and_a_tap_closes_it() -> void:
 
 
 # FT: FT-STN-012
-# w5: on a first visit the controls chip, the contact-label legend and the radar legend
-# stack top down, none over another, for Science, Relay and Comms.
+# On a first visit the first-seat card shows alone; the radar legend waits until it is closed,
+# so the two never open together, for Science, Relay and Comms.
 func test_first_visit_chips_stack_without_overlap() -> void:
 	for seat: String in ["science", "relay", "comms"]:
 		var ctx: StationContext = StationFixture.context(seat, SETTINGS)
@@ -83,21 +112,14 @@ func test_first_visit_chips_stack_without_overlap() -> void:
 		s.size = Vector2(1280, 720)
 		for i: int in 4:
 			await get_tree().process_frame
-		var chips: Array[Control] = []
-		for n: String in ["ControlsHint", "ControlsLegendHint", "RadarLegend"]:
-			var c: Control = s.find_child(n, true, false)
-			assert_object(c).override_failure_message("%s %s" % [seat, n]).is_not_null()
-			chips.append(c)
-		for i: int in 2:
-			var upper: Rect2 = chips[i].get_global_rect()
-			var lower: Rect2 = chips[i + 1].get_global_rect()
-			(
-				assert_float(lower.position.y)
-				. override_failure_message(
-					"%s: %s under %s" % [seat, chips[i + 1].name, chips[i].name]
-				)
-				. is_greater_equal(upper.end.y)
-			)
+		assert_object(s.first_seat_card()).override_failure_message(seat).is_not_null()
+		assert_object(s.find_child("RadarLegend", true, false)).is_null()
+		assert_bool(ctx.settings.hint_seen(ControlsHint.RADAR_KEY)).is_false()
+		s.first_seat_card().dismiss()
+		for i: int in 3:
+			await get_tree().process_frame
+		var legend: Control = s.find_child("RadarLegend", true, false)
+		assert_object(legend).override_failure_message(seat).is_not_null()
 		s.queue_free()
 		await get_tree().process_frame
 		if FileAccess.file_exists(SETTINGS):

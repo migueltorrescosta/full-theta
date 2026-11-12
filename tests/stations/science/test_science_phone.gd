@@ -74,6 +74,7 @@ func _table(p: SciencePanel) -> Array:
 		return func() -> BaseButton: return p.phone.actions[k]
 	var c: Callable = func(kind: String, id: String) -> Callable:
 		return func() -> BaseButton: return p.phone.crew.button(kind, id)
+	var chip: Callable = func() -> BaseButton: return p.screen().frame.selection_bar.name_button
 	return [
 		["Scan", 0, a.call("scan"), -1, 1, ["command", "science_scan"]],
 		["Hack (choose subsystem)", 0, a.call("hack"), 0, 2, ["command", "science_hack"]],
@@ -82,10 +83,9 @@ func _table(p: SciencePanel) -> Array:
 		["Passive / active", 0, a.call("mode"), -1, 1, ["command", "science_sensor_mode"]],
 		["Scan own ship", 0, a.call("self"), -1, 1, ["command", "science_self_scan"]],
 		["Claim scan/hack", 0, a.call("claim"), -1, 1, ["claim", ""]],
-		["Sensor power request", 2, c.call("chip", "sensor_power"), -1, 2, ["send_chip", ""]],
-		["To scan mark request", 2, c.call("chip", "scan_mark"), -1, 2, ["send_chip", ""]],
-		["Ping (Crew)", 2, c.call("ping", ""), -1, 2, ["ping", ""]],
-		["Mark (Crew)", 2, c.call("mark", ""), -1, 2, ["place_mark", ""]],
+		# Ping and Mark: the selection sheet (C4), from the target chip.
+		["Ping (selection)", 0, chip, 0, 2, ["ping", ""]],
+		["Mark (selection)", 0, chip, 1, 2, ["place_mark", ""]],
 		["Share", 2, c.call("share", ""), -1, 2, ["share", ""]],
 	]
 
@@ -102,6 +102,10 @@ func test_every_action_is_within_two_taps_both_ways_up() -> void:
 		var s: StationScreen = await _screen(c[0], c[1])
 		var p: SciencePanel = _sci(s)
 		s.ctx.crew.select("contact", H2)
+		# Two players at Science, so Take the scan shows (C3, D412).
+		s.ctx.crew.lobby[StationFixture.SHIP]["seats"] = [
+			{"name": "Ana", "seat": "science"}, {"name": "Bo", "seat": "science"}
+		]
 		await _frames(2)
 		for row: Array in _table(p):
 			var what: String = "%s %s" % [row[0], c[0]]
@@ -359,3 +363,31 @@ func test_status_and_hack_title_keep_clear_upright() -> void:
 	assert_float(title_h).is_greater(font.get_height(HackGame.FONT_SIZE))
 	# The top row's nodes sit under the title's foot (6 px above its first baseline).
 	assert_float(g.node_centre(0).y - HackGame.NODE_R).is_greater_equal(22.0 - 16.0 + title_h)
+
+
+# FT: FT-STN-005
+# C3, D412: Take the scan shows only with two players at Science, and Hack only while a
+# hackable contact is near; a row left empty goes, so no dead button shows.
+func test_claim_and_hack_hide_while_they_cannot_act() -> void:
+	for c: Array in [[SIDEWAYS, LANDSCAPE], [UPRIGHT, PORTRAIT]]:
+		var s: StationScreen = await _screen(c[0], c[1])
+		var p: SciencePanel = _sci(s)
+		var claim: RailButton = p.phone.actions["claim"]
+		assert_bool(claim.is_visible_in_tree()).override_failure_message("%s" % c[0]).is_false()
+		if c[0] == SIDEWAYS:
+			# Alone in its row: the row goes too.
+			assert_bool(claim.get_parent().visible).is_false()
+		# A held claim always shows, as Release.
+		s.ctx.crew.claims[StationCatalogue.CLAIM_SCAN] = {
+			"session": StationFixture.SESSION, "name": s.ctx.settings.player_name
+		}
+		await _frames(2)
+		assert_bool(claim.is_visible_in_tree()).override_failure_message("%s held" % c[0]).is_true()
+		s.ctx.crew.claims.erase(StationCatalogue.CLAIM_SCAN)
+		s.ctx.crew.lobby[StationFixture.SHIP]["seats"] = [
+			{"name": "Ana", "seat": "science"}, {"name": "Bo", "seat": "science"}
+		]
+		await _frames(2)
+		assert_bool(claim.is_visible_in_tree()).override_failure_message("%s" % c[0]).is_true()
+		assert_bool(p.phone.actions["hack"].is_visible_in_tree()).is_equal(p.can_open_hack())
+		_vp.queue_free()

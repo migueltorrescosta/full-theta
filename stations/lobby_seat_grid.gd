@@ -1,18 +1,21 @@
 class_name LobbySeatGrid
 extends RefCounted
-## The lobby's seats (D216, D257, FT-NET-015, FT-JNT-006): the station grid, its legend and
-## the coverage line, the selection's name and role, and the Captain, Viewer and dev buttons,
-## with the pick rules (up to MAX_STATIONS stations, two make the joint view of the pair).
+## The lobby's seats (D216, D257, FT-NET-015, FT-JNT-006): the station grid (each cell
+## names its load as a word in its load colour, #37 C9) and the coverage line, the
+## selection's name and role, and the Captain, Viewer and dev buttons, with the pick rules
+## (up to MAX_STATIONS stations, two make the joint view of the pair).
 ## It builds and fills its nodes; LobbyScreen places them and lays them out. A tap sends the
 ## pick to the server and emits `changed`, and the screen refreshes.
 
 ## A tap changed the picks: the lobby refreshes.
 signal changed
 
-## The load tags, in legend order, and the colour word the legend names them with.
+## The load tags (a cell names its own: lobby.load_<tag>, in the tag's colour).
 const LOAD_TAGS: Array[String] = ["intense", "busy", "light"]
 ## The crew stations in grid order (row by row in landscape).
 const GRID_STATIONS: Array[String] = ["helm", "weapons", "engineering", "science", "relay", "comms"]
+## Most px a grid row grows by into the lobby's spare room (grow).
+const MAX_GROW: float = 64.0
 ## A player picks at most this many stations (a joint view covers two).
 const MAX_STATIONS: int = 2
 ## Cell padding and the grid gap, in px at 100 % UI scale (a cell stays >= TOUCH_MIN tall).
@@ -29,11 +32,10 @@ const DEV_ALL: String = "all"
 
 ## The ship whose stations are shown (LobbyScreen.ship).
 var ship: int = -1
-## The nodes, placed by LobbyScreen: the coverage line, the grid, the legend, the Info block
-## (the selection's name and role) and the seat row.
+## The nodes, placed by LobbyScreen: the coverage line, the grid, the Info block (the
+## selection's name and role) and the seat row.
 var coverage: Label
 var grid: GridContainer
-var legend: HBoxContainer
 var info: VBoxContainer
 var summary: BoxContainer
 var summary_name: Label
@@ -60,17 +62,13 @@ func _init(context: StationContext) -> void:
 	grid.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	grid.add_theme_constant_override("h_separation", GRID_GAP)
 	grid.add_theme_constant_override("v_separation", GRID_GAP)
-	legend = HBoxContainer.new()
-	legend.name = "Legend"
-	legend.alignment = BoxContainer.ALIGNMENT_CENTER
 	_build_summary()
 	_build_seats()
 
 
-## The coverage line, the legend and the cells, for the shown ship's `lobby` state.
+## The coverage line and the cells, for the shown ship's `lobby` state.
 func refresh_cells(state: Dictionary) -> void:
 	coverage.text = coverage_text(state)
-	_build_legend()
 	_refresh_grid()
 
 
@@ -143,13 +141,14 @@ func seat_for(stations: Array[String]) -> String:
 
 
 ## The names of the crewmates who picked a station (a joint view covers both of its
-## stations), from the `lobby` event's seats.
+## stations), from the `lobby` event's seats; a tick before each one who is Ready (#37 C1).
 func crew_at(station: String) -> PackedStringArray:
 	var names: PackedStringArray = []
 	for seat: Variant in _ctx.crew.ship_state(ship).get("seats", []):
 		var covered: Array = _ctx.crew.def_of(str(seat["seat"])).get("stations", [])
 		if station in covered:
-			names.append(str(seat["name"]))
+			var ready: bool = bool((seat as Dictionary).get("ready", false))
+			names.append(("✓ " if ready else "") + str(seat["name"]))
 	return names
 
 
@@ -202,23 +201,6 @@ func selection_text() -> Array[String]:
 	return [name, tr("role." + seat)]
 
 
-## The one-line legend under the grid: "Red: intense · Yellow: busy · Green: light", each
-## part in its colour (D187).
-func _build_legend() -> void:
-	for c: Node in legend.get_children():
-		if c != coverage:
-			legend.remove_child(c)
-			c.queue_free()
-	for i: int in LOAD_TAGS.size():
-		if i > 0:
-			legend.add_child(_label("·", "SmallLabel"))
-		var tag: String = LOAD_TAGS[i]
-		var item: Label = _label(tr("lobby.legend_" + tag), "SmallLabel")
-		item.name = "Legend_" + tag
-		item.add_theme_color_override("font_color", load_color(tag))
-		legend.add_child(item)
-
-
 static func _label(text: String, variation: String = "") -> Label:
 	var l: Label = Label.new()
 	l.text = text
@@ -248,17 +230,19 @@ func _refresh_grid() -> void:
 		var id: String = str(b.name).trim_prefix("Seat_")
 		b.set_pressed_no_signal(dev or id in picks)
 		b.disabled = full and not id in picks
-		# Fade the text but not the seat holders' names (they keep their contrast).
+		# Fade the text but not the seat holders' names or the load word (they keep their
+		# contrast).
 		var fade: Color = Color(1, 1, 1, 0.45) if b.disabled else Color.WHITE
 		b.find_child("Name", true, false).self_modulate = fade
 		b.find_child("Role", true, false).self_modulate = fade
 		_set_crew(b, crew_at(id))
 
 
-## A station cell (D257, P28-Lobby): a toggle button: the name left and the seat holders'
-## names right on the first line, the role summary wrapped under it (ROLE_LINES lines; the
-## texts are written to fit). Tapping it takes the seat or leaves it. Its height follows
-## the text, at least TOUCH_MIN.
+## A station cell (D257, P28-Lobby): a toggle button: the name and its load word (light, busy,
+## intense, in the load colour; #37 C9, reverses D316) left and the seat holders' names right
+## on the first line, the role summary wrapped under it (ROLE_LINES lines; the texts are
+## written to fit). Tapping it takes the seat or leaves it. Its height follows the text, at
+## least TOUCH_MIN.
 func _cell(id: String, tag: String) -> Button:
 	var b: Button = Button.new()
 	b.name = "Seat_" + id
@@ -276,6 +260,7 @@ func _cell(id: String, tag: String) -> Button:
 	box.offset_right = -CELL_INSET
 	box.offset_bottom = -CELL_INSET
 	box.add_theme_constant_override("separation", 0)
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	b.add_child(box)
 	var top: HBoxContainer = HBoxContainer.new()
 	top.name = "Top"
@@ -285,8 +270,19 @@ func _cell(id: String, tag: String) -> Button:
 	name_label.add_theme_font_size_override("font_size", 15)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	name_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(name_label)
+	if tag in LOAD_TAGS:
+		var load: Label = _cell_label("Load", tr("lobby.load_" + tag), "CaptionLabel")
+		load.autowrap_mode = TextServer.AUTOWRAP_OFF
+		load.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		load.add_theme_color_override("font_color", load_color(tag))
+		load.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		top.add_child(load)
+	var gap: Control = Control.new()
+	gap.name = "Gap"
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(gap)
 	var role: Label = _cell_label("Role", tr("role." + id), "CaptionLabel")
 	role.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	role.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -319,6 +315,36 @@ func _cell_label(node_name: String, text: String, variation: String) -> Label:
 	return l
 
 
+## Puts each cell's load word on its name line (`inline`, three columns) or on a line of its
+## own under the name (two columns upright, where a long name, its word and the seat holders'
+## names don't fit one line, as in Italian).
+func place_load(inline: bool) -> void:
+	for cell: Node in grid.get_children():
+		var load: Control = cell.find_child("Load", true, false)
+		if load == null:
+			continue
+		var top: Node = cell.find_child("Top", true, false)
+		var box: Node = top.get_parent()
+		var want: Node = top if inline else box
+		if load.get_parent() != want:
+			load.get_parent().remove_child(load)
+			want.add_child(load)
+			want.move_child(load, 1)
+
+
+## Gives each grid row up to MAX_GROW px of the room `free` (px) the lobby has to spare (the
+## room a hidden ship row leaves), so the grid fills the screen rather than leaving an empty
+## band.
+func grow(free: float) -> void:
+	var rows: int = ceili(float(grid.get_child_count()) / maxf(1.0, float(grid.columns)))
+	var now: float = grid.get_meta(&"extra", 0.0)
+	var want: float = clampf(floorf(now + free / maxf(1.0, float(rows))), 0.0, MAX_GROW)
+	if absf(want - now) < 1.0:
+		return
+	grid.set_meta(&"extra", want)
+	fit_cells()
+
+
 ## Re-fits every cell's height, after the grid's phone flag changed.
 func fit_cells() -> void:
 	for cell: Node in grid.get_children():
@@ -332,9 +358,12 @@ static func _fit_cell(cell_node: Variant, box_node: Variant) -> void:
 		var box: Control = box_node
 		var h: float = box.get_combined_minimum_size().y + 2.0 * CELL_INSET
 		var least: int = UiTheme.TOUCH_MIN
-		if cell.get_parent() != null and cell.get_parent().get_meta(&"phone", false):
-			least = UiTheme.TOUCH_PRIMARY
-		cell.custom_minimum_size = Vector2(0.0, maxf(h, float(least)))
+		var extra: float = 0.0
+		if cell.get_parent() != null:
+			if cell.get_parent().get_meta(&"phone", false):
+				least = UiTheme.TOUCH_PRIMARY
+			extra = cell.get_parent().get_meta(&"extra", 0.0)
+		cell.custom_minimum_size = Vector2(0.0, maxf(h, float(least)) + extra)
 
 
 ## The Captain, Viewer and dev buttons: the pick's one is pressed; Captain is greyed out
@@ -358,7 +387,7 @@ func refresh_summary() -> void:
 	summary_role.text = text[1]
 
 
-## The selection's name and role, in the Info block (the legend joins it on a short
+## The selection's name and role, in the Info block (the coverage line joins it on a short
 ## screen, with no gap between them).
 func _build_summary() -> void:
 	info = VBoxContainer.new()

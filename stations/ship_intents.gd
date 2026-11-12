@@ -126,9 +126,14 @@ func release_pick() -> void:
 	_call(&"release_pick", [])
 
 
-## Start (D129).
+## Ready on or off in the lobby (#37 C1).
+func set_ready(ready: bool) -> void:
+	_call(&"set_ready", [ready])
+
+
+## Start (D129, #37 C1): the host's, or a Ready crew player's with no host connected.
 func start() -> void:
-	_call(&"set_ready", [true])
+	_call(&"start", [])
 
 
 func vote_abandon(ship: int, vote: bool) -> void:

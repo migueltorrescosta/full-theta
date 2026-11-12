@@ -88,6 +88,9 @@ class RecordingClient:
 	func set_ready(ready: bool) -> void:
 		sent.append(["set_ready", [ready]])
 
+	func start() -> void:
+		sent.append(["start", []])
+
 	func vote_abandon(ship: int, vote: bool) -> void:
 		sent.append(["vote_abandon", [ship, vote]])
 
@@ -211,7 +214,7 @@ static func context(
 		"crew": 3,
 		"min_crew": 3,
 		"uncovered": [],
-		"ready": true,
+		"covered": true,
 		"started": true,
 		"in_play": true,
 		"captain": ""
@@ -419,12 +422,13 @@ static func fleet(
 	mode: String = "coop",
 	names: Array = [SHIP_NAME, "Heron", "Osprey"],
 	teams: Array = [],
-	started: bool = false
+	started: bool = false,
+	host_here: bool = true
 ) -> Dictionary:
 	var rows: Array = []
 	for i: int in names.size():
 		var team: int = int(teams[i]) if i < teams.size() else 0
-		var seats: Array = [{"name": "P%d" % i, "seat": "helm"}]
+		var seats: Array = [{"name": "P%d" % i, "seat": "helm", "session": 100 + i, "ready": false}]
 		rows.append(
 			FleetMessages.fleet_ship(i, names[i], team, seats, 1, ["weapons"], false, started)
 		)
@@ -436,6 +440,7 @@ static func fleet(
 		"max_ships": 6,
 		"waiting": [],
 		"started": started,
+		"host": host_here,
 	}
 	ctx.crew.handle_event({"type": "fleet", "payload": p}, NOW_MS)
 	# The server's Catalogue lists every crewed ship (NetGame.crew_ships), so a pick

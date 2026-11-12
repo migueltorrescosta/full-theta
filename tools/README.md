@@ -8,7 +8,7 @@ Scripts for the engine fetch, gates, lints, traceability and provenance checks. 
 
 | Tier | What | When | Needs | Time |
 |---|---|---|---|---|
-| `l0` | formatting, lint, architecture, definitions, traceability, retired words, dialogue, palette, licences, the tools' own tests (`tools/l0.sh`, 15 checks in parallel) | CI and before every PR | `uv`, `git`, Godot (fetched) | about 1 min |
+| `l0` | formatting, lint, architecture, definitions, traceability, retired words, dialogue, rail label lengths, palette, licences, the tools' own tests (`tools/l0.sh`, 16 checks in parallel) | CI and before every PR | `uv`, `git`, Godot (fetched) | about 1 min |
 | `l1` | every gdUnit4 suite, `tests/net` included, in `L1_SHARDS` processes (default 3) split by recorded time (`tools/l1_shards.py`, `tools/l1_times.json`); this covers what the spec calls L1 to L3 | CI and before every PR | the above | about 4 min |
 | `l2` | the simulation-side suites only (`tests/sim`, `pairs`, `scenarios`, `director`) in one gdUnit4 process: a quick check while changing the sim, a subset of `l1` | while working | the above | 1 to 2 min |
 | `l4` | a server and 3 client processes on 2 cores (`tools/l4/run.sh`), then the browser station (`tools/l4/web.sh`) | before a PR that touches the net or the web build | `node`, `npm`, Chromium (via `tools/l6`), export templates (1.3 GB, fetched) | about 6 min |
@@ -28,7 +28,7 @@ Scripts for the engine fetch, gates, lints, traceability and provenance checks. 
 
 `tools/gate.sh l4` runs `tools/l4/run.sh`: a server and three headless client processes pinned to 2 cores (`taskset -c 0,1`), driven by intent files, with kills and relaunches (FT-TST-011, FT-TST-014). `tools/l4/repeat.sh N` runs it N times and writes `build/l4/repeat-summary.txt`. The scenarios, the intent format and the logs are in `tools/l4/README.md`.
 
-`tools/l4/web.sh` (run by `tools/gate.sh l4` after the scenarios) is the browser smoke test (FT-TST-021, FT-NET-013, FT-NET-046, FT-AUD-017): it exports the web build (`tools/release/export_web.sh`), serves it from a dedicated server on 2 cores, and drives it with headless Chromium on the same 2 cores, one worker (`tools/l4/web_station.mjs`; needs `npm ci` in `tools/l6` once, which the script does). The page joins by itself, takes Tactical through the `?pick=tactical&ready=1` hooks, unlocks audio after a tap, plays, is woken after a simulated suspension, and one screenshot must not be blank. `tools/l4/web_check.py` then reads the server log (joins, the resumed join, commands, snapshot ages). Logs and `shot.png` in `build/l4web/`.
+`tools/l4/web.sh` (run by `tools/gate.sh l4` after the scenarios) is the browser smoke test (FT-TST-021, FT-NET-013, FT-NET-046, FT-AUD-017): it exports the web build (`tools/release/export_web.sh`), serves it from a dedicated server on 2 cores, and drives it with headless Chromium on the same 2 cores, one worker (`tools/l4/web_station.mjs`; needs `npm ci` in `tools/l6` once, which the script does). The page joins by itself, takes Tactical through the `?pick=tactical&ready=1` hooks (Ready, then Start: the page is the only player and no host is connected, so its Start counts, D408), unlocks audio after a tap, plays, is woken after a simulated suspension, and one screenshot must not be blank. `tools/l4/web_check.py` then reads the server log (joins, the resumed join, commands, snapshot ages). Logs and `shot.png` in `build/l4web/`.
 
 ## HTTP budget
 

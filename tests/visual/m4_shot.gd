@@ -1,19 +1,20 @@
 ## Multi-ship and PvP screens for the L5 harness (#11): builds tests/stations/station_fixture.gd's
 ## context with a fleet of four ships and shows one `view`, set from shots.json:
 ## - "lobby": the multi-ship lobby in TEAMS (the host's, several ships and teams);
-## - "mode": the same lobby with the host's Mode dialog open;
+## - "mode": the same lobby with the host's Game setup sheet open (#37 C1);
 ## - "scoreboard": the scoreboard of a last-ship-standing session, the player's ship out;
 ## - "relaunch": the holdout scoreboard with the relaunch prompt;
 ## - "handover": the viewer of a friendly ship with the handover notice;
 ## - "forfeit": Helm in a race with a crewmate's give-up vote;
 ## - "takeover": Helm of Osprey over its ally Kestrel's pause, offering Kestrel's stations.
-## - "outcome", "debrief": Helm with the outcome card of a won run, on its Outcome or Debrief
-##   tab (a phone's two tabs, #28);
-## - "pause": the host's own ship paused under a host pause;
+## - "outcome", "debrief": Helm with the end card of a won run, its summary with three
+##   highlights, or its Details (the full debrief, ux-20);
+## - "pause": the host's own ship paused under a host pause (`host` false: a crew player's);
 ## - "menu_web": the web main menu.
 ## `insets` simulates a phone's safe-area insets [left, top, right, bottom] in device-
 ## independent px (#28), drawn in translucent red; `lang` the language (I18n.LANGUAGES),
-## `ships` the fleet's size (up to 6), `fullscreen` FullscreenButton.forced (-1 as found).
+## `ships` the fleet's size (up to 6), `fullscreen` FullscreenButton.forced (-1 as found),
+## `host` whether the pause is the host's.
 extends Control
 
 const StationShot: GDScript = preload("res://tests/visual/station_shot.gd")
@@ -24,6 +25,7 @@ var insets: Array = []
 var lang: String = "en"
 var ships: int = 4
 var fullscreen: int = -1
+var host: bool = true
 
 var _ctx: StationContext
 
@@ -51,6 +53,8 @@ func _ready() -> void:
 			_event("eliminated", FleetMessages.eliminated(0, "destroyed", 0))
 			_event("handover", FleetMessages.handover(0, 1))
 			_station()
+			# Each shot shows it, whichever shots this process rendered before.
+			HandoverNotice.seen.clear()
 			var n: HandoverNotice = HandoverNotice.new()
 			n.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 			n.grow_horizontal = Control.GROW_DIRECTION_BOTH
@@ -102,20 +106,20 @@ func _event(type: String, p: Dictionary) -> void:
 func _lobby() -> void:
 	_ctx.crew.host = true
 	_ctx.crew.lobby[0]["started"] = false
-	_ctx.crew.lobby[0]["ready"] = false
+	_ctx.crew.lobby[0]["covered"] = false
 	_ctx.crew.lobby[0]["crew"] = 2
 	_ctx.crew.lobby[0]["uncovered"] = ["relay", "comms"]
 	_ctx.crew.lobby[0]["seats"] = [
-		{"seat": "helm", "name": "Ana"},
-		{"seat": "weapons", "name": "Bo"},
-		{"seat": "systems", "name": "Cy"},
+		{"seat": "helm", "name": "Ana", "session": 7, "ready": true},
+		{"seat": "weapons", "name": "Bo", "session": 8, "ready": false},
+		{"seat": "systems", "name": "Cy", "session": StationFixture.SESSION, "ready": true},
 	]
 	_fleet("teams", false)
 	var l: LobbyScreen = LobbyScreen.new()
 	l.setup(_ctx)
 	add_child(l)
 	if view == "mode":
-		l.find_child("ModeButton", true, false).pressed.emit()
+		l.find_child("GameSetup", true, false).pressed.emit()
 
 
 func _scoreboard() -> void:
@@ -165,7 +169,7 @@ func _own_view() -> void:
 			m.pid_path = "user://l5_menu_none.pid"
 			add_child(m)
 		"pause":
-			_ctx.crew.host = true
+			_ctx.crew.host = host
 			_event("pause", {"host": true})
 			_event("pause", {"ship": 0, "uncovered": ["science", "comms"]})
 			_event("abandon_votes", {"ship": 0, "voters": ["Bo"], "sessions": [9], "needed": 2})
@@ -183,7 +187,7 @@ func _own_view() -> void:
 			_event("run_votes", {"ship": 0, "voters": ["Bo"], "needed": 2})
 			_event("debrief", debrief_record())
 			if view == "debrief":
-				card.pages.select(1)
+				card.show_details(true)
 
 
 ## A debrief long enough to scroll.
@@ -216,4 +220,10 @@ static func debrief_record() -> Dictionary:
 		"decisions": decisions,
 		"first_use": {"helm": {"face": 12.0, "jump": -1.0}, "weapons": {"fire": 31.0}},
 		"coop": [{"stations": ["helm", "weapons"], "events": 4}],
+		"highlights":
+		{
+			"best_pair": {"pair": "p2", "stations": ["helm", "weapons"], "events": 4},
+			"closest_call": {"hull": 0.12, "time": 271.0},
+			"top_kill": {"name": "Raider", "time": 302.0},
+		},
 	}

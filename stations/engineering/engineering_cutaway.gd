@@ -8,9 +8,13 @@ extends Control
 ## (right-click a token also calls it back). Drawn in 2D from an orthographic projection
 ## of the ship frame: cheap, and no world up (D124).
 ##
-## On a phone (#28, D274) a finger has no right button: a drag that starts off the crew
-## tokens turns the cutaway and a tap selects; tokens and discs take a 44 px grab area
+## On a touch screen (#28, D274) a finger has no right button: a drag that starts off the
+## crew tokens turns the cutaway and a tap selects; tokens and discs take a 44 px grab area
 ## and tokens sit 52 px apart, each token's area a control with the `tap` meta (TapAudit).
+##
+## One sentence over the cutaway says how to use it on the player's device (touch, pad, or
+## mouse), until the first crew dragged onto a part (or, on a pad, the first turn): then it
+## goes for good, like the other first-visit hints (R22-17, ClientSettings.hint_seen).
 
 ## Hull outline from nose to tail, the approved ship's sections (ProceduralShip): z,
 ## half-width, half-height, centre height; stretched to enclose the subsystems.
@@ -31,6 +35,8 @@ const TURN_SLOP: float = 8.0
 const HINT_MIN_H: float = 220.0
 ## A phone's cutaway at least this many times wider than tall puts its hint beside the hull.
 const HINT_SIDE_ASPECT: float = 1.3
+## The first-visit hint key of the cutaway's sentence (ClientSettings.hint_seen).
+const HINT_KEY: String = "eng_cutaway"
 
 var model: EngineeringModel
 ## View angles (rad): yaw about the ship's up axis, then pitch towards the viewer; the
@@ -132,6 +138,7 @@ func _ensure_geo() -> void:
 		model.ship_def,
 		model.count(),
 		phone(),
+		hint(),
 		TranslationServer.get_locale(),
 		get_theme_default_font_size(),
 	]
@@ -195,14 +202,19 @@ func crew_at(pos: Vector2) -> int:
 	return -1
 
 
-## True on a phone (either way up), where a finger turns the cutaway.
+## True on a phone (either way up).
 func phone() -> bool:
 	return is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self))
 
 
-## How far (px) from a token's centre a press grabs it: half a touch target on a phone.
+## True on a touch screen (a phone or a tablet), where a finger turns the cutaway.
+func finger() -> bool:
+	return is_inside_tree() and LayoutMode.is_touch(LayoutMode.kind_of(self))
+
+
+## How far (px) from a token's centre a press grabs it: half a touch target on a touch screen.
 func grab_radius() -> float:
-	return UiTheme.TOUCH_MIN / 2.0 if phone() else TOKEN_R + 3.0
+	return UiTheme.TOUCH_MIN / 2.0 if finger() else TOKEN_R + 3.0
 
 
 ## Centre to centre of two tokens on a phone: a grab area and a gap.
@@ -241,7 +253,7 @@ func _button(mb: InputEventMouseButton) -> void:
 					drag_crew = c
 					drag_pos = mb.position
 					model.crew_pick = c
-				elif phone():
+				elif finger():
 					_finger_turn = true
 					_rotated = false
 					_press_at = mb.position
@@ -250,7 +262,8 @@ func _button(mb: InputEventMouseButton) -> void:
 			elif drag_crew >= 0:
 				var i: int = subsystem_at(mb.position, maxf(node_r() * 2.0, grab_radius()))
 				if i >= 0:
-					model.dispatch(drag_crew, i)
+					if model.dispatch(drag_crew, i):
+						learned()
 				elif token_pos(drag_crew).distance_to(mb.position) > grab_radius() * 2.0:
 					model.recall(drag_crew)
 				drag_crew = -1
@@ -558,7 +571,7 @@ func hint_height() -> float:
 
 
 func _hint_height() -> float:
-	if size.y < HINT_MIN_H or model == null or hint_beside():
+	if size.y < HINT_MIN_H or model == null or hint_beside() or hint() == "":
 		return 0.0
 	var fs: int = get_theme_default_font_size() - 2
 	var text: Vector2 = get_theme_default_font().get_multiline_string_size(
@@ -572,7 +585,11 @@ func _hint_height() -> float:
 ## (at least MIN_SQUARE, D319).
 func hint_beside() -> bool:
 	return (
-		size.y >= HINT_MIN_H and model != null and phone() and size.x >= HINT_SIDE_ASPECT * size.y
+		size.y >= HINT_MIN_H
+		and model != null
+		and phone()
+		and size.x >= HINT_SIDE_ASPECT * size.y
+		and hint() != ""
 	)
 
 
@@ -592,18 +609,34 @@ func hint_rect() -> Rect2:
 	return Rect2(Vector2(12.0, 10.0), Vector2(size.x - 24.0, text.y))
 
 
-## The hint over the cutaway; a phone has no right button (#28): a finger turns it.
+## The hint over the cutaway in the words of the player's device (a finger has no right
+## button, #28; a pad turns with its right stick), or "" once learned.
 func hint() -> String:
-	if phone():
+	if model == null or model.ctx == null or model.ctx.settings.hint_seen(HINT_KEY):
+		return ""
+	if finger():
 		return TouchText.of(
-			"eng.cutaway_hint_touch", "Drag a crew onto a part to fix it. Drag elsewhere to turn."
+			"eng.cutaway_hint_touch", "Drag a crew onto a part to fix it. Drag empty space to turn."
 		)
+	if model.ctx.matcher.device == IntentTable.PAD:
+		return tr("eng.cutaway_hint_pad")
 	return tr("eng.cutaway_hint")
+
+
+## The player did what the hint says (a crew dragged onto a part, a pad's turn): it goes for
+## good.
+func learned() -> void:
+	var settings: ClientSettings = model.ctx.settings
+	if settings.hint_seen(HINT_KEY):
+		return
+	settings.mark_hint_seen(HINT_KEY)
+	settings.save()
+	queue_redraw()
 
 
 ## Each token's grab area on a phone, as a control TapAudit sees.
 func _sync_taps() -> void:
-	var n: int = model.crew_count() if phone() else 0
+	var n: int = model.crew_count() if finger() else 0
 	while _taps.size() < n:
 		var c: Control = Control.new()
 		c.name = "CrewTap%d" % _taps.size()

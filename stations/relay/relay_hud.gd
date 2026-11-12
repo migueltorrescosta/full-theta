@@ -30,6 +30,9 @@ var accept: Button
 var decline: Button
 var send: Button
 var send_to: OptionButton
+## True while the station's Shakedown step asks for an intent (StationPanel.lesson_wants): a
+## control that hides while it can't act shows then, so the lesson never names a hidden one.
+var wants: Callable = func(_intent: String) -> bool: return false
 
 var _left: PanelContainer
 var _left_margin: MarginContainer
@@ -52,6 +55,7 @@ var _key: Array = []
 var _contact_ids: Array = []
 var _mark_slots: Array = []
 var _ally_list: Array[Dictionary] = []
+var _mail_buttons: HBoxContainer
 
 
 func _init() -> void:
@@ -119,6 +123,7 @@ func setup(context: StationContext) -> void:
 	_mail.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	mail.add_child(_mail)
 	var buttons: HBoxContainer = HBoxContainer.new()
+	_mail_buttons = buttons
 	accept = _button(buttons, "Accept", "relay.accept", _on_accept)
 	decline = _button(buttons, "Decline", "relay.decline", _on_decline)
 	send_to = OptionButton.new()
@@ -140,6 +145,7 @@ func refresh() -> void:
 	var near: Array = _contact_rows()
 	var key: Array = [blk, near, ctx.crew.marks, ctx.crew.inbox, ctx.crew.relay_log]
 	key.append_array([ctx.crew.selection, ctx.crew.catalogue.get("ships", [])])
+	key.append(_lesson_key())
 	if key == _key:
 		return
 	_key = key.duplicate(true)
@@ -160,7 +166,9 @@ func refresh() -> void:
 	var fab: float = float(blk.get("fab_left", 0.0))
 	_fab.text = tr("relay.fab") % ceili(fab) if fab > 0.0 else ""
 	_fab.visible = fab > 0.0
-	launch.disabled = stock <= 0
+	# Launch shows only with a probe in stock (C3: no dead button; the line above says
+	# "0 left"), or while the Shakedown's probe or claim step names it.
+	launch.visible = stock > 0 or wants.call("probe_launch") or wants.call("claim")
 	lanes.text = tr("relay.lanes_on" if bool(blk.get("lanes", false)) else "relay.lanes_off")
 	_fill_contacts(near)
 	_fill_marks()
@@ -333,15 +341,16 @@ func _fill_log() -> void:
 		_log.add_child(_wrapped(log_text(e)))
 
 
-## A short box has no room for a line under its heading: the heading carries the waiting
-## mark ("INBOX  Name from Ship +1"), and says nothing more when none waits.
+## A short box has room for one line under its heading: the inbox line when no button row
+## shows, else the buttons, the heading then carrying the line ("INBOX  Name from Ship +1",
+## "INBOX  No marks waiting").
 func _show_mail() -> void:
-	_mail.visible = not _short
+	_mail.visible = not _short or (_mail_buttons != null and not _mail_buttons.visible)
 
 
 func _fill_inbox_heading() -> void:
 	var text: String = tr("relay.inbox").to_upper()
-	if _short and ctx != null and not ctx.crew.inbox.is_empty():
+	if not _mail.visible:
 		text += "  " + _mail.text
 	_inbox_heading.text = text
 
@@ -353,10 +362,9 @@ func _fill_inbox() -> void:
 	else:
 		var more: String = " +%d" % (ctx.crew.inbox.size() - 1) if ctx.crew.inbox.size() > 1 else ""
 		_mail.text = tr("relay.inbox_item") % [item["name"], item["from"]] + more
-	_show_mail()
-	_fill_inbox_heading()
-	accept.disabled = item.is_empty()
-	decline.disabled = item.is_empty()
+	# Accept and Decline show only with a mark waiting (the line says "No marks waiting").
+	accept.visible = not item.is_empty() or wants.call("accept")
+	decline.visible = not item.is_empty() or wants.call("decline")
 	var targets: Array = allies()
 	if targets != _ally_list:
 		_ally_list = targets
@@ -367,7 +375,26 @@ func _fill_inbox() -> void:
 			send_to.set_item_metadata(send_to.item_count - 1, a["id"])
 			if a["id"] == kept:
 				send_to.select(send_to.item_count - 1)
-	send.disabled = send_to.item_count == 0 or ctx.crew.selection.get("kind", "") != "mark"
+	# Send and its ship list show only with an ally to send to and a mark selected; the row
+	# goes when none of its buttons shows.
+	send.visible = can_send() or wants.call("mark_send")
+	send_to.visible = send.visible and send_to.item_count > 0
+	_mail_buttons.visible = accept.visible or decline.visible or send.visible
+	_show_mail()
+	_fill_inbox_heading()
+
+
+## True when a mark is selected and an allied ship can take it.
+func can_send() -> bool:
+	return not allies().is_empty() and ctx.crew.selection.get("kind", "") == "mark"
+
+
+## What the lesson steps ask that changes which buttons show.
+func _lesson_key() -> Array:
+	var out: Array = []
+	for id: String in ["probe_launch", "claim", "accept", "decline", "mark_send"]:
+		out.append(wants.call(id))
+	return out
 
 
 func _on_accept() -> void:

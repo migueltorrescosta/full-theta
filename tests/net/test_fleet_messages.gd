@@ -31,14 +31,21 @@ func test_client_intents_decode() -> void:
 ## One payload per FleetMessages event.
 func _payloads() -> Dictionary:
 	var row: Dictionary = FleetMessages.fleet_ship(
-		1, "Kestrel II", 0, [{"name": "Ana", "seat": "tactical"}], 1, ["helm"], false, false
+		1,
+		"Kestrel II",
+		0,
+		[{"name": "Ana", "seat": "tactical", "session": 3, "ready": true}],
+		1,
+		["helm"],
+		false,
+		false
 	)
 	var reason: String = GameOutcome.REASON_NAMES[GameOutcome.Reason.LAST_STANDING]
 	var teams: String = GameRules.MODE_NAMES[GameRules.Mode.TEAMS]
 	var team_win: String = GameRules.TEAM_WIN_NAMES[0]
 	return {
 		NetProtocol.EVENT_FLEET:
-		FleetMessages.fleet([row], teams, team_win, GameRules.MAX_SHIPS, -1, [1], false),
+		FleetMessages.fleet([row], teams, team_win, GameRules.MAX_SHIPS, -1, [1], false, true),
 		NetProtocol.EVENT_TAKEOVER: FleetMessages.takeover(0, "helm", "Ana", 1),
 		NetProtocol.EVENT_HANDOVER: FleetMessages.handover(0, FleetMessages.TO_SCOREBOARD),
 		NetProtocol.EVENT_SCOREBOARD:

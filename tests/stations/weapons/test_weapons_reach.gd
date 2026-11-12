@@ -21,10 +21,8 @@ const TABLE: Array = [
 	["Claim / release", ["intent:claim", "release_claim"], "Fire page", 1],
 	["Direct mount", ["intent:mount_1"], "Mounts page, row", 2],
 	["Claim from the mount list", ["intent:mount_1", "release_claim"], "Mounts page, Claim", 2],
-	["Power request", ["send_chip:power"], "Crew page", 2],
-	["Bring to bear request", ["send_chip:bring_to_bear"], "Crew page", 2],
-	["Ping", ["ping"], "Crew page or selection sheet", 2],
-	["Mark at the selection", ["place_mark"], "Crew page or selection sheet", 2],
+	["Ping", ["ping"], "selection sheet", 2],
+	["Mark at the selection", ["place_mark"], "selection sheet", 2],
 	["Cycle target", ["select"], "selection bar ‹ ›", 1],
 	["Alert level", ["set_alert"], "alert chip, sheet", 2],
 	["Menu (Controls, Settings, Leave)", ["menu"], "☰", 1],
@@ -52,6 +50,10 @@ func _screen(size: Vector2i, insets: Array) -> StationScreen:
 	_vp.size = size
 	add_child(_vp)
 	var ctx: StationContext = StationFixture.context("weapons", SETTINGS)
+	# Two players at Weapons: Claim shows (C3).
+	ctx.crew.lobby[StationFixture.SHIP]["seats"] = [
+		{"name": "Ana", "seat": "weapons"}, {"name": "Bo", "seat": "weapons"}
+	]
 	ctx.crew.claims["mount:0"] = {"session": StationFixture.SESSION, "name": "Ana"}
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.setup(ctx)

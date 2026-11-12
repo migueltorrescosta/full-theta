@@ -40,15 +40,16 @@ func test_a_radial_only_step_teaches_the_radial_on_a_pad() -> void:
 	var texts: Array = card.find_children("*", "Label", true, false).map(
 		func(l: Label) -> String: return l.text
 	)
-	assert_array(texts).contains(["Align a mount to the target. Helm menu › Align"])
+	# The card shows the example only (R25-15): on a pad, the radial route.
 	assert_array(texts).contains(["Helm menu: hold View+Right stick, flick to Align, then let go."])
+	assert_array(texts).not_contains(["Align a mount to the target. Helm menu › Align"])
 	# The keyboard reads its key.
 	var kbm: StationScreen = _screen(IntentTable.KBM)
 	_step(kbm, "align", "Align a mount to the target. {binding:align}")
 	var kbm_texts: Array = kbm.training.find_children("*", "Label", true, false).map(
 		func(l: Label) -> String: return l.text
 	)
-	assert_array(kbm_texts).contains(["Align a mount to the target. L"])
+	assert_array(kbm_texts).contains(["Align: select the drone, press L."])
 
 
 # FT: FT-MIS-039

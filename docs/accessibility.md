@@ -28,7 +28,7 @@ Gaps:
 
 | # | Gap | Proposed fix | Effort |
 |---|---|---|---|
-| C1 | The seat load of the lobby (intense, busy, light) is red, yellow or green on the name and border only. FT-STN-006 does not require a second code for it, but WCAG 1.4.1 does. The three colours are 12.7 or more apart under every simulation, so the colour itself is safe. | Add a pip count (3, 2 or 1 filled pips) beside the seat name in `lobby_screen.gd` and the legend. Owner choice Q1. | S, baselines |
+| C1 | Closed (#37 C9): each lobby cell now names its seat load as a word (light, busy, intense) in its colour, beside the name (under it on a phone upright), and the legend row is gone, so the load no longer rests on colour alone (WCAG 1.4.1). The three colours are 12.7 or more apart under every simulation. | Done in `lobby_seat_grid.gd` (`_cell`, `place_load`). | done |
 | C2 | Blips are 6 px in radius at 100 %, so 4.5 px at 75 % UI scale: triangle, square and circle are hard to tell apart. | Draw blips at least 6 physical px (divide by the window's `content_scale_factor`) in `disc_radar.gd` and `relay_map.gd` (`BLIP_R`). | S, baselines |
 | C3 | Information only: `st_captain` vs `st_helm` is 3.9 under protanopia, `st_relay` vs `st_viewer` 1.7 under deuteranopia. These tints appear only in the controls diagram, which always names the station. | None proposed; the checker does not put Captain and Viewer in the `stations` group because they are never in a joint view. | none |
 
@@ -90,7 +90,7 @@ Gaps:
 |---|---|
 | FT-STN-007 rebindable and persisted per client | Pass: `IntentTable` rows for every intent on keyboard and mouse and on the controller; capture in `settings_screen.gd`, collisions reported (`settings.taken`), reset button, saved in `ClientSettings` (`test_rebind_replaces_defaults_per_device`, `test_settings_screen_rebinds_from_a_pressed_key`) |
 | FT-STN-014 every hold has a toggle | Pass: the seven hold intents (face, approach, helm radial, helm pointer, fire, fire all, relay radial) each show a Toggle check box; the matcher honours it (`test_hold_and_toggle_modes`); persisted with the bindings |
-| FT-STN-017 comfort toggle | Pass: `ComfortCamera` is used by the Helm cockpit (`helm_scene.gd`), the turret camera (`weapons_panel.gd`) and the main screen (`viewer_panel.gd`); roll lock to deck, target or reference plane, reduced field of view, "set reference plane" (`test_helm_panel`, `test_viewer_panel`, `test_weapons_panel`, `test_client_settings`) |
+| FT-STN-017 comfort toggle | Pass: `ComfortCamera` is used by the Helm cockpit (`helm_scene.gd`), the turret camera (`weapons_panel.gd`) and the main screen (`viewer_panel.gd`); one switch that also narrows the field of view, with the roll lock (deck, target or reference plane) and "set reference plane" under Advanced (D417) (`test_helm_panel`, `test_viewer_panel`, `test_weapons_panel`, `test_client_settings`) |
 | FT-AUD-010 every spoken line is also a subtitle | Pass: `SubtitleFeed` makes a subtitle for every voice line whether or not audio plays, labelled with the speaker, on screen 2 s plus 60 ms per character (about 17 characters a second), at most 6 kept |
 | Sound off | Pass: the top bar shows "Sound on" / "off" (`test_sound_toggle`) |
 | Motion and flashing | Pass: the alert flash is one 700 ms fade of a frame, not a flash sequence; the star backdrop has no parallax (D310) |

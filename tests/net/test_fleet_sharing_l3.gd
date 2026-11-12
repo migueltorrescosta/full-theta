@@ -28,8 +28,8 @@ func _session(mode: GameRules.Mode) -> Array[NetClient]:
 		out.append(await h.joined(server, "all-%d" % ship, StationCatalogue.ALL, ship))
 	for ship: int in 2:
 		out.append(await h.joined(server, "weapons-%d" % ship, "weapons", ship))
-	out[0].set_ready(true)
-	out[1].set_ready(true)
+	h.all_ready(server)
+	out[0].start()
 	await h.until(func() -> bool: return server.world.tick > 2)
 	return out
 

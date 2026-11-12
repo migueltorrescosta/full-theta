@@ -31,6 +31,10 @@ func _screen(size: Vector2i, insets: Array, mine: bool = true) -> StationScreen:
 	_vp.size = size
 	add_child(_vp)
 	var ctx: StationContext = StationFixture.context("weapons", SETTINGS)
+	# Two players at Weapons: Claim shows (C3).
+	ctx.crew.lobby[StationFixture.SHIP]["seats"] = [
+		{"name": "Ana", "seat": "weapons"}, {"name": "Bo", "seat": "weapons"}
+	]
 	if mine:
 		ctx.crew.claims["mount:0"] = {"session": StationFixture.SESSION, "name": "Ana"}
 	ctx.crew.select("contact", StationFixture.U3)
@@ -162,7 +166,7 @@ func test_phone_landscape_one_right_rail() -> void:
 		assert_bool(rail.encloses(b.get_global_rect())).is_true()
 	assert_bool(t.mount_list.is_visible_in_tree()).is_false()
 	assert_str(t.mount_button.text).is_equal("1 bow · ready\nheat 15% cool\n380/400 rounds")
-	assert_str(t.claim_button.text).is_equal("✓ Claim")
+	assert_str(t.claim_button.text).is_equal("Release mount")
 	assert_str(t.ammo_button.text).is_equal("Mass driver ▸")
 	# No target line on a phone: the selection bar shows U3, read-outs under its row.
 	assert_bool(t.target_label.visible).is_false()
@@ -217,6 +221,10 @@ func test_touch_rules_on_every_page_both_ways() -> void:
 		s.rotate_banner.dismiss()
 		await _frames(2)
 		for i: int in p.pages.count():
+			# A Crew page with nothing to share has no tab (C4).
+			if not p.pages.shown(i):
+				assert_array(t.crew.entries()).is_empty()
+				continue
 			await _page(s, i)
 			var what: String = "%s %s" % [c[0], p.pages.title(i)]
 			_assert_touch_rules(s, what)
@@ -337,7 +345,7 @@ func test_mount_list_looks_and_claims() -> void:
 	var look: RailButton = t.rows[0][0]
 	var claim: RailButton = t.rows[0][1]
 	assert_str(look.text).is_equal("1 bow · ready\nheat 15% cool · 380/400 rounds")
-	assert_str(claim.text).is_equal("Claim")
+	assert_str(claim.text).is_equal("Claim mount")
 	_tap(look)
 	assert_array(heard).is_equal(["mount_1"])
 	_tap(claim)
@@ -461,9 +469,8 @@ func test_out_of_arc_warning_clears_the_chips() -> void:
 
 
 # FT: FT-STN-010, FT-PAIR-012, FT-SPA-016, FT-STN-005
-# The Crew page holds Weapons' requests (power from Engineering, bring the mount to bear
-# from Helm), Ping and Mark on the selection; each sends what the chip key and the common
-# keys send.
+# The Crew page holds Weapons' shares only (C4, ux-13): Ping and Mark are the selection
+# sheet's, each sending what the common keys send; requests sit at the top of the view.
 func test_crew_page_requests_ping_and_mark() -> void:
 	var s: StationScreen = await _screen(Vector2i(844, 390), LANDSCAPE)
 	var p: WeaponsPanel = _panel(s)
@@ -471,17 +478,15 @@ func test_crew_page_requests_ping_and_mark() -> void:
 	await _page(s, WeaponsTouch.Page.CREW)
 	t.crew.refresh()
 	await _frames(1)
-	for id: String in ["power", "bring_to_bear"]:
-		var b: RailButton = t.crew.button("chip", id)
-		assert_object(b).override_failure_message(id).is_not_null()
-		_tap(b)
-	var chips: Array = StationFixture.sent(s.ctx).of("send_chip")
-	assert_array(chips).is_equal(
-		[["send_chip", ["power", -1]], ["send_chip", ["bring_to_bear", 0]]]
-	)
-	_tap(t.crew.button("ping"))
+	for kind: String in ["chip", "ping", "mark"]:
+		assert_object(t.crew.button(kind)).override_failure_message(kind).is_null()
+	_tap(s.frame.selection_bar.name_button)
+	await _frames(1)
+	_tap(s.sheet.option(0))
 	assert_int(StationFixture.sent(s.ctx).of("ping").size()).is_equal(1)
-	_tap(t.crew.button("mark"))
+	_tap(s.frame.selection_bar.name_button)
+	await _frames(1)
+	_tap(s.sheet.option(1))
 	var marks: Array = StationFixture.sent(s.ctx).of("place_mark")
 	assert_int(marks.size()).is_equal(1)
 	assert_int(int(marks[0][1][2])).is_equal(StationFixture.U3)

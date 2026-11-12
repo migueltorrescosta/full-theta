@@ -3,8 +3,10 @@ host_spawn pid_file=$RUN/server.pid.json grace=$GRACE publish=url timeout=40
 expect_welcome resumed=false host=true
 pick ship=0 seat=tactical
 barrier name=picked n=3
-expect_event type=lobby payload.ship=0 payload.ready=true keep=true
-ready
+expect_event type=lobby payload.ship=0 payload.covered=true keep=true
+# The host's Start waits for every crew player's Ready (#37 C1).
+expect_event type=fleet payload.waiting.size=0 keep=true
+start
 expect_event type=started payload.ship=0
 expect_tick_moving
 barrier name=started n=3

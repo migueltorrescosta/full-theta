@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 ## PauseOverlay: the host pause and the menu's Pause control (FT-MIS-040), the coverage pause's
-## vote, abandon and takeover (FT-NET-041, FT-NET-042).
+## give-up toggle, the host's End now and takeover (FT-NET-041, FT-NET-042, #37 C11).
 
 const HOST_PAUSE: Dictionary = {"host": true, "ship": -1, "uncovered": [], "crew": 0}
 const COVERAGE_PAUSE: Dictionary = {"ship": 0, "uncovered": ["relay"], "crew": 2, "min_crew": 3}
@@ -38,6 +38,7 @@ func test_host_pause_text_and_resume_only_on_the_host() -> void:
 		assert_object(o.find_child("Vote", true, false)).is_null()
 		var resume: Button = o.find_child("Resume", true, false)
 		assert_bool(resume != null).is_equal(host)
+		assert_bool(o.find_child("EndNow", true, false) != null).is_equal(host)
 		if host:
 			resume.pressed.emit()
 			var rec: StationFixture.RecordingClient = StationFixture.sent(ctx)
@@ -120,13 +121,14 @@ func test_pause_control_is_host_and_coop_only() -> void:
 
 
 # FT: FT-NET-041
-func test_pause_overlay_vote_and_host_abandon() -> void:
-	var ctx: StationContext = StationFixture.context("tactical")
-	var o: PauseOverlay = auto_free(PauseOverlay.new())
-	o.setup(ctx)
-	add_child(o)
+# #37 C11: one "Give up (n/needed)" toggle casts or withdraws the crew's vote and shows the
+# count; the host's End now asks "End the game?" and then ends the game for everyone
+# (`end_requested`, D353). A player never sees End now.
+func test_pause_overlay_give_up_toggle_and_host_end_now() -> void:
+	var made: Array = _overlay(true)
+	var ctx: StationContext = made[0]
+	var o: PauseOverlay = made[1]
 	assert_bool(o.visible).is_false()
-	ctx.crew.host = true
 	ctx.crew.handle_event({"type": "pause", "payload": COVERAGE_PAUSE}, 0)
 	assert_bool(o.visible).is_true()
 	# Crew changes it doesn't show leave its buttons alone.
@@ -134,18 +136,39 @@ func test_pause_overlay_vote_and_host_abandon() -> void:
 	ctx.crew.changed.emit(&"alert")
 	ctx.crew.changed.emit(&"marks")
 	assert_object(o.find_child("Vote", true, false)).is_same(vote)
+	assert_str(vote.text).is_equal("Give up (0/0)")
+	assert_bool(vote.toggle_mode).is_true()
+	assert_object(o.find_child("Votes", true, false)).is_null()
+	var hint: Label = o.find_child("Hint", true, false)
+	assert_bool(hint.visible).is_true()
+	assert_str(hint.text).contains("vote to give up")
+	assert_object(o.find_child("Abandon", true, false)).is_null()
 	vote.pressed.emit()
-	(o.find_child("Abandon", true, false) as Button).pressed.emit()
 	var rec: StationFixture.RecordingClient = StationFixture.sent(ctx)
 	assert_array(rec.of("vote_abandon")[0][1]).is_equal([0, true])
-	assert_array(rec.of("abandon")[0][1]).is_equal([0])
 	var votes: Dictionary = {
 		"ship": 0, "voters": ["Ana"], "sessions": [StationFixture.SESSION], "needed": 2
 	}
 	ctx.crew.handle_event({"type": "abandon_votes", "payload": votes}, 0)
-	(o.find_child("Vote", true, false) as Button).pressed.emit()
+	vote = o.find_child("Vote", true, false)
+	assert_str(vote.text).is_equal("✓ Give up (1/2)")
+	assert_bool(vote.button_pressed).is_true()
+	vote.pressed.emit()
 	assert_array(rec.of("vote_abandon")[1][1]).is_equal([0, false])
-	assert_str((o.find_child("Votes", true, false) as Label).text).contains("1/2")
+	var ended: Array[int] = [0]
+	o.end_requested.connect(func() -> void: ended[0] += 1)
+	(o.find_child("EndNow", true, false) as Button).pressed.emit()
+	var dialog: ConfirmationDialog = o.find_child("EndDialog", true, false)
+	assert_bool(dialog.visible).is_true()
+	assert_str(dialog.dialog_text).is_equal("This ends the game for everyone in it.")
+	assert_int(ended[0]).is_equal(0)
+	dialog.confirmed.emit()
+	assert_int(ended[0]).is_equal(1)
+	assert_array(rec.of("abandon")).is_empty()
+	var player: Array = _overlay(false)
+	(player[0] as StationContext).crew.handle_event({"type": "pause", "payload": COVERAGE_PAUSE}, 0)
+	assert_object((player[1] as PauseOverlay).find_child("EndNow", true, false)).is_null()
+	assert_object((player[1] as PauseOverlay).find_child("Vote", true, false)).is_not_null()
 
 
 # FT: FT-NET-042

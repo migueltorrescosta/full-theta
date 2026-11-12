@@ -1,13 +1,15 @@
 ## Station widgets for the L5 harness (#7): builds tests/stations/station_fixture.gd's
 ## context and shows one view of it, set from shots.json: "screen" (the StationScreen
 ## of `seat`), "lobby", "menu" or "menu_web" (the main menu, with or without the Host
-## section), or "radar" (the disc radar alone, large). Extras: `selected`
+## section), "training" (the Training picker), "callouts" (its Callouts quiz; `quiz_pick`
+## answers the first question) or "radar" (the disc radar alone, large). Extras: `selected`
 ## (a contact id, -1 none), `ping` (a contact id pinged a second ago, -1 none),
 ## `overlay` (the menu on its Controls tab; `controls_view` picks its view, a ControlsPane.VIEW_),
 ## `menu_tab` (the menu on that tab), `tooltip` (the first visit: it
 ## opens by itself), `strip` (the radar's side strip) and
 ## `ui_scale` (the window's content scale, FT-STN-013; reset on exit), `claim` (a
-## claim item the player holds, e.g. "mount:0") and `events` (sim events fed to the
+## claim item the player holds, e.g. "mount:0"), `crew_seats` (the seats the ship's players
+## hold, e.g. ["weapons", "weapons"]) and `events` (sim events fed to the
 ## crew model 2 s before the shot, after the screen is built; a payload `vector` given
 ## as [x, y, z] becomes a Vector3), `focus` (the focused panel of a joint view, F1 = 0),
 ## `science` (a Science block with the cards, a scan or a hack open) and `touch` (the touch
@@ -21,6 +23,10 @@
 ## The lobby's `host_bind` makes it the host's (its join strip and dialog, #35 A6), and
 ## `player` sets the player's saved name ("" shows the name prompt, #35 A5).
 ## `render_3d` sets the 3D resolution setting (a RenderQuality mode, default "full").
+## `comfort` turns the comfort switch on, `advanced` opens its Advanced group, `menu_scroll`
+## scrolls the menu's tab to a node (e.g. "ChangeKeys").
+## `eng_rare` shows Engineering's rare rail actions (C3): a fault of unknown cause on the
+## engines and a second player at Engineering, so Guess cause and Take crew show.
 ## The "touch_kit" view shows the shared touch widgets (presentation/touch/) on a radar:
 ## overlay rails with a throttle, sticks, tabs and an open drawer; `docked` docks them.
 extends Control
@@ -48,6 +54,9 @@ var menu_tab: String = ""
 var strip: bool = false
 var ui_scale: float = 1.0
 var claim: String = ""
+## The seats of the ship's other players too, as the lobby lists them ([seat id, ...]): two
+## at Weapons show its Claim button (C3).
+var crew_seats: Array = []
 var events: Array = []
 var focus: int = 0
 ## Force the touch layout (a tablet-sized shot has no touch screen under Xvfb).
@@ -63,6 +72,8 @@ var fullscreen: int = 0
 var audit: String = ""
 ## The touch_kit view's rails are docked.
 var docked: bool = false
+## Engineering's rare rail actions show (a fault of unknown cause, two players there).
+var eng_rare: bool = false
 
 ## The game was started with --dev (ClientSettings.dev_flag): the menu's Dev checkbox and the
 ## lobby's dev seat show (#35 A7).
@@ -71,6 +82,8 @@ var dev: bool = false
 var host_bind: String = ""
 ## The player's saved name.
 var player: String = "Ana"
+## The lobby's seats whose holders said Ready (#37 C1).
+var ready_seats: Array = []
 
 ## A Shakedown step on the focused station's banner (a solo lesson step, D303).
 var lesson: bool = false
@@ -80,6 +93,14 @@ var lesson_intent: String = ""
 ## follow it, D1, D4).
 var device: String = ""
 var render_3d: String = "full"
+## The menu's comfort switch is on; `advanced` also opens its Advanced group (ux-17).
+var comfort: bool = false
+var advanced: bool = false
+## A node of the open menu tab to scroll into view, e.g. "ChangeKeys" (ux-18); "" none.
+var menu_scroll: String = ""
+## The "callouts" view (the Training picker's Callouts quiz): the option picked on its first
+## question, -1 none.
+var quiz_pick: int = -1
 
 var _ctx: StationContext
 
@@ -118,6 +139,16 @@ func _ready() -> void:
 		_ctx.settings.reset_hints()
 	if claim != "":
 		_ctx.crew.claims[claim] = {"session": StationFixture.SESSION, "name": "Ana"}
+	if eng_rare:
+		_ctx.snap.blocks[StationCatalogue.Section.ENGINEERING]["subsystems"][0]["fault"] = true
+		_ctx.crew.lobby[0]["seats"] = [
+			{"name": "Ana", "seat": "engineering"}, {"name": "Bo", "seat": "engineering"}
+		]
+	if not crew_seats.is_empty():
+		var seats: Array = []
+		for i: int in crew_seats.size():
+			seats.append({"name": ["Ana", "Bo", "Cy", "Di"][i % 4], "seat": str(crew_seats[i])})
+		_ctx.crew.lobby[StationFixture.SHIP]["seats"] = seats
 	if selected >= 0:
 		_ctx.crew.select("contact", selected)
 	if ping >= 0:
@@ -133,7 +164,7 @@ func _ready() -> void:
 			m.token_path = "user://l5_menu_none.token"
 			m.pid_path = "user://l5_menu_none.pid"
 			add_child(m)
-		"training":
+		"training", "callouts":
 			var picker_menu: MainMenu = MainMenu.new()
 			picker_menu.web = true
 			picker_menu.settings = ClientSettings.new("user://l5_menu_training.cfg")
@@ -143,20 +174,28 @@ func _ready() -> void:
 			picker_menu.pid_path = "user://l5_menu_none.pid"
 			add_child(picker_menu)
 			picker_menu.open_training()
+			if view == "callouts":
+				picker_menu.open_callouts()
+				if quiz_pick >= 0:
+					picker_menu._quiz.pick(quiz_pick)
 		"lobby":
 			_ctx.crew.lobby[0]["started"] = false
-			_ctx.crew.lobby[0]["ready"] = false
+			_ctx.crew.lobby[0]["covered"] = false
 			_ctx.crew.lobby[0]["crew"] = 2
 			_ctx.crew.lobby[0]["uncovered"] = ["relay", "comms"]
-			_ctx.crew.lobby[0]["seats"] = [
-				{"seat": "helm", "name": "Ana"},
-				{"seat": "weapons", "name": "Bo"},
-				{"seat": "systems", "name": "Cy"},
-			]
+			# Cy is the player; `ready_seats` names the seats that said Ready (#37 C1).
+			var holders: Array = [["helm", "Ana", 7], ["weapons", "Bo", 8]]
+			holders.append(["systems", "Cy", StationFixture.SESSION])
+			_ctx.crew.lobby[0]["seats"] = holders.map(
+				func(h: Array) -> Dictionary:
+					return {
+						"seat": h[0], "name": h[1], "session": h[2], "ready": h[0] in ready_seats
+					}
+			)
 			if seat == StationCatalogue.ALL:
 				# The dev seat covers every station and needs no other crew (FT-NET-029).
 				_ctx.crew.lobby[0]["uncovered"] = []
-				_ctx.crew.lobby[0]["ready"] = true
+				_ctx.crew.lobby[0]["covered"] = true
 			_ctx.host_bind = host_bind
 			# The host's lobby: its join strip and its End game button (C1, D353).
 			_ctx.crew.host = host_bind != ""
@@ -195,6 +234,7 @@ func _ready() -> void:
 					menu.controls_pane.show_view(ControlsPane.VIEW_CARD)
 			)
 			add_child(menu)
+			_ctx.settings.comfort = comfort
 			menu.setup(_ctx.settings, true)
 			add_child(s)
 			move_child(menu, -1)
@@ -213,6 +253,10 @@ func _ready() -> void:
 					_ctx.settings.bindings, s.stations, _ctx.matcher.device, _ctx.crew.seat
 				)
 				menu.open(menu_tab)
+				if advanced:
+					(menu.find_child("Advanced", true, false) as Button).button_pressed = true
+				if menu_scroll != "":
+					_scroll_menu.call_deferred(menu)
 			for e: Dictionary in events:
 				var p: Dictionary = e.get("payload", {})
 				if p.get("vector") is Array:
@@ -225,6 +269,16 @@ func _ready() -> void:
 		add_child(shade)
 	if audit != "":
 		_write_audit.call_deferred()
+
+
+## Scrolls the menu's open tab so `menu_scroll` is at its top.
+func _scroll_menu(menu: SettingsScreen) -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var tab: ScrollContainer = menu.tabs.get_current_tab_control() as ScrollContainer
+	var target: Control = menu.find_child(menu_scroll, true, false) as Control
+	if tab != null and target != null:
+		tab.scroll_vertical = int(target.global_position.y - tab.global_position.y)
 
 
 ## The touch widgets in the three rail patterns' parts (#28): a radar as the view, a

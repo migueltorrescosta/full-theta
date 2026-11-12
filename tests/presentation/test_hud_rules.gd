@@ -116,7 +116,9 @@ func test_a_toast_sits_inside_the_top_bar_and_covers_no_control() -> void:
 				s.top_bar.chip, s.top_bar.sound, s.top_bar.menu_button, s.top_bar.tabs
 			]
 			for c: Control in controls:
-				if c.is_visible_in_tree():
+				# (an upright phone's empty tab strip is only room, which a toast may take)
+				var empty: bool = c == s.top_bar.tabs and not s.top_bar.tabs.has_content()
+				if c.is_visible_in_tree() and not empty:
 					(
 						assert_bool(c.get_global_rect().intersects(box))
 						. override_failure_message("%s: toast over %s" % [where, c.name])
@@ -126,33 +128,55 @@ func test_a_toast_sits_inside_the_top_bar_and_covers_no_control() -> void:
 
 
 # FT: FT-STN-002
+# Every radar the screen shows (the side column's, a phone panel's inset or page, the
+# Captain's mirror, Science's Crew page, a tablet's corner inset), w-dcc.
 func test_radar_chips_stay_near_their_blip_and_clear_of_each_other() -> void:
 	for layout: Array in LAYOUTS:
 		for seat: String in SEATS:
 			var s: StationScreen = await _screen(layout, seat)
 			var where: String = "%s %s" % [layout[0], seat]
-			_check_chips(s.radar, where)
+			for radar: DiscRadar in _radars(s):
+				_check_chips(radar, "%s %s" % [where, radar.get_parent().name])
 			_drop(s)
+
+
+## The disc radars shown under `node`, or its side column's when it shows none (a hidden
+## column's radar still lays its chips out).
+func _radars(node: Node) -> Array[DiscRadar]:
+	var out: Array[DiscRadar] = []
+	for c: Node in node.find_children("*", "DiscRadar", true, false):
+		if (c as DiscRadar).is_visible_in_tree() and (c as DiscRadar).size.x > 0.0:
+			out.append(c)
+	if out.is_empty() and node is StationScreen:
+		out.append((node as StationScreen).radar)
+	return out
 
 
 func _check_chips(radar: DiscRadar, where: String) -> void:
 	var entries: Array[Dictionary] = radar._layout()
 	var view: Rect2 = radar._view()
+	var font: Font = radar.get_theme_default_font()
+	var c: Vector2 = radar.disc_centre()
+	var numerals: Array = radar._numerals(font, c, DiscRadar.RANGES_M[radar.range_index]).values()
 	for e: Dictionary in entries:
 		if e["callout"] == "":
 			continue
 		var r: Rect2 = e["callout_rect"]
 		var name: String = "%s %s" % [where, e["item"]["label"]]
-		(
-			assert_float(CalloutLayout.gap_to(r, e["pos"]))
-			. override_failure_message("%s: chip %s is far from its blip %s" % [name, r, e["pos"]])
-			. is_less_equal(48.0)
-		)
-		(
-			assert_bool(view.grow(0.5).encloses(r))
-			. override_failure_message("%s: chip %s outside the radar %s" % [name, r, view])
-			. is_true()
-		)
+		for n: Rect2 in numerals:
+			(
+				assert_bool(n.intersects(r))
+				. override_failure_message("%s: chip %s over a clock number %s" % [name, r, n])
+				. is_false()
+			)
+		for box: Rect2 in [radar._own_box(), radar._range_rect(), radar._site_rect()]:
+			(
+				assert_bool(box.intersects(r))
+				. override_failure_message(
+					"%s: chip %s over the own ship or a box %s" % [name, r, box]
+				)
+				. is_false()
+			)
 		for o: Dictionary in entries:
 			if o == e:
 				continue
@@ -164,6 +188,15 @@ func _check_chips(radar: DiscRadar, where: String) -> void:
 					)
 					. is_false()
 				)
+			var blip: float = radar.blip_r() + 1.0
+			var at: Vector2 = o["pos"]
+			(
+				assert_bool(
+					Rect2(at - Vector2(blip, blip), Vector2(blip, blip) * 2.0).intersects(r)
+				)
+				. override_failure_message("%s: chip over %s's blip" % [name, o["item"]["label"]])
+				. is_false()
+			)
 			if not o["beyond"]:
 				var p: Vector2 = o["pos"]
 				var f: Vector2 = o["foot"]
