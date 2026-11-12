@@ -17,7 +17,7 @@ func dock_reserve() -> Vector2:
 
 
 ## The radar column hides for a lone full-screen panel (which may depend on the form). A
-## joint view or the dev seat on a phone on its side (#28) shows only the focused panel,
+## joint view or the dev seat on a phone (#28; upright too, w-yk5) shows only the focused panel,
 ## which gets the whole width when it draws its own rails and radar, and the station chip
 ## in the top bar's tab strip instead of the docked panels (FT-JNT-001: tap to focus). On
 ## a phone on its side the share buttons move into a drawer
@@ -34,9 +34,7 @@ func show_side() -> void:
 	)
 	var sideways: bool = form_now == LayoutMode.Form.PHONE_LANDSCAPE
 	var phone_form: bool = LayoutMode.is_phone(form_now)
-	# Upright a joint view keeps its docked panels until the stations' upright layouts
-	# leave room for the bottom tab bar (#28 follow-up, wave 2).
-	var phone_alone: bool = s.panels.size() >= 2 and sideways
+	var phone_alone: bool = s.panels.size() >= 2 and phone_form
 	var alone: bool = s.panels.size() == 1 or phone_alone
 	s._side.visible = not (alone and s.focused_panel().full_screen())
 	s._dock.visible = not phone_alone

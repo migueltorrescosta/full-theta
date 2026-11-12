@@ -154,17 +154,24 @@ func show_tabs(form_now: LayoutMode.Form, alone: bool) -> void:
 		s.joint_switch.clip_text = false
 		s.joint_switch.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 		s.joint_switch.pressed.connect(_on_station_chip)
+	var sideways: bool = form_now == LayoutMode.Form.PHONE_LANDSCAPE
+	var upright: bool = form_now == LayoutMode.Form.PHONE_PORTRAIT
 	var chip: RailButton = s.joint_switch
 	if chip != null:
 		chip.visible = alone
 		chip.custom_minimum_size = Vector2(CHIP_W, UiTheme.TOUCH_PRIMARY)
 		if s.panels.size() == 2:
-			chip.text = "%s %s" % [JOINT_ARROW, tr("station." + s.stations[1 - s.focus_index])]
+			var other: String = tr("station." + s.stations[1 - s.focus_index])
+			chip.text = "%s %s" % [JOINT_ARROW, other]
+			chip.tooltip_text = other
+			if upright:
+				# Upright the bottom tabs have no room for the name: the partner glance under
+				# the selection chip names the other station (w-yk5).
+				chip.text = JOINT_ARROW
+				chip.custom_minimum_size.x = UiTheme.TOUCH_PRIMARY
 		else:
 			chip.text = "%s %s" % [tr("station." + s.focused_station()), DEV_ARROW]
 	var pages: PageHost = s.focused_panel().pages
-	var sideways: bool = form_now == LayoutMode.Form.PHONE_LANDSCAPE
-	var upright: bool = form_now == LayoutMode.Form.PHONE_PORTRAIT
 	s.top_bar.tabs.bind(pages if sideways else null)
 	bottom_tabs.bind(pages if upright else null)
 	var strip: PageTabs = s.top_bar.tabs if sideways else bottom_tabs

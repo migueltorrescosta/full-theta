@@ -152,6 +152,8 @@
     {"name": "l5_ph_relay", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"seat": "relay", "insets": [0, 0, 0, 0]}},
     {"name": "l5_ph_helm", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"seat": "helm", "insets": [0, 0, 0, 0]}},
     {"name": "l5_ph_weapons", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"seat": "weapons", "insets": [0, 0, 0, 0]}},
+    {"name": "l5_ph_survey", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"seat": "survey", "insets": [0, 47, 0, 34]}},
+    {"name": "l5_ph_targeting", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"seat": "targeting", "insets": [0, 47, 0, 34]}},
     {"name": "l5_ph_science", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"seat": "science", "insets": [0, 0, 0, 0]}},
     {"name": "l5_ph_science_scan", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"seat": "science", "science": "scan", "insets": [0, 0, 0, 0]}},
     {"name": "l5_ph_science_hack", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"seat": "science", "science": "hack", "insets": [0, 0, 0, 0]}},
