@@ -124,6 +124,14 @@ func add_dialogs(host: Node) -> void:
 	host.add_child(_sheet)
 	_tabs = TabContainer.new()
 	_tabs.name = "SetupTabs"
+	# The tabs are touch targets: at least UiTheme.TOUCH_PRIMARY px tall (theme tabs are ~34).
+	for style: String in ["tab_selected", "tab_unselected", "tab_hovered"]:
+		var sb: StyleBox = UiTheme.box("panel", "line_strong", 12, 15)
+		if style != "tab_unselected":
+			sb = UiTheme.box(
+				"panel_focus", "accent" if style == "tab_selected" else "line_strong", 12, 15
+			)
+		_tabs.add_theme_stylebox_override(style, sb)
 	_sheet.add_child(_tabs)
 	var mode_tab: VBoxContainer = _tab("ModeTab")
 	_mode = ModePanel.new()
