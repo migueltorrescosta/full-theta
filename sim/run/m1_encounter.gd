@@ -63,10 +63,7 @@ static func kestrel_yard() -> SiteDef:
 func validate() -> Array[String]:
 	var ships: Array[ShipDef] = [player, enemy.ship]
 	var errors: Array[String] = SimWorld.period_errors(map_period, ships)
-	if hazards.size() > HazardSystem.MAX_HAZARDS:
-		errors.append(
-			"%d hazards, at most %d are supported" % [hazards.size(), HazardSystem.MAX_HAZARDS]
-		)
+	errors.append_array(_hazard_errors())
 	return errors
 
 
@@ -75,12 +72,26 @@ func validate() -> Array[String]:
 func build() -> SimWorld:
 	if not validate().is_empty():
 		return null
-	var world: SimWorld = SimWorld.new(world_seed, build_id, map_period)
-	world.science_def = science
-	world.hazards = hazards.duplicate()
+	var world: SimWorld = _new_world()
 	world.add_site(kestrel_yard())
 	world.set_relation(PLAYER_FACTION, ENEMY_FACTION, SimWorld.Relation.HOSTILE)
 	world.spawn_ship(player, PLAYER_FACTION)
 	var facing_player: Quaternion = Quaternion(Vector3.UP, PI)
 	world.spawn_npc(enemy, ENEMY_FACTION, CubePoint.make(0.0, 0.0, -SEPARATION), facing_player)
 	return world
+
+
+## A new world at tick 0 with the setup's seed, build, map period, Science def and hazards:
+## the start of every build() (M1Encounter and the setups that extend it).
+func _new_world() -> SimWorld:
+	var world: SimWorld = SimWorld.new(world_seed, build_id, map_period)
+	world.science_def = science
+	world.hazards = hazards.duplicate()
+	return world
+
+
+## validate()'s hazard check: one bit per hazard in HazardTable.crossed.
+func _hazard_errors() -> Array[String]:
+	if hazards.size() <= HazardSystem.MAX_HAZARDS:
+		return []
+	return ["%d hazards, at most %d are supported" % [hazards.size(), HazardSystem.MAX_HAZARDS]]
