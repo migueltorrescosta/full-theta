@@ -9,6 +9,8 @@ extends ScrollContainer
 
 ## The row of buttons inside.
 var row: HBoxContainer = HBoxContainer.new()
+## The buttons live here (a phone); the lobby shows the strip only with a second ship.
+var on: bool = false
 
 
 func _init() -> void:
@@ -33,6 +35,7 @@ func use(phone: bool, flow: Container, new_ship: Button) -> void:
 		to.add_child(moving[i])
 		to.move_child(moving[i], i)
 		adopt(moving[i], phone)
+	on = phone
 	visible = phone
 
 

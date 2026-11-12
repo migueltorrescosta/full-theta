@@ -78,6 +78,8 @@ var dev: bool = false
 var host_bind: String = ""
 ## The player's saved name.
 var player: String = "Ana"
+## The lobby's seats whose holders said Ready (#37 C1).
+var ready_seats: Array = []
 
 ## A Shakedown step on the focused station's banner (a solo lesson step, D303).
 var lesson: bool = false
@@ -169,18 +171,22 @@ func _ready() -> void:
 					picker_menu._quiz.pick(quiz_pick)
 		"lobby":
 			_ctx.crew.lobby[0]["started"] = false
-			_ctx.crew.lobby[0]["ready"] = false
+			_ctx.crew.lobby[0]["covered"] = false
 			_ctx.crew.lobby[0]["crew"] = 2
 			_ctx.crew.lobby[0]["uncovered"] = ["relay", "comms"]
-			_ctx.crew.lobby[0]["seats"] = [
-				{"seat": "helm", "name": "Ana"},
-				{"seat": "weapons", "name": "Bo"},
-				{"seat": "systems", "name": "Cy"},
-			]
+			# Cy is the player; `ready_seats` names the seats that said Ready (#37 C1).
+			var holders: Array = [["helm", "Ana", 7], ["weapons", "Bo", 8]]
+			holders.append(["systems", "Cy", StationFixture.SESSION])
+			_ctx.crew.lobby[0]["seats"] = holders.map(
+				func(h: Array) -> Dictionary:
+					return {
+						"seat": h[0], "name": h[1], "session": h[2], "ready": h[0] in ready_seats
+					}
+			)
 			if seat == StationCatalogue.ALL:
 				# The dev seat covers every station and needs no other crew (FT-NET-029).
 				_ctx.crew.lobby[0]["uncovered"] = []
-				_ctx.crew.lobby[0]["ready"] = true
+				_ctx.crew.lobby[0]["covered"] = true
 			_ctx.host_bind = host_bind
 			# The host's lobby: its join strip and its End game button (C1, D353).
 			_ctx.crew.host = host_bind != ""

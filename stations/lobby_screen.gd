@@ -2,36 +2,40 @@ class_name LobbyScreen
 extends Control
 ## The lobby as the station grid (D216, FT-NET-015, FT-NET-017, FT-NET-032, FT-STN-015, FT-JNT-006):
 ## the six crew stations as cells, 3 columns by 2 rows in landscape and 2 by 3 in portrait on every
-## device, each with its name, its role description, the names of the crewmates who picked it and a
-## border in its load colour; a one-line legend under the grid (compact, D257: about half the old
-## height, no Take button, the cell takes or leaves the seat; the role summary wraps to
-## LobbySeatGrid.ROLE_LINES lines, P28-Lobby). Tapping cells multi-selects up to two stations (two
-## make the joint view of that pair) and the pick goes to the server on each tap; with two picked
-## the other cells grey out; tapping a picked cell deselects it. Under the grid the selection's name
-## and summary show. Captain and Viewer are two buttons below (each clears the picks). The host's
-## difficulty is one line with Customise, which opens a dialog of the data-shortcut toggles
-## (FT-PAIR-017, FT-STN-016; read-only for the others); Start is the confirm. Nothing scrolls: the
-## whole lobby fits the screen. Picks go to the server (ShipIntents.pick); the screen shows what the
-## events say. The host's lobby also has a "How to join" dialog (FT-NET-013): the browser URL with a
-## QR code and the desktop address; while the ship's seats are open the QR code and the address in
-## large type also sit under the title row (#35 A6), smaller on a phone upright and left to the
-## dialog on a short screen. A player with no name of their own (a phone that joined by QR code)
-## gets a one-field name prompt at the top (#35 A5).
+## device, each with its name, its load as a word in its load colour (light, busy, intense; #37 C9),
+## its role description, the names of the crewmates who picked it (a tick before each one who is
+## Ready) and a border in its load colour (compact, D257: no Take button, the cell takes or leaves
+## the seat; the role summary wraps to LobbySeatGrid.ROLE_LINES lines, P28-Lobby). Tapping cells
+## multi-selects up to two stations (two make the joint view of that pair) and the pick goes to the
+## server on each tap; with two picked the other cells grey out; tapping a picked cell deselects it.
+## Under the grid the selection's name and summary show. Captain and Viewer are two buttons below
+## (each clears the picks). Nothing scrolls: the whole lobby fits the screen. Picks go to the server
+## (ShipIntents.pick); the screen shows what the events say. The host's lobby also has a "How to
+## join" dialog (FT-NET-013): the browser URL with a QR code and the desktop address; while the
+## ship's seats are open the QR code and the address in large type also sit under the title row
+## (#35 A6), smaller on a phone upright and left to the dialog on a short screen. A player with no
+## name of their own (a phone that joined by QR code) gets a one-field name prompt at the top
+## (#35 A5).
 ##
-## Multi-ship games (#11, M4-Q3, M4-Q4, M4-Q6): the ship row lists the `fleet` ships
-## (with their team in TEAMS and HOLDOUT) and a New ship button while there is room (any
-## player, up to 6); a crew puts its ship on team A or B; the host's mode and options sit
-## behind the Mode button (read-only for the others); Start is pressed per ship and then
-## names the ships still to press it, since the universe starts all together.
+## Ready and Start (#37 C1): a player sees only the ship, the seats, a Ready toggle (crew players)
+## and a one-line setup summary ("Co-op · Normal"). The host sees no Ready (its Start is its Ready)
+## but a Game setup button (LobbyGameSetup: mode, ships and teams, difficulty) and Start, which
+## stays greyed with what it waits for ("Need Relay, Comms", "Waiting for Ana") until every crewed
+## ship is covered and every crew player is Ready. With no host connected (a dedicated server, or
+## the host dropped), a Ready crew player gets Start instead.
 ##
-## Phones (#28): in landscape (a short window) the ship row stays its own row and Start,
-## Mode and the difficulty join the seat row; the legend and the selection (its name and
-## role on one line) sit together between the grid and the seat row. Upright, Start joins
-## the difficulty row and the selection's text is smaller. On a phone the wide buttons of
-## the seat and bottom rows trim their text rather than overflow. Every tap target is at least
-## TOUCH_PRIMARY px tall with TOUCH_GAP px between them.
+## Multi-ship games (#11, M4-Q3, M4-Q4, M4-Q6): the ship row lists the `fleet` ships (with their
+## team in TEAMS and HOLDOUT) and Back to ships, and shows only with a second ship; the host adds
+## ships and sets teams in the Game setup sheet. The universe starts all together.
 ##
-## The seats are LobbySeatGrid, the mode and difficulty LobbyGameSetup, and the join strip and
+## Phones (#28): in landscape (a short window) the ship row stays its own row and Start, Ready and
+## the setup line join the seat row; the coverage and the selection (its name and role on one
+## line) sit together between the grid and the seat row. Upright, Ready and Start take the bottom
+## row and the selection's text is smaller. On a phone the wide buttons of the seat and bottom rows
+## trim their text rather than overflow. Every tap target is at least TOUCH_PRIMARY px tall with
+## TOUCH_GAP px between them.
+##
+## The seats are LobbySeatGrid, the setup line and sheet LobbyGameSetup, and the join strip and
 ## name prompt live in LobbyJoinPanel; this screen places them, lays them out and refreshes them.
 
 ## The player wants out of the session (Main menu): the shell leaves, and the host's
@@ -54,6 +58,8 @@ const START_WRAP_SIZE: int = 13
 const SHORT_TOP: int = 0
 ## Added to each wide button's natural width when sharing a phone row (short names first).
 const WEIGH_SLACK: float = 12.0
+## The setup summary's share of a phone row, against its natural width (it trims first).
+const SUMMARY_WEIGHT: float = 0.5
 ## The crew changes the lobby depends on.
 const KINDS: Array[StringName] = [&"catalogue", &"lobby", &"picked", &"toggles", &"fleet"]
 ## The names a new ship takes, the first one not in use (M4-Q3).
@@ -61,7 +67,7 @@ const NEW_SHIP_NAMES: Array[String] = [
 	"Kestrel", "Heron", "Osprey", "Merlin", "Petrel", "Tern", "Curlew", "Swift"
 ]
 ## The team letters (team 0 is A).
-const TEAM_LETTERS: Array[String] = ["A", "B"]
+const TEAM_LETTERS: Array[String] = LobbyGameSetup.TEAM_LETTERS
 ## Phone tap targets (#28): primary targets at least this tall, this far apart.
 const PHONE_TARGET: int = UiTheme.TOUCH_PRIMARY
 const PHONE_GAP: int = UiTheme.TOUCH_GAP
@@ -75,16 +81,13 @@ var ship: int = -1:
 		if _seats != null:
 			_seats.ship = value
 
-## The ship row: a button per ship, then New ship, the team buttons and Back to ships; it
-## wraps on a narrow screen.
+## The ship row, with a second ship only: a button per ship, then Back to ships; it wraps on
+## a narrow screen.
 var _ships: HFlowContainer
-## On a phone (#28 follow-up) the ship buttons and New ship scroll sideways in one row
-## (LobbyShipStrip) and upright the team buttons and Back to ships take the row under it.
+## On a phone (#28 follow-up) the ship buttons scroll sideways in one row (LobbyShipStrip) and
+## upright Back to ships takes the row under it.
 var _strip: LobbyShipStrip
 var _ship_tools: HFlowContainer
-var _new_ship: Button
-var _teams: HBoxContainer
-var _team_buttons: Array[Button] = []
 ## The seat grid (LobbySeatGrid) and the game setup (LobbyGameSetup); the nodes below of
 ## theirs that the layout moves and styles are theirs too.
 var _seats: LobbySeatGrid
@@ -101,6 +104,9 @@ var _short: bool = false
 ## The lobby is on a phone (LayoutMode PHONE): cells and buttons take phone sizes.
 var _phone: bool = false
 var _start: Button
+## Ready (#37 C1) and Start, side by side at the bottom (the seat row on a short screen).
+var _ready: Button
+var _actions: HBoxContainer
 var _title: Label
 var _leave: Button
 var _menu: Button
@@ -144,7 +150,7 @@ func refresh() -> void:
 		ship = -1
 	elif ship < 0 or not ship in ship_ids:
 		ship = ctx.crew.ship if ctx.crew.ship in ship_ids else (ship_ids[0] if ships else -1)
-	var box: Container = _strip.row if _strip.visible else _ships
+	var box: Container = _strip.row if _strip.on else _ships
 	if ship_ids != _ship_ids:
 		_ship_ids = ship_ids
 		for c: Node in box.get_children():
@@ -156,37 +162,23 @@ func refresh() -> void:
 			b.name = "Ship_%d" % int(ships[i]["ship"])
 			b.toggle_mode = true
 			b.pressed.connect(_choose_ship.bind(int(ships[i]["ship"])))
-			LobbyShipStrip.adopt(b, _strip.visible)
+			LobbyShipStrip.adopt(b, _strip.on)
 			box.add_child(b)
 			box.move_child(b, i)
 	for i: int in ships.size():
 		var b: Button = box.get_child(i) as Button
 		b.text = ship_label(ships[i])
 		b.set_pressed_no_signal(int(ships[i]["ship"]) == ship)
+	_show_ship_row()
 	var state: Dictionary = ctx.crew.ship_state(ship)
 	_seats.refresh_cells(state)
 	_apply_columns()
 	_seats.refresh_seats(_phone)
-	_weigh_buttons()
 	_seats.refresh_summary()
-	_refresh_fleet()
-	_start.disabled = not (
-		ctx.crew.is_crew() and ctx.crew.ship == ship and bool(state.get("ready", false))
-	)
-	_start.text = tr("lobby.start")
-	if _start.disabled:
-		# A greyed Start says what it waits for, on every form (R24-6, R26-3).
-		_start.text = start_blocker(state)
-	if ctx.crew.waiting_for_others(ship):
-		_start.disabled = true
-		_start.text = tr("lobby.waiting") % ", ".join(ctx.crew.waiting_names())
-	_fit_start()
-	_start.visible = (
-		not _browsing
-		and (not bool(state.get("started", false)) or ctx.crew.waiting_for_others(ship))
-	)
+	_game_setup.refresh_mode()
+	_refresh_actions()
+	_weigh_buttons()
 	_body.visible = not _browsing
-	_leave.visible = not _browsing
 	_show_join_strip()
 	_menu.text = tr("lobby.end_game" if ctx.crew.host else "lobby.menu")
 	_fit_strip.call_deferred()
@@ -197,6 +189,35 @@ func refresh() -> void:
 		_seats.summary_name.text = tr("lobby.pick_ship")
 		_seats.summary_role.text = ""
 		_body.visible = false
+
+
+## The ship row and Back to ships show only with a second ship (#37 C1), or while browsing.
+func multi_ship() -> bool:
+	return ctx.crew.fleet_ships().size() > 1 or _browsing
+
+
+func _show_ship_row() -> void:
+	var multi: bool = multi_ship()
+	_strip.visible = _strip.on and multi
+	_ships.visible = not _strip.on and multi
+	_ship_tools.visible = _strip.on and multi and not _short
+	_leave.visible = multi and not _browsing
+
+
+## Ready for a crew player, Start for the host (or, with no host, for a Ready crew player),
+## greyed with what it waits for (R24-6, #37 C1).
+func _refresh_actions() -> void:
+	var mine: bool = ctx.crew.ship == ship
+	_ready.visible = not _browsing and mine and ctx.crew.offers_ready()
+	var ready: bool = ctx.crew.is_ready()
+	_ready.set_pressed_no_signal(ready)
+	_ready.text = tr("lobby.ready_on" if ready else "lobby.ready")
+	_start.visible = not _browsing and ctx.crew.offers_start()
+	var why: String = start_blocker()
+	_start.disabled = why != ""
+	_start.text = tr("lobby.start") if why == "" else why
+	_fit_start()
+	_actions.visible = not _short and (_ready.visible or _start.visible)
 
 
 ## A Start text too long for one line ("Falta: Retransmissão, Comunicações" in a phone's
@@ -213,21 +234,39 @@ func _fit_start() -> void:
 		_start.add_theme_font_size_override("font_size", START_WRAP_SIZE)
 
 
-## Why Start is greyed on the shown ship: "Pick a station", "Need Relay, Comms" or
-## "Need 1 more player"; "Start" when nothing blocks it.
-func start_blocker(state: Dictionary) -> String:
-	if ctx.crew.ship != ship or not ctx.crew.is_crew():
-		return tr("lobby.need_seat")
-	if bool(state.get("ready", false)):
-		return tr("lobby.start")
+## Why Start is greyed, or "" when nothing blocks it (#37 C1): a crewed ship that fails
+## coverage ("Need Relay, Comms", "Need 1 more player"; another ship by name, "Waiting for
+## Heron"), else the crew players not Ready ("Waiting for Ana, Rui").
+func start_blocker() -> String:
+	var crewed: Array[int] = ctx.crew.crewed_ships()
+	if crewed.is_empty():
+		return _need_players(int(ctx.crew.ship_state(ship).get("min_crew", 3)))
+	for id: int in crewed:
+		var state: Dictionary = ctx.crew.ship_state(id)
+		if bool(state.get("covered", false)):
+			continue
+		if id != ship and crewed.size() > 1:
+			return tr("lobby.waiting") % ctx.crew.ship_name(id)
+		return coverage_blocker(state)
+	var names: PackedStringArray = ctx.crew.unready_names()
+	if not names.is_empty():
+		return tr("lobby.waiting") % ", ".join(names)
+	return ""
+
+
+## What a ship's coverage still needs: "Need Relay, Comms" or "Need 1 more player".
+func coverage_blocker(state: Dictionary) -> String:
 	var uncovered: Array = state.get("uncovered", [])
 	if not uncovered.is_empty():
 		var names: PackedStringArray = []
 		for st: Variant in uncovered:
 			names.append(tr(StationCatalogue.name_key(str(st))))
 		return tr("lobby.need_stations") % ", ".join(names)
-	var missing: int = maxi(1, int(state.get("min_crew", 3)) - int(state.get("crew", 0)))
-	if missing == 1:
+	return _need_players(int(state.get("min_crew", 3)) - int(state.get("crew", 0)))
+
+
+func _need_players(missing: int) -> String:
+	if missing <= 1:
 		return tr("lobby.need_players_one")
 	return tr("lobby.need_players") % missing
 
@@ -238,12 +277,6 @@ func ship_label(row: Dictionary) -> String:
 	if ctx.crew.has_teams():
 		text = tr("lobby.ship_team") % [text, TEAM_LETTERS[clampi(int(row.get("team", 0)), 0, 1)]]
 	return text
-
-
-## The mode button's text (LobbyGameSetup.mode_text): just the mode's name on a narrow or
-## short screen.
-func mode_text() -> String:
-	return _game_setup.mode_text(_short or size.x < NARROW_WIDTH)
 
 
 ## The first name of NEW_SHIP_NAMES no ship has, or "Ship 7" past the list.
@@ -259,28 +292,6 @@ func next_ship_name() -> String:
 func add_ship() -> void:
 	_added = next_ship_name()
 	ctx.intents.add_ship(_added)
-
-
-## Puts the shown ship on a team (M4-Q6): its own crew only, before Start.
-func choose_team(team: int) -> void:
-	if ctx.crew.ship == ship and not bool(ctx.crew.fleet.get("started", false)):
-		ctx.intents.set_team(ship, team)
-	refresh()
-
-
-## The New ship and team buttons and the mode line, from the `fleet` event.
-func _refresh_fleet() -> void:
-	_new_ship.visible = ctx.crew.can_add_ship()
-	_new_ship.text = tr("lobby.new_ship")
-	var teams: bool = ctx.crew.has_teams() and ship >= 0 and not _browsing
-	_teams.visible = teams
-	var mine: bool = ctx.crew.ship == ship and not bool(ctx.crew.fleet.get("started", false))
-	for t: int in _team_buttons.size():
-		var b: Button = _team_buttons[t]
-		b.text = tr("lobby.team") % TEAM_LETTERS[t]
-		b.set_pressed_no_signal(ctx.crew.team_of(ship) == t)
-		b.disabled = not mine
-	_game_setup.refresh_mode(mode_text())
 
 
 ## The columns of the grid for a lobby of this size: 3 in landscape, 2 in portrait.
@@ -313,9 +324,9 @@ static func _label(text: String, variation: String = "") -> Label:
 func _apply_columns() -> void:
 	if _seats != null:
 		_seats.grid.columns = columns_for(size)
+		_seats.place_load(_seats.grid.columns == LANDSCAPE_COLUMNS)
 		if size.y > 0.0:
 			_arrange(size.y < SHORT_HEIGHT)
-			_game_setup.mode_button.text = mode_text()
 		if is_inside_tree():
 			_apply_targets(LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE)
 			_apply_safe_area()
@@ -339,7 +350,7 @@ func _apply_targets(phone: bool) -> void:
 		box.add_theme_constant_override("h_separation", gap)
 		box.add_theme_constant_override("v_separation", gap)
 	_use_strip(phone)
-	for box: Control in [_head, _seats.seat_row, _game_setup.row, _teams, _body, _strip.row]:
+	for box: Control in [_head, _seats.seat_row, _game_setup.row, _actions, _body, _strip.row]:
 		box.add_theme_constant_override("separation", gap if phone else 4)
 	_outer.add_theme_constant_override("separation", PHONE_GAP if phone else (3 if _short else 6))
 	for b: Node in find_children("*", "BaseButton", true, false):
@@ -356,19 +367,12 @@ func _apply_targets(phone: bool) -> void:
 		_seats.fit_cells()
 	_phone = phone
 	_style_summary(_short, phone)
-	# A phone upright shows the labelled mode and the preset on the difficulty row ("Mode:
-	# Teams", "Difficulty: Easy"), with Start under it on its own row (R24-5, R24-6).
-	if not _short:
-		_game_setup.difficulty.visible = not phone
-		_reparent(_start, _outer, -1)
-	_game_setup.label_customise(_short or phone)
 
 
 ## Lays the rows out for the window: normal, or short (a phone in landscape, #28), where
-## the title row goes: the coverage joins the legend line, the team buttons and Back to
-## ships the seat row, and the mode, difficulty, How to join, Main menu and Start one
-## bottom row; the legend and the selection share one block, the selection's name and
-## role on one line (the role trimmed to fit).
+## the title row goes: Back to ships joins the seat row, and the setup line, How to join,
+## Main menu, Ready and Start one bottom row; the coverage and the selection share one block,
+## the selection's name and role on one line (the role trimmed to fit).
 func _arrange(short: bool) -> void:
 	if short == _short:
 		return
@@ -379,7 +383,6 @@ func _arrange(short: bool) -> void:
 	# A phone keeps a floor of safe margin on top already (SafeArea.FLOOR).
 	_margin.add_theme_constant_override("margin_top", SHORT_TOP if short else pad)
 	_head.visible = not short
-	_game_setup.difficulty.visible = not short
 	_seats.summary.vertical = not short
 	_seats.coverage.theme_type_variation = "CaptionLabel" if short else "DimLabel"
 	_seats.summary.add_theme_constant_override("separation", 6 if short else 0)
@@ -389,6 +392,7 @@ func _arrange(short: bool) -> void:
 	)
 	_style_summary(short, _phone)
 	_show_join_strip()
+	_refresh_actions()
 
 
 ## On a phone or a short screen, shares a row's room among its wide buttons by their
@@ -397,16 +401,23 @@ func _arrange(short: bool) -> void:
 func _weigh_buttons() -> void:
 	for row: Control in [_seats.seat_row, _game_setup.row]:
 		for c: Node in row.get_children():
-			var b: Button = c as Button
-			if b == null or not b.size_flags_horizontal & Control.SIZE_EXPAND:
+			var b: Control = c as Control
+			if (
+				not (b is Button or b == _game_setup.summary)
+				or not b.size_flags_horizontal & Control.SIZE_EXPAND
+			):
 				continue
 			var w: float = 1.0
 			if _short or _phone:
 				var font_size: int = b.get_theme_font_size("font_size")
 				var text: Vector2 = b.get_theme_font("font").get_string_size(
-					b.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size
+					str(b.get("text")), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size
 				)
-				w = text.x + b.get_theme_stylebox("normal").get_minimum_size().x + WEIGH_SLACK
+				w = text.x + WEIGH_SLACK
+				if b is Button:
+					w += b.get_theme_stylebox("normal").get_minimum_size().x
+				else:
+					w *= SUMMARY_WEIGHT  # the buttons' text first; the summary trims
 			b.size_flags_stretch_ratio = maxf(1.0, w)
 
 
@@ -417,6 +428,7 @@ func _weigh_buttons() -> void:
 ## the screen (longer languages).
 func _style_summary(short: bool, phone: bool) -> void:
 	var small: bool = short or phone
+	_game_setup.fit_summary(short)
 	for row: Control in [_seats.seat_row, _game_setup.row]:
 		for c: Node in row.get_children():
 			if c is Button and (c as Button).size_flags_horizontal & Control.SIZE_EXPAND:
@@ -450,22 +462,20 @@ func _style_summary(short: bool, phone: bool) -> void:
 	_seats.coverage.clip_text = phone and short
 	_seats.coverage.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	if short:
-		_reparent(_seats.legend, _body.get_node("Info"), 0)
-		_reparent(_seats.coverage, _seats.legend, 0)
-		_reparent(_teams, _seats.seat_row, -1)
+		_reparent(_seats.coverage, _body.get_node("Info"), 0)
 		_reparent(_leave, _seats.seat_row, -1)
-		for c: Control in [_join_button, _menu, _start, _fullscreen]:
+		for c: Control in [_join_button, _menu, _ready, _start, _fullscreen]:
 			_reparent(c, _game_setup.row, -1)
 	else:
-		_reparent(_seats.legend, _body, _seats.grid.get_index() + 1)
 		_reparent(_seats.coverage, _outer, _ship_tools.get_index() + 1)
-		_reparent(_teams, _ship_tools if _phone else _ships, -1)
 		_reparent(_leave, _ship_tools if _phone else _ships, -1)
 		_reparent(_join_button, _head, 1)
 		_reparent(_menu, _head, 2)
 		_reparent(_fullscreen, _head, 3)
-		_reparent(_start, _outer, -1)
+		_reparent(_ready, _actions, 0)
+		_reparent(_start, _actions, 1)
 	_start.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_ready.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 
 static func _reparent(node: Control, parent: Node, index: int) -> void:
@@ -475,17 +485,15 @@ static func _reparent(node: Control, parent: Node, index: int) -> void:
 	parent.move_child(node, index)
 
 
-## The phone's ship strip (LobbyShipStrip) or the flow, and where the team buttons and Back
-## to ships go: the row under the strip upright, the flow off a phone.
+## The phone's ship strip (LobbyShipStrip) or the flow, and where Back to ships goes: the row
+## under the strip upright, the flow off a phone.
 func _use_strip(phone: bool) -> void:
-	if _strip.visible != phone:
-		_strip.use(phone, _ships, _new_ship)
+	if _strip.on != phone:
+		_strip.use(phone, _ships, null)
 		if not _short:
-			_reparent(_teams, _ship_tools if phone else _ships, -1)
 			_reparent(_leave, _ship_tools if phone else _ships, -1)
 		_fit_strip.call_deferred()
-	_ships.visible = not phone
-	_ship_tools.visible = phone and not _short
+	_show_ship_row()
 
 
 func _fit_strip() -> void:
@@ -547,16 +555,6 @@ func _build() -> void:
 	_ships = HFlowContainer.new()
 	_ships.name = "Ships"
 	outer.add_child(_ships)
-	_new_ship = _button("NewShip", tr("lobby.new_ship"), add_ship)
-	_ships.add_child(_new_ship)
-	_teams = HBoxContainer.new()
-	_teams.name = "Teams"
-	_ships.add_child(_teams)
-	for t: int in TEAM_LETTERS.size():
-		var b: Button = _button("Team_%d" % t, "", choose_team.bind(t))
-		b.toggle_mode = true
-		_teams.add_child(b)
-		_team_buttons.append(b)
 	_leave = _button("BackToShips", tr("lobby.leave_pick"), _back_to_ships)
 	_ships.add_child(_leave)
 	_strip = LobbyShipStrip.new()
@@ -574,18 +572,27 @@ func _build() -> void:
 	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	outer.add_child(_body)
 	_body.add_child(_seats.grid)
-	_body.add_child(_seats.legend)
 	_body.add_child(_seats.info)
 	_body.add_child(_seats.seat_row)
 	_game_setup = LobbyGameSetup.new(ctx)
 	_game_setup.refresh_needed.connect(_refresh_data)
+	_game_setup.add_ship_requested.connect(add_ship)
 	_body.add_child(_game_setup.row)
+	_actions = HBoxContainer.new()
+	_actions.name = "Actions"
+	outer.add_child(_actions)
+	_ready = _button("Ready", tr("lobby.ready"), _toggle_ready)
+	_ready.toggle_mode = true
+	_ready.theme_type_variation = "TouchButton"
+	_ready.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_actions.add_child(_ready)
 	_start = _button("Start", tr("lobby.start"), func() -> void: ctx.intents.start())
 	_start.theme_type_variation = "TouchButton"
 	_start.clip_text = true
 	_start.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_start.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_start.resized.connect(_fit_start)
-	outer.add_child(_start)
+	_actions.add_child(_start)
 	_build_dialogs()
 
 
@@ -605,8 +612,7 @@ func _button(node_name: String, text: String, handler: Callable) -> Button:
 	return b
 
 
-## The dialogs: the difficulty toggles and the mode, the end of the game and, on the host,
-## how to join.
+## The dialogs: the Game setup sheet, the end of the game and, on the host, how to join.
 func _build_dialogs() -> void:
 	_game_setup.add_dialogs(self)
 	_end_dialog = ConfirmationDialog.new()
@@ -639,9 +645,14 @@ func _open_join() -> void:
 	_join_dialog.popup_centered_clamped(Vector2i(360, 320), 0.9)
 
 
-## The game setup's difficulty line and dialog (LobbyGameSetup.refresh).
+## The setup summary and sheet (LobbyGameSetup.refresh).
 func _refresh_data() -> void:
-	_game_setup.refresh(_short or _phone)
+	_game_setup.refresh()
+
+
+## Ready on or off (#37 C1); the lobby event shows what the server holds.
+func _toggle_ready() -> void:
+	ctx.intents.set_ready(not ctx.crew.is_ready())
 
 
 ## A language switch retranslates the whole lobby.
@@ -649,6 +660,7 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and ctx != null:
 		_title.text = tr("lobby.title")
 		_start.text = tr("lobby.start")
+		_ready.text = tr("lobby.ready")
 		_menu.text = tr("lobby.end_game" if ctx.crew.host else "lobby.menu")
 		_end_dialog.title = tr("lobby.end_title")
 		_end_dialog.dialog_text = tr("lobby.end_text")

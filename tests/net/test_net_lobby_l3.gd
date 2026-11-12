@@ -120,18 +120,18 @@ func test_one_pick_sharing_and_one_captain() -> void:
 	assert_str(h.session_of(server, c).seat).is_equal("tactical")
 	var lobby: Dictionary = h.last_event(d, NetProtocol.EVENT_LOBBY)
 	assert_str(lobby["payload"]["captain"]).is_equal("b")
-	# The station grid names who sits where (D216).
+	# The station grid names who sits where (D216), and who is Ready (#37 C1).
+	var seats: Array = lobby["payload"]["seats"]
 	(
-		assert_array(lobby["payload"]["seats"])
+		assert_array(seats.map(func(r: Dictionary) -> Array: return [r["name"], r["seat"]]))
 		. contains_exactly_in_any_order(
-			[
-				{"name": "a", "seat": "systems"},
-				{"name": "b", "seat": "captain"},
-				{"name": "c", "seat": "tactical"},
-				{"name": "d", "seat": "tactical"},
-			]
+			[["a", "systems"], ["b", "captain"], ["c", "tactical"], ["d", "tactical"]]
 		)
 	)
+	var ids: Array = [a, b, c, d].map(func(x: NetClient) -> int: return h.session_of(server, x).id)
+	for r: Dictionary in seats:
+		assert_bool(r["ready"]).is_false()
+		assert_array(ids).contains([r["session"]])
 	b.release_pick()
 	assert_bool(await h.until(func() -> bool: return h.session_of(server, b).seat == "")).is_true()
 	assert_bool(await h.pick(c, "captain")).is_true()
@@ -140,8 +140,8 @@ func test_one_pick_sharing_and_one_captain() -> void:
 # FT: FT-NET-019, FT-NET-020, FT-NET-021, FT-GEN-004, FT-GEN-005, FT-GEN-006
 # Start works only once the coverage check passes: with Tactical and Systems (2 crew)
 # plus a Captain and a Viewer the lobby lists Relay and Comms as uncovered and refuses
-# Start; Captain and Viewer can't start; Ops makes it pass, and Start starts the run
-# (the sim steps from then on, not before).
+# a Ready crew player's Start (no host here, #37 C1); Captain and Viewer can't say Ready or
+# start; Ops makes it pass, and Start starts the run (the sim steps from then on, not before).
 func test_start_needs_three_crew_covering_six_stations() -> void:
 	var server: NetServer = h.server()
 	var tac: NetClient = await h.joined(server, "tac", "tactical")
@@ -152,22 +152,29 @@ func test_start_needs_three_crew_covering_six_stations() -> void:
 		return e["payload"]["uncovered"] == ["relay", "comms"]
 	var lobby: Dictionary = await h.next_event(view, NetProtocol.EVENT_LOBBY, 0, uncovered_ok)
 	assert_int(lobby["payload"]["crew"]).is_equal(2)
-	assert_bool(lobby["payload"]["ready"]).is_false()
+	assert_bool(lobby["payload"]["covered"]).is_false()
 	var tick: int = server.world.tick
 	var from: int = h.mark(tac)
 	tac.set_ready(true)
+	tac.start()
 	var refused: Dictionary = await h.next_event(tac, NetProtocol.EVENT_REQUEST_REJECTED, from)
+	assert_int(refused["payload"]["request"]).is_equal(NetProtocol.Type.START)
 	assert_str(refused["payload"]["reason"]).is_equal(NetGame.NOT_COVERED)
 	assert_array(refused["payload"]["uncovered"]).is_equal(["relay", "comms"])
 	from = h.mark(cap)
 	cap.set_ready(true)
+	refused = await h.next_event(cap, NetProtocol.EVENT_REQUEST_REJECTED, from)
+	assert_int(refused["payload"]["request"]).is_equal(NetProtocol.Type.READY)
+	assert_str(refused["payload"]["reason"]).is_equal(NetGame.NOT_CREW)
+	from = h.mark(cap)
+	cap.start()
 	refused = await h.next_event(cap, NetProtocol.EVENT_REQUEST_REJECTED, from)
 	assert_str(refused["payload"]["reason"]).is_equal(NetGame.NOT_CREW)
 	await h.wait(300)
 	assert_int(server.world.tick).is_equal(tick)
 	assert_bool(server.game.lobby.launched.is_empty()).is_true()
 	var ops: NetClient = await h.joined(server, "ops", "ops")
-	var ready_ok: Callable = func(e: Dictionary) -> bool: return e["payload"]["ready"]
+	var ready_ok: Callable = func(e: Dictionary) -> bool: return e["payload"]["covered"]
 	lobby = await h.next_event(sys, NetProtocol.EVENT_LOBBY, 0, ready_ok)
 	assert_array(lobby["payload"]["uncovered"]).is_empty()
 	assert_int(lobby["payload"]["crew"]).is_equal(3)
@@ -177,6 +184,77 @@ func test_start_needs_three_crew_covering_six_stations() -> void:
 	var started: Callable = func(e: Dictionary) -> bool: return e["payload"]["started"]
 	assert_dict(await h.next_event(view, NetProtocol.EVENT_LOBBY, 0, started)).is_not_empty()
 	assert_bool(server.game.sim_running()).is_true()
+
+
+# FT: FT-NET-019, FT-NET-021
+# Ready is a toggle per crew player (#37 C1): the lobby's seat rows show it, Ready{false}
+# takes it back, a seat change clears it; a crew player not Ready can't start, and the
+# others' names come with `not_ready`.
+func test_ready_is_a_toggle_that_a_seat_change_clears() -> void:
+	var server: NetServer = h.server()
+	var crew: Array[NetClient] = await h.crew3(server)
+	var tac: NetClient = crew[0]
+	var seat_ready: Callable = func(e: Dictionary, name: String, want: bool) -> bool:
+		for row: Dictionary in e["payload"]["seats"]:
+			if row["name"] == name:
+				return row["ready"] == want
+		return false
+	var from: int = h.mark(tac)
+	tac.set_ready(true)
+	var on: Dictionary = await h.next_event(
+		tac, NetProtocol.EVENT_LOBBY, from, seat_ready.bind("tactical", true)
+	)
+	assert_dict(on).is_not_empty()
+	assert_bool(h.session_of(server, tac).ready).is_true()
+	tac.set_ready(false)
+	assert_bool(await h.until(func() -> bool: return not h.session_of(server, tac).ready)).is_true()
+	tac.set_ready(true)
+	assert_bool(await h.until(func() -> bool: return h.session_of(server, tac).ready)).is_true()
+	from = h.mark(tac)
+	tac.start()
+	var refused: Dictionary = await h.next_event(tac, NetProtocol.EVENT_REQUEST_REJECTED, from)
+	assert_str(refused["payload"]["reason"]).is_equal(NetGame.NOT_READY)
+	assert_array(refused["payload"]["waiting"]).is_equal(["systems", "ops"])
+	from = h.mark(crew[1])
+	crew[1].start()
+	refused = await h.next_event(crew[1], NetProtocol.EVENT_REQUEST_REJECTED, from)
+	assert_str(refused["payload"]["reason"]).is_equal(NetGame.NOT_READY)
+	assert_bool(await h.pick(tac, "drive")).is_true()
+	assert_bool(h.session_of(server, tac).ready).is_false()
+	assert_bool(server.game.lobby.launched.is_empty()).is_true()
+
+
+# FT: FT-NET-019
+# The host starts the game (#37 C1): its own Start is its Ready, a crew player's Start is
+# refused `not_host` while the host is connected, and the host's waits for every crew
+# player's Ready. Once the host drops, a Ready crew player may Start (the no-host rule), and
+# the `fleet` event says no host is here.
+func test_the_host_starts_and_without_one_a_ready_player_does() -> void:
+	var server: NetServer = h.server(false, 10.0, "s3cret")
+	var host: NetClient = await h.welcomed(server, "host", "", "s3cret")
+	await h.pick(host, "tactical")
+	var sys: NetClient = await h.joined(server, "sys", "systems")
+	var ops: NetClient = await h.joined(server, "ops", "ops")
+	assert_bool(await h.say_ready(server, [sys])).is_true()
+	var from: int = h.mark(ops)
+	ops.set_ready(true)
+	ops.start()
+	var refused: Dictionary = await h.next_event(ops, NetProtocol.EVENT_REQUEST_REJECTED, from)
+	assert_str(refused["payload"]["reason"]).is_equal(NetGame.NOT_HOST)
+	ops.set_ready(false)
+	assert_bool(await h.until(func() -> bool: return not h.session_of(server, ops).ready)).is_true()
+	from = h.mark(host)
+	host.start()
+	refused = await h.next_event(host, NetProtocol.EVENT_REQUEST_REJECTED, from)
+	assert_str(refused["payload"]["reason"]).is_equal(NetGame.NOT_READY)
+	assert_array(refused["payload"]["waiting"]).is_equal(["ops"])
+	assert_bool(server.game.lobby.host_here()).is_true()
+	host.bye()
+	assert_bool(await h.until(func() -> bool: return not server.game.lobby.host_here())).is_true()
+	var no_host: Callable = func(e: Dictionary) -> bool: return not e["payload"]["host"]
+	assert_dict(await h.next_event(sys, NetProtocol.EVENT_FLEET, 0, no_host)).is_not_empty()
+	assert_bool(await h.say_ready(server, [ops])).is_true()
+	assert_bool(await h.start(server, sys)).is_true()
 
 
 # FT: FT-NET-029, FT-M1-015
@@ -265,3 +343,24 @@ func test_rename_changes_the_seat_name_in_the_lobby() -> void:
 	c.rename("   ")
 	await h.wait(200)
 	assert_str(h.session_of(server, c).name).is_equal("Ana")
+
+
+# FT: FT-NET-015
+# R24-13: two players with the same name are told apart: the second "Player" to join is
+# "Player 2", the third "Player 3", and a rename to a taken name is numbered too.
+func test_duplicate_names_are_numbered() -> void:
+	var server: NetServer = h.server()
+	var a: NetClient = await h.joined(server, "Player", "helm")
+	var b: NetClient = await h.joined(server, "Player", "weapons")
+	var c: NetClient = await h.joined(server, "Player", "engineering")
+	assert_str(h.session_of(server, a).name).is_equal("Player")
+	assert_str(h.session_of(server, b).name).is_equal("Player 2")
+	assert_str(h.session_of(server, c).name).is_equal("Player 3")
+	a.rename("Ana")
+	(
+		assert_bool(await h.until(func() -> bool: return h.session_of(server, a).name == "Ana"))
+		. is_true()
+	)
+	c.rename("Ana")
+	var numbered: Callable = func() -> bool: return h.session_of(server, c).name == "Ana 2"
+	assert_bool(await h.until(numbered)).is_true()

@@ -27,7 +27,7 @@ func _lobby(ships: int) -> LobbyScreen:
 	var ctx: StationContext = StationFixture.context("systems")
 	ctx.crew.host = true
 	ctx.crew.lobby[0]["started"] = false
-	ctx.crew.lobby[0]["ready"] = false
+	ctx.crew.lobby[0]["covered"] = false
 	ctx.crew.lobby[0]["crew"] = 2
 	ctx.crew.lobby[0]["uncovered"] = ["relay", "comms"]
 	ctx.crew.lobby[0]["seats"] = [

@@ -90,7 +90,7 @@ ALLOW: list[tuple[str, str, str, str]] = [
     # D396: a team is a lobby label; outside the sim a ship's team is still looked up by name.
     ("net/net_fleet.gd", "team_of", r"team_of", "the lobby's ship-to-team map, which the wire scoreboard and the winner's team use"),
     ("stations/crew_state.gd", "team_of", r"team_of", "the client's copy of the lobby's ship-to-team map"),
-    ("stations/lobby_screen.gd", "team_of", r"team_of", "the lobby's team buttons read that map"),
+    ("stations/lobby_game_setup.gd", "team_of", r"team_of", "the Game setup sheet's team buttons read that map"),
     ("tests/net/test_fleet_lobby_l3.gd", "team_of", r"fleet\.team_of", "tests the lobby's ship-to-team map"),
     ("tests/sim/run/test_crew_factions.gd", "team_of", r"SimWorld\.team_of used to", "the regression note names the deleted function"),
 ]

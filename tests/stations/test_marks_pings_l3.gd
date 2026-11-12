@@ -42,6 +42,9 @@ func test_marks_and_pings_reach_every_station() -> void:
 	var server: NetServer = _h.server()
 	for seat: String in SEATS:
 		_shells[seat] = await _shell(server, seat)
+	# Everyone Ready, then Helm's Start: no host here (#37 C1).
+	_h.all_ready(server)
+	_shell_of("helm").ctx.intents.set_ready(true)
 	_shell_of("helm").ctx.intents.start()
 	# A first visit's screen draws once its own frame ran (the top bar holds the name).
 	var shown: Callable = func(s: ClientShell) -> bool:

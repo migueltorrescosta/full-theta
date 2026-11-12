@@ -2,6 +2,7 @@
 ui_join timeout=60
 expect_welcome host=false
 ui_pick seat=systems
+ui_button name=Ready timeout=30
 barrier name=picked n=3 timeout=90
 expect_event type=started payload.ship=0 timeout=60
 ui_expect shown=station focused=engineering timeout=30
@@ -15,6 +16,7 @@ ui_expect card=true ship_outcome.outcome=win
 barrier name=won n=3 timeout=30
 ui_button name=Vote
 ui_expect shown=lobby seat=systems card=false timeout=30
+ui_button name=Ready timeout=30
 barrier name=lobby1 n=3 timeout=30
 expect_event type=started payload.ship=0 timeout=60
 ui_expect shown=station timeout=30

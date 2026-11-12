@@ -1,3 +1,4 @@
+# gdlint: disable=max-public-methods
 class_name NetHarness
 extends RefCounted
 ## Shared helpers for the L3 network tests (and the L4 bots, T048): a NetServer on a
@@ -136,10 +137,39 @@ func crew3(s: NetServer) -> Array[NetClient]:
 	return out
 
 
-## Presses Start and waits until the run started and the sim stepped.
+## Every crew player on the server is Ready (a shortcut for the Ready messages, #37 C1).
+func all_ready(s: NetServer) -> void:
+	for session: NetSession in s.game.by_id.values():
+		if session.is_crew():
+			session.ready = true
+	s.game.lobby.mark_dirty()
+
+
+## Each client says Ready (the message, #37 C1) and the server holds it: true once it does.
+func say_ready(s: NetServer, clients: Array[NetClient]) -> bool:
+	for c: NetClient in clients:
+		c.set_ready(true)
+	return await until(
+		func() -> bool:
+			for c: NetClient in clients:
+				if not session_of(s, c).ready:
+					return false
+			return true
+	)
+
+
+## Makes every crew player Ready, presses Start from `c` (or from the host client when a host
+## is connected and `c` isn't it: only the host's Start counts then, #37 C1) and waits until
+## the run started and the sim stepped.
 func start(s: NetServer, c: NetClient) -> bool:
 	var tick: int = s.world.tick
-	c.set_ready(true)
+	all_ready(s)
+	var by: NetClient = c
+	if s.game.lobby.host_here() and not session_of(s, c).is_host:
+		for other: NetClient in events:
+			if session_of(s, other) != null and session_of(s, other).is_host:
+				by = other
+	by.start()
 	return await until(func() -> bool: return s.world.tick > tick + 2)
 
 

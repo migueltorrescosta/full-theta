@@ -55,6 +55,8 @@ func test_shell_runs_lobby_to_station_with_the_dev_seat() -> void:
 		)
 		. is_true()
 	)
+	# Ready, then Start: no host here, so the Ready crew player starts (#37 C1).
+	shell.ctx.intents.set_ready(true)
 	shell.ctx.intents.start()
 	assert_bool(await _until(func() -> bool: return shell.screen != null)).is_true()
 	assert_int(shell.screen.panels.size()).is_equal(6)

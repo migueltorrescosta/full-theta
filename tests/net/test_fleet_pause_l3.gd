@@ -40,10 +40,11 @@ func _alls(server: NetServer, ships: Array) -> Array[NetClient]:
 	return out
 
 
-## Presses Start on every client given and waits until the sim steps.
+## Every crew player Ready, Start from the first client given (no host here, #37 C1); waits
+## until the sim steps.
 func _start(server: NetServer, clients: Array[NetClient]) -> bool:
-	for c: NetClient in clients:
-		c.set_ready(true)
+	h.all_ready(server)
+	clients[0].start()
 	return await h.until(func() -> bool: return server.game.sim_running() and server.world.tick > 2)
 
 

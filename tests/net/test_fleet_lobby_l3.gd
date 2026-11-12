@@ -70,7 +70,7 @@ func test_ships_added_up_to_six() -> void:
 
 
 # FT: FT-GEN-001
-# Each ship has its own picks and coverage check in `fleet`: a crewed ship is ready, the
+# Each ship has its own picks and coverage check in `fleet`: a crewed ship is covered, the
 # other shows its own uncovered stations.
 func test_each_ship_has_its_own_coverage() -> void:
 	var server: NetServer = h.fleet_server(GameRules.Mode.COOP, 2)
@@ -81,29 +81,38 @@ func test_each_ship_has_its_own_coverage() -> void:
 		var ships: Array = ev["payload"]["ships"]
 		return ships[0]["crew"] == 3 and ships[1]["crew"] == 1
 	var fleet: Dictionary = await _fleet(lone, from, both)
-	assert_bool(fleet["ships"][0]["ready"]).is_true()
+	assert_bool(fleet["ships"][0]["covered"]).is_true()
 	assert_array(fleet["ships"][0]["uncovered"]).is_empty()
-	assert_bool(fleet["ships"][1]["ready"]).is_false()
+	assert_bool(fleet["ships"][1]["covered"]).is_false()
 	assert_array(fleet["ships"][1]["uncovered"]).contains(["helm", "weapons"])
 	assert_array(fleet["ships"][1]["uncovered"]).not_contains(["relay", "comms"])
 	assert_array(fleet["waiting"]).is_equal([0, 1])
 
 
 # FT: FT-GEN-001
-# The universe starts all together (M4-Q4): the first ship's Start waits for the other,
-# listed in `waiting`; the second's starts both.
+# The universe starts all together (M4-Q4, #37 C1): with no host, a Ready crew player's Start
+# is refused while the other ship's crew isn't Ready (`not_ready` with their names; the ship
+# listed in `waiting`, each seat's Ready in `fleet`); once everyone is, one Start starts both.
 func test_ships_start_all_together() -> void:
 	var server: NetServer = h.fleet_server(GameRules.Mode.COOP, 2, [], true)
 	var crews: Array[NetClient] = await _crews(server, [0, 1])
 	var from: int = h.mark(crews[1])
-	crews[0].set_ready(true)
+	assert_bool(await h.say_ready(server, [crews[0]])).is_true()
 	var one: Callable = func(ev: Dictionary) -> bool: return ev["payload"]["waiting"] == [1]
 	var fleet: Dictionary = await _fleet(crews[1], from, one)
-	assert_bool(fleet["ships"][0]["started"]).is_true()
+	assert_bool(fleet["host"]).is_false()
+	assert_bool(fleet["ships"][0]["seats"][0]["ready"]).is_true()
+	assert_bool(fleet["ships"][1]["seats"][0]["ready"]).is_false()
+	var from0: int = h.mark(crews[0])
+	crews[0].start()
+	var e: Dictionary = await h.next_event(crews[0], NetProtocol.EVENT_REQUEST_REJECTED, from0)
+	assert_str(e["payload"]["reason"]).is_equal("not_ready")
+	assert_array(e["payload"]["waiting"]).is_not_empty()
 	await h.wait(200)
 	assert_bool(server.game.lobby.launched.is_empty()).is_true()
 	assert_int(server.world.tick).is_equal(0)
-	crews[1].set_ready(true)
+	assert_bool(await h.say_ready(server, [crews[1]])).is_true()
+	crews[0].start()
 	assert_bool(await _running(server)).is_true()
 	assert_int(server.game.lobby.launched.size()).is_equal(2)
 	var started: Callable = func(ev: Dictionary) -> bool: return ev["payload"]["started"]
@@ -123,8 +132,8 @@ func test_unpicked_ship_vanishes_at_start() -> void:
 	assert_bool(await h.until(three)).is_true()
 	crews.append(await h.joined(server, "far", StationCatalogue.ALL, 2))
 	var from: int = h.mark(crews[1])
-	crews[0].set_ready(true)
-	crews[1].set_ready(true)
+	assert_bool(await h.say_ready(server, crews)).is_true()
+	crews[0].start()
 	assert_bool(await _running(server)).is_true()
 	assert_int(server.game.crew_ships().size()).is_equal(2)
 	assert_str(server.game.crew_ships()[1]["name"]).is_equal("Far")
@@ -140,8 +149,9 @@ func test_unpicked_ship_vanishes_at_start() -> void:
 
 # FT: FT-MIS-031, FT-GEN-002
 # The host picks the mode and its options (M4-Q6): teams split the ships 0 and 1 and a crew
-# moves its ship; others are refused `not_host`, unknown modes `bad_mode`, a team outside a
-# teams mode `bad_team`; after Start the lobby is closed.
+# moves its ship, the host any ship (#37 C1: its Game setup sheet); others are refused
+# `not_host`, unknown modes `bad_mode`, a team outside a teams mode `bad_team`; a crew
+# player's Start is refused `not_host` while the host is here; after Start the lobby is closed.
 func test_host_sets_mode_and_teams() -> void:
 	var server: NetServer = h.fleet_server(GameRules.Mode.COOP, 3, [], true, 10.0, SECRET)
 	var host: NetClient = await h.welcomed(server, "host", "", SECRET)
@@ -169,8 +179,16 @@ func test_host_sets_mode_and_teams() -> void:
 	var from_b: int = h.mark(crews[1])
 	crews[1].set_team(1, 0)
 	assert_str(await _rejected(crews[1], NetProtocol.Type.SHIP_TEAM, from_b)).is_equal("not_crew")
-	for c: NetClient in [host, crews[0], crews[1]]:
-		c.set_ready(true)
+	host.set_team(0, 1)
+	var by_host: Callable = func(ev: Dictionary) -> bool:
+		return ev["payload"]["ships"][0]["team"] == 1
+	assert_dict(await _fleet(crews[0], from, by_host)).is_not_empty()
+	host.set_team(0, 0)
+	assert_bool(await h.say_ready(server, crews)).is_true()
+	from_b = h.mark(crews[1])
+	crews[1].start()
+	assert_str(await _rejected(crews[1], NetProtocol.Type.START, from_b)).is_equal("not_host")
+	host.start()
 	assert_bool(await _running(server)).is_true()
 	assert_int(server.game.fleet.team_of(2)).is_equal(1)
 	assert_int(server.world.faction_of(1)).is_equal(server.world.faction_of(2))
@@ -199,7 +217,7 @@ func test_modes_offered_and_checked_at_start() -> void:
 	assert_int(finite.lives).is_equal(5)
 	host.set_mode("race", "last_team_standing")
 	from = h.mark(host)
-	host.set_ready(true)
+	host.start()
 	var e: Dictionary = await h.next_event(host, NetProtocol.EVENT_REQUEST_REJECTED, from)
 	assert_str(e["payload"]["reason"]).is_equal("bad_mode")
 	assert_array(e["payload"]["errors"]).is_not_empty()
@@ -212,8 +230,8 @@ func test_modes_offered_and_checked_at_start() -> void:
 func test_game_over_relays_the_outcome() -> void:
 	var server: NetServer = h.fleet_server(GameRules.Mode.LAST_STANDING, 2, [], true)
 	var crews: Array[NetClient] = await _crews(server, [0, 1])
-	for c: NetClient in crews:
-		c.set_ready(true)
+	assert_bool(await h.say_ready(server, crews)).is_true()
+	crews[0].start()
 	assert_bool(await _running(server)).is_true()
 	var from: int = h.mark(crews[0])
 	server.world.kin.alive[0] = 0
@@ -234,8 +252,8 @@ func test_game_over_relays_the_outcome() -> void:
 func test_last_ship_standing_names_the_winner() -> void:
 	var server: NetServer = h.fleet_server(GameRules.Mode.LAST_STANDING, 2, [], true)
 	var crews: Array[NetClient] = await _crews(server, [0, 1])
-	for c: NetClient in crews:
-		c.set_ready(true)
+	assert_bool(await h.say_ready(server, crews)).is_true()
+	crews[0].start()
 	assert_bool(await _running(server)).is_true()
 	var from: int = h.mark(crews[0])
 	server.world.kin.alive[1] = 0
@@ -265,8 +283,8 @@ func test_whole_fleet_flow_through_the_client() -> void:
 		var teams: Array = ev["payload"]["ships"].map(func(r: Dictionary) -> int: return r["team"])
 		return ev["payload"]["mode"] == "teams" and teams == [0, 1, 1]
 	assert_dict(await _fleet(watcher, from, split)).is_not_empty()
-	for c: NetClient in [host, crews[0], crews[1]]:
-		c.set_ready(true)
+	assert_bool(await h.say_ready(server, crews)).is_true()
+	host.start()
 	assert_bool(await _running(server)).is_true()
 	var started: Callable = func(ev: Dictionary) -> bool: return ev["payload"]["started"]
 	assert_dict(await _fleet(watcher, from, started)).is_not_empty()

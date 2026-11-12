@@ -52,11 +52,11 @@ func on_join(s: NetSession) -> void:
 		hook.call(s, station)
 
 
-## Seats the session at `seat` of the ship and presses Start for it (the coverage check
-## passes through the bots).
+## Seats the session at `seat` of the ship and starts the lesson for it, Ready (the coverage
+## check passes through the bots; NetLobby.start without the host rule).
 func seat_and_start(s: NetSession, ship: int, seat: String) -> void:
 	game.lobby.move(s, ship, seat)
-	game.lobby.mark_ready(s)
+	game.lobby.start(s, true)
 
 
 func _on_training(s: NetSession, msg: Dictionary, _now_us: int) -> void:

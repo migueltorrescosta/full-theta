@@ -608,9 +608,16 @@ func _await_answer(step: Dictionary) -> Result:
 	return _wait("no answer")
 
 
-## ready [value=true]: sends Ready; expect the outcome with expect_event.
+## ready [value=true]: sends Ready (on or off); expect the outcome with expect_event.
 func _do_ready(step: Dictionary) -> Result:
 	_client.set_ready(bool(_arg(step, "value", true)))
+	return Result.DONE
+
+
+## start: sends Start (the host's, or a Ready crew player's with no host); expect the outcome
+## with expect_event.
+func _do_start(_step: Dictionary) -> Result:
+	_client.start()
 	return Result.DONE
 
 

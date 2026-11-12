@@ -2,6 +2,7 @@
 connect
 expect_welcome resumed=false
 pick ship=0 seat=systems
+ready
 barrier name=picked n=3
 barrier name=rejected n=3
 barrier name=released n=3

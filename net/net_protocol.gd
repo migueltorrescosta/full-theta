@@ -63,9 +63,12 @@ enum Type {
 	TRAINING = 46,
 	# A player changes their name mid-session (#35 A5).
 	RENAME = 47,
+	# The host starts the game once every crewed ship is covered and every crew player is
+	# Ready; with no host connected, any Ready crew player (#37 C1, version 11).
+	START = 48,
 }
 
-const PROTOCOL_VERSION: int = 10
+const PROTOCOL_VERSION: int = 11
 ## Default WebSocket port; the HTTP port for web stations is this minus one (D108).
 const DEFAULT_WS_PORT: int = 47801
 
@@ -281,6 +284,7 @@ const MESSAGES: Dictionary = {
 	Type.CLIENT_FRAME: [RATED, {"ms": TYPE_INT, "what": TYPE_STRING}],
 	Type.TRAINING: [RATED, {"station": TYPE_STRING}],
 	Type.RENAME: [RATED | NAMED, {"name": TYPE_STRING}],
+	Type.START: [RATED, {}],
 }
 
 ## Messages a client may send; the server drops any other type from a client.

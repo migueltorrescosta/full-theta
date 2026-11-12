@@ -35,6 +35,8 @@ const BAD_ITEM: String = "bad_item"
 const NOT_CLAIMED: String = "not_claimed"
 const CAPTAIN_TAKEN: String = "captain_taken"
 const NOT_COVERED: String = "coverage"
+## Start while a crew player isn't Ready, or from a crew player who isn't (#37 C1).
+const NOT_READY: String = "not_ready"
 const STARTED: String = "started"
 const TOGGLES_LOCKED: String = "toggles_locked"
 const BAD_TOGGLES: String = "bad_toggles"
@@ -478,7 +480,7 @@ func _on_hello(conn: int, msg: Dictionary, now_us: int) -> void:
 		by_id[s.id] = s
 	elif s.connected():
 		by_conn.erase(s.conn)
-	s.name = msg["name"]
+	s.name = unique_name(msg["name"], s)
 	s.client_kind = msg["kind"]
 	s.is_host = host_secret != "" and msg["host_secret"] == host_secret
 	if s.is_host:
@@ -578,16 +580,36 @@ func _on_bye(conn: int, _msg: Dictionary, _now_us: int) -> void:
 	transport.close(conn, 1000, "bye")
 
 
-## Rename{name} (#35 A5): the session takes the name (an empty one is ignored); the lobby's
-## seats and captain follow, and claims and votes name it from then on.
+## Rename{name} (#35 A5): the session takes the name (an empty one is ignored), numbered when
+## another player has it (unique_name); the lobby's seats and captain follow, and claims and
+## votes name it from then on.
 func _on_rename(s: NetSession, msg: Dictionary, _now_us: int) -> void:
-	if str(msg["name"]) == "" or msg["name"] == s.name:
+	var to: String = unique_name(msg["name"], s)
+	if str(msg["name"]) == "" or to == s.name:
 		return
 	if server_log != null:
-		server_log.event("rename", {"session": s.id, "from": s.name, "to": msg["name"]})
-	s.name = msg["name"]
+		server_log.event("rename", {"session": s.id, "from": s.name, "to": to})
+	s.name = to
 	lobby.mark_dirty()
 	publish()
+
+
+## `wanted`, or numbered ("Player 2", "Player 3") while another live session has that name, so
+## the lobby's seat holders can be told apart (R24-13: phones that joined by QR code with the
+## default name). Cut to NetProtocol.MAX_NAME_BYTES with its number.
+func unique_name(wanted: String, s: NetSession) -> String:
+	var taken: Dictionary = {}
+	for o: NetSession in by_id.values():
+		if o != s:
+			taken[o.name] = true
+	var out: String = wanted
+	var n: int = 2
+	while out != "" and taken.has(out):
+		var suffix: String = " %d" % n
+		var room: int = NetProtocol.MAX_NAME_BYTES - suffix.length()
+		out = NetProtocol.clip_utf8(wanted, room).strip_edges() + suffix
+		n += 1
+	return out
 
 
 ## A client's long frame (#28) goes to the server log, with whose it was.
@@ -610,6 +632,8 @@ func _on_closed(conn: int, _msg: Dictionary, now_us: int) -> void:
 		return
 	sessions.drop(s, now_us)
 	lobby.on_disconnect(s)
+	# A dropped host lets any Ready crew player Start (the `fleet` event's `host`, #37 C1).
+	lobby.mark_dirty()
 	publish()
 
 

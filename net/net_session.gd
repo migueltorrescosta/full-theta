@@ -30,6 +30,9 @@ var last_seat: String = ""
 ## also after Back to ships (#35 A10, NetGame.pick_rule).
 var home_ship: int = -1
 var last_claims: Array[String] = []
+## The player's Ready toggle in the lobby (Ready, #37 C1): cleared whenever the session's
+## ship or seat changes (NetLobby.set_pick) and at a run reset.
+var ready: bool = false
 ## Presented the server's host secret in Hello (D127): the host client.
 var is_host: bool = false
 ## Command rate limit (FT-NET-006).

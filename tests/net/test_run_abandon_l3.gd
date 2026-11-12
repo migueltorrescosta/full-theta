@@ -134,8 +134,8 @@ func test_pvp_vote_is_a_forfeit() -> void:
 	var crews: Array[NetClient] = []
 	for ship: int in 3:
 		crews.append(await h.joined(server, "all-%d" % ship, StationCatalogue.ALL, ship))
-	for c: NetClient in crews:
-		c.set_ready(true)
+	h.all_ready(server)
+	crews[0].start()
 	assert_bool(await h.until(func() -> bool: return server.world.tick > 2)).is_true()
 	var from: int = h.mark(crews[1])
 	crews[1].vote_abandon(1, true)
@@ -163,8 +163,8 @@ func test_pvp_host_forfeits_only_its_own_ship() -> void:
 		)
 		await h.pick(c, StationCatalogue.ALL, ship)
 		crews.append(c)
-	for c: NetClient in crews:
-		c.set_ready(true)
+	h.all_ready(server)
+	crews[0].start()
 	assert_bool(await h.until(func() -> bool: return server.world.tick > 2)).is_true()
 	var host: NetClient = crews[0]
 	var from: int = h.mark(host)
