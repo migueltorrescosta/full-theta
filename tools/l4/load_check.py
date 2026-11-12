@@ -256,7 +256,7 @@ def _check(out: Path, say: Callable[[str], None], problems: list[str]) -> bool: 
     for c in clients:
         bad += int(c["stats"].get("bad_snapshots", 0))
         if c["picked"] != "ok":
-            picks_failed.append(f"{c['name']} {c['entry']}: {c['picked']}")
+            picks_failed.append(f"{c['name']} {c['seat']}: {c['picked']}")
         for k, v in c["rejects"].items():
             rejects[k] += v
         flat = c["snaps"]
@@ -312,7 +312,7 @@ def _check(out: Path, say: Callable[[str], None], problems: list[str]) -> bool: 
         problems.append("bandwidth: no byte samples spanning the window")
         return False
     session_seat = {str(c["session"]): c for c in clients}
-    per_entry: dict[str, list[float]] = defaultdict(list)
+    per_seat: dict[str, list[float]] = defaultdict(list)
     total_bps = 0.0
     stalls = 0
     skipped: list[int] = []
@@ -328,13 +328,13 @@ def _check(out: Path, say: Callable[[str], None], problems: list[str]) -> bool: 
         bps = (row[2] - before[2]) / dt
         total_bps += bps
         seat = session_seat.get(str(row[0]))
-        per_entry[seat["entry"] if seat else "?"].append(bps)
-    say("| Entry | Clients | B/s per client mean | min | max |")
+        per_seat[seat["seat"] if seat else "?"].append(bps)
+    say("| Seat | Clients | B/s per client mean | min | max |")
     say("|---|---|---|---|---|")
-    for entry in sorted(per_entry):
-        v = per_entry[entry]
-        say(f"| {entry} | {len(v)} | {mean(v):,.0f} | {min(v):,.0f} | {max(v):,.0f} |")
-    all_v = [x for v in per_entry.values() for x in v]
+    for name in sorted(per_seat):
+        v = per_seat[name]
+        say(f"| {name} | {len(v)} | {mean(v):,.0f} | {min(v):,.0f} | {max(v):,.0f} |")
+    all_v = [x for v in per_seat.values() for x in v]
     say(
         f"| all | {len(all_v)} | {mean(all_v):,.0f} | {min(all_v, default=0):,.0f} | "
         f"{max(all_v, default=0):,.0f} |"
@@ -387,12 +387,12 @@ def _check(out: Path, say: Callable[[str], None], problems: list[str]) -> bool: 
     )
     if not full.get("ok"):
         problems.append(f"connection 65: {full.get('reason')}")
-    by_entry: dict[str, int] = defaultdict(int)
+    by_seat: dict[str, int] = defaultdict(int)
     for c in clients:
-        by_entry[c["entry"]] += 1
-    seats_ok = dict(by_entry) == SEATS
+        by_seat[c["seat"]] += 1
+    seats_ok = dict(by_seat) == SEATS
     say(
-        f"Seats: {dict(sorted(by_entry.items()))} ({verdict(seats_ok)}); picks refused: "
+        f"Seats: {dict(sorted(by_seat.items()))} ({verdict(seats_ok)}); picks refused: "
         f"{picks_failed or 'none'}; bad snapshots: {bad}; stalls: {stalls}; snapshots skipped "
         f"in the window: {sum(skipped) if skipped else 'not recorded'} (max per connection "
         f"{max(skipped, default=0)}); command and request rejections: {dict(rejects) or 'none'}; "

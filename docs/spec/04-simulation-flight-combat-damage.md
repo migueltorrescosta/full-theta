@@ -16,7 +16,7 @@ Shields have one focus direction on the sphere around the ship. Engineering sets
 
 A hit damages the subsystem nearest the impact point: the energy past the shields is split between that subsystem (a per-ship share in data) and the hull (D26, D116); what a subsystem can't absorb, because it is destroyed or the hit exceeds its health, passes to the next-nearest live subsystem and then to the hull (D123). Each subsystem (for example engines, thrusters, weapons, shields, sensors, reactor) takes independent damage with direct consequences (v0.3 §5). Some damage arrives as faults of unknown cause (pair P10). Engineering dispatches numbered repair crews on the cutaway; each job takes its spare parts at dispatch, and with too few parts it is refused (D27, D115). Overcharge builds heat; heat past a threshold creates faults (P1, P6). Thrust and torque limits in data are the nominal-power envelope; overcharge and a one-press boost (above the reactor cap for a data duration, limited by heat) reach up to 1.5 times them (D117). Science reveals weak points and damage-type resistances (D28).
 
-## 4.5 Enemy AI
+## 4.5 NPC AI
 
 Basic, testable behaviours first: attack, keep range, retreat at low hull. Later: flanking, coordinated attacks, subsystem targeting and adaptation (v0.3 §5). AI acts only on what its faction's sensors know. An enemy has retreated, for the encounter outcome, once it is in retreat and no hostile ship detects it any more (D120).
 
@@ -48,8 +48,8 @@ Basic, testable behaviours first: attack, keep range, retreat at low hull. Later
 - **FT-SIM-024** Engineering shall repair subsystems by dispatching repair crews to them; each repair shall take its spare parts when dispatched, and a dispatch without enough parts shall be refused. (D27, D115)
 - **FT-SIM-025** Faults of unknown cause shall repair slowly by default and quickly when the repair names the correct cause. (P10, D206)
 - **FT-SIM-026** Overcharging a subsystem shall build heat, and heat past a data-defined threshold shall create a fault, once per heating episode; the threshold sits below the heat one overcharge pip settles at, so no overcharge is free for ever. (P1, P6, D341)
-- **FT-SIM-027** Enemy AI shall support attack, keep range and retreat at low hull in milestone 1. (v0.3 §5, D72, D120)
-- **FT-SIM-028** Enemy AI shall act only on its faction's knowledge. (v0.3 §5, D21)
+- **FT-SIM-027** NPC AI shall support attack, keep range and retreat at low hull in milestone 1. (v0.3 §5, D72, D120, D399)
+- **FT-SIM-028** NPC AI shall act only on its faction's knowledge. (v0.3 §5, D21, D399)
 - **FT-SIM-029** Damage, physics and enemy stats shall never be altered to force an outcome. (v0.3 §5)
 - **FT-SIM-030** Every important state change shall emit an event that drives visual and audio feedback on the affected stations. (v0.3 §5)
 - **FT-SIM-031** Engineering shall receive an alert when shields fall to 40 %. (v0.3 §5)

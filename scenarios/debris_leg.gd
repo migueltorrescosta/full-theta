@@ -61,7 +61,7 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 	if from == HOME:
 		_result = Result.WON
 		return
-	# The map names the leg's debris (MapDef.legs): an enemy key and how many pieces.
+	# The map names the leg's debris (MapDef.legs): an NPC key and how many pieces.
 	for leg: Dictionary in api.legs():
 		if leg["from"] != from or leg["to"] != _destination:
 			continue

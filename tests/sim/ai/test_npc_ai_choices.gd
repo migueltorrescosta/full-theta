@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## Review 2026-11-08 B1 and E6 (R09-8, R18-1): which target the enemy AI picks, what it does
+## Review 2026-11-08 B1 and E6 (R09-8, R18-1): which target the NPC AI picks, what it does
 ## when the target dies, and that it sends its face point and aim only when they change.
 ## The M1 raider enemy (faction 2) at the origin; M1 corvettes (faction 1) a few km away.
 

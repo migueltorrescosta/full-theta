@@ -1,7 +1,7 @@
 class_name ScenarioFixture
 extends RefCounted
 ## Worlds for the real scenarios (E07): the server's own RunSetup on m3_run (the
-## M3 map, the enemy catalogue, conversations and reputation), one crewed ship at the yard,
+## M3 map, the NPC catalogue, conversations and reputation), one crewed ship at the yard,
 ## and a small driver that plays one scenario the way the Director does.
 
 static var _defs: DefLibrary = DefLibrary.new()
@@ -77,7 +77,7 @@ func run(n: int) -> void:
 		tick()
 
 
-## Ships of a faction other than the crewed ship's, by enemy key (a def's id).
+## Ships of a faction other than the crewed ship's, by NPC key (a def's id).
 func ships_of(def_id: StringName) -> Array[int]:
 	var out: Array[int] = []
 	for id: int in world.ship_count():

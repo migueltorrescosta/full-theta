@@ -381,7 +381,7 @@ static func load_tls(cert_path: String, key_path: String) -> TLSOptions:
 	return TLSOptions.server(key, cert)
 
 
-## The run on content/runs/m3_run.tres with the enemy catalogue, or null (reported).
+## The run on content/runs/m3_run.tres with the NPC catalogue, or null (reported).
 func run_setup(defs: DefLibrary, which: String = encounter_name) -> RunSetup:
 	var run_def: RunDef = defs.run(&"shakedown" if which == "shakedown" else &"m3_run")
 	if run_def == null:
@@ -398,7 +398,7 @@ func run_setup(defs: DefLibrary, which: String = encounter_name) -> RunSetup:
 	for path: String in DefLibrary.list_tres("res://content/economy/markets"):
 		var market: MarketDef = load(path) as MarketDef
 		setup.markets[market.id] = market
-	# (the site ids are the map's load order; hails by enemy key)
+	# (the site ids are the map's load order; hails by NPC key)
 	var sites: Array[SiteDef] = run_def.map.sites if run_def.map != null else []
 	for i: int in sites.size():
 		if sites[i].market != &"":

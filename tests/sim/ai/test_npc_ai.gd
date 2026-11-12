@@ -1,6 +1,6 @@
 # gdlint: disable=unused-argument
 extends GdUnitTestSuite
-## T035: enemy AI scenarios (FT-SIM-027, FT-SIM-028, FT-M1-007). One M1 corvette
+## T035: NPC AI scenarios (FT-SIM-027, FT-SIM-028, FT-M1-007). One M1 corvette
 ## (faction 1, at the origin, no helm input) and the M1 raider enemy (faction 2) a few
 ## km away. The raider's NpcDef keeps 800..3000 m, retreats below 25 % hull and fires
 ## within 0.05 rad of the bow; its cannon reaches 6 km and its sensors 15 km.

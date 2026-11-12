@@ -164,7 +164,7 @@ func test_top_bar_shows_hull_as_a_percentage_of_the_ships_maximum() -> void:
 
 
 # FT: FT-MSC-002
-# The target view draws its target even beyond NEAR's range (H2 is 2.3 km out, NEAR sees
+# The close-up view draws its selection even beyond NEAR's range (H2 is 2.3 km out, NEAR sees
 # 2 km): before, the view showed an empty sky with the label and bracket only. Other
 # views still draw only contacts with a NEAR orientation.
 func test_target_view_draws_a_target_beyond_near_range() -> void:

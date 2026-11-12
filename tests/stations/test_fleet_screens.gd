@@ -181,7 +181,7 @@ func test_relaunch_prompt_offers_the_vote_while_lives_last() -> void:
 
 # FT: FT-NET-042
 # Takeover in a pause (M4-Q8): an allied ship's player sees the paused ship's uncovered
-# stations and takes one; an enemy ship's pause offers nothing. The ship's side sees who took
+# stations and takes one; a hostile ship's pause offers nothing. The ship's side sees who took
 # it as a toast.
 func test_allied_players_take_over_a_paused_ship() -> void:
 	var ctx: StationContext = _ctx("teams")

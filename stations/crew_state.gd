@@ -73,7 +73,7 @@ var alert: int = ALERT_NORMAL
 var alert_by: String = ""
 ## Sorted by slot: {"slot", "name", "contact", "pos" (Vector3, m), "by"}.
 var marks: Array[Dictionary] = []
-## Active pings, oldest first: {"kind", "id", "pos", "by", "at_ms", "copies"}.
+## Pings still showing, oldest first: {"kind", "id", "pos", "by", "at_ms", "copies"}.
 var pings: Array[Dictionary] = []
 ## The main screen's view (MainScreen.View), set by the Captain or by Relay.
 var main_view: int = MainScreen.View.FORWARD

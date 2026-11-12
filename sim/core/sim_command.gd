@@ -1,12 +1,12 @@
 class_name SimCommand
 extends RefCounted
-## A typed command for one ship (FT-ARC-005, FT-ARC-008). Stations and the enemy AI
+## A typed command for one ship (FT-ARC-005, FT-ARC-008). Stations and the NPC AI
 ## emit the same command classes (FT-SIM-027). Commands queue on the World and apply
 ## at the start of the next tick, in submission order; the World stamps the tick.
 ## Subclasses keep their parameters in plain typed script variables, which to_dict()
 ## and SimCommands.from_dict() round-trip for the command log (FT-ARC-008).
 
-## CREW: a station; AI: the enemy AI (regenerated on replay, not logged); SERVER: the
+## CREW: a station; AI: the NPC AI (regenerated on replay, not logged); SERVER: the
 ## run itself, e.g. a per-ship reset (logged like CREW).
 enum Source { CREW, AI, SERVER }
 

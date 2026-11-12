@@ -221,7 +221,7 @@ func test_scan_minigame_title_and_buttons() -> void:
 
 
 # FT: FT-STN-005, FT-SCI-006
-func test_hack_session_nodes_are_tap_sized_and_apart() -> void:
+func test_hack_minigame_nodes_are_tap_sized_and_apart() -> void:
 	var s: StationScreen = await _screen(SIDEWAYS, LANDSCAPE, "hack")
 	var p: SciencePanel = _sci(s)
 	var g: HackGame = p.hack_game

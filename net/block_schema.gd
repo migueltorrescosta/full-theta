@@ -179,7 +179,7 @@ const BLOCKS: Dictionary = {
 		],
 	],
 	# Science (E01): sensors, the noise preview of the selected contact, the
-	# scan-position mark, the open minigame session with its puzzle, the contact cards of
+	# scan-position mark, the open minigame with its puzzle, the contact cards of
 	# the faction's knowledge (FT-SCI-001, FT-SCI-002) and the faction's open hack
 	# windows (P7). noise_flags: bit 0 active, 1 sweep, 2 probe, 3 at the mark.
 	StationCatalogue.Section.SCIENCE:

@@ -6,7 +6,7 @@ extends RefCounted
 ## identifies the contact's allegiance once one is within identify_range, scaled alike
 ## (D112; Science scans extend it, E01), and never forgets it. Callsigns are
 ## per faction (FT-SPA-002), so allied ships, being one faction, share them (FT-ARC-018).
-## Enemy AI must read contacts only through this class.
+## NPC AI must read contacts only through this class.
 ##
 ## Events, keyed to the observing faction through their ship_id:
 ## - &"contact_detected": ship_id = the lowest-id observing ship that detects the

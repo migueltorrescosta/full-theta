@@ -103,7 +103,7 @@ func test_marks_cap_relay_replace_and_relay_only_edits() -> void:
 # FT: FT-SPA-016, FT-SPA-020, FT-SPA-017, FT-SPA-031
 func test_pings_reach_every_pick_of_the_ship_only() -> void:
 	var server: NetServer = h.server()
-	# The enemy ship without its AI: another crewable ship, to check isolation.
+	# The hostile ship without its AI: another crewable ship, to check isolation.
 	server.world.ai.enabled[ENEMY] = 0
 	_detect(server)
 	var crew: Array[NetClient] = await h.crew3(server)

@@ -34,7 +34,7 @@ func nearest_hostile(ship: int, reach: float, armed_only: bool = false) -> int:
 	return CrewMoves.nearest_hostile(_world, ship, reach, armed_only)
 
 
-## Whether the ship's Science has no scan session open.
+## Whether the ship's Science has no minigame open.
 func science_idle(ship: int) -> bool:
 	return _world.science.kind[ship] == ScienceTable.Minigame.NONE
 

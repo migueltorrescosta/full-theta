@@ -1,0 +1,7 @@
+{
+  "_comment": "UI strings (fixture).",
+  "strings": {
+    "sci.session_over": {"en": "The session is over.", "pt_PT": "A sess\u00e3o acabou."},
+    "ship.hostile": {"en": "That's an enemy ship.", "pt_PT": "Esse \u00e9 um enemy ship."}
+  }
+}

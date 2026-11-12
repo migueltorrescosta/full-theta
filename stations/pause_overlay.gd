@@ -8,7 +8,7 @@ extends PanelContainer
 ## Multi-ship games (#11, M4-Q8, D265 proposed): players of an allied ship may take over a
 ## paused ship's uncovered station too ("Take Science on Heron"); there is no accept prompt,
 ## the first claim wins, and the server refuses a takeover that would leave the taker's own
-## ship uncovered. An enemy ship's pause offers nothing. In PvP the vote is the give-up
+## ship uncovered. A hostile ship's pause offers nothing. In PvP the vote is the give-up
 ## (forfeit) vote (M4-Q10).
 ##
 ## On a phone (#28 follow-up, design 2.13) the overlay is an opaque sheet over the safe area

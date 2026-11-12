@@ -1,6 +1,6 @@
 class_name AiTable
 extends SimTable
-## Enemy AI state (T035, FT-SIM-027), one row per ship keyed by ship id and faction
+## NPC AI state (T035, FT-SIM-027), one row per ship keyed by ship id and faction
 ## (FT-ARC-012). Rows start disabled; SimWorld.spawn_npc enables a row and copies the
 ## NpcDef's behaviour numbers into it (FT-ARC-020: copies, never the definition).
 ## NpcAi reads the parameters and writes mode and target; nothing else writes here.
