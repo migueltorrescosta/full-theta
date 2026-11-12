@@ -14,6 +14,8 @@ signal alert_sheet_requested
 
 ## Bar height before UI scale (px).
 const HEIGHT: float = 40.0
+## The least width of the first row's free stretch that takes the toasts (notice_rect).
+const NOTICE_MIN_W: float = 220.0
 ## The goal chip's row under the bar's rows (px): what the crew is trying to do, with progress.
 ## A phone's bar has no room for the row: its goal is the second line of the timer's cell.
 const GOAL_H: float = 20.0
@@ -351,6 +353,19 @@ static func _fill(
 	if summaries.has(key) or max_value <= 0.0 or not status.has(key):
 		return -1.0
 	return float(status[key]) / max_value
+
+
+## Where a toast or the critical banner shows on a desktop or a tablet (C5): the free stretch
+## of the first row between the station names and the timer, so the ship's name, hull, shields
+## and power stay in view; status_rect() where that stretch is under NOTICE_MIN_W.
+func notice_rect() -> Rect2:
+	if not phone and _stations.is_visible_in_tree() and _timer.is_visible_in_tree():
+		var row: Rect2 = _row.get_global_rect()
+		var left: float = _stations.get_global_rect().end.x + 12.0
+		var right: float = _timer.get_global_rect().position.x - 12.0
+		if right - left >= NOTICE_MIN_W:
+			return Rect2(left, row.position.y, right - left, row.size.y)
+	return status_rect()
 
 
 ## The box (global coordinates) of the bar's status text, which a toast replaces: the

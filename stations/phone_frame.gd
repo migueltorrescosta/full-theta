@@ -332,6 +332,10 @@ func _place_view_top() -> void:
 		side_by_side = col.is_empty() or x1 - x0 >= chip_w + gap + col_w
 	var row_h: float = 0.0
 	var right: float = x1 - (col_w + gap if side_by_side and not col.is_empty() else 0.0)
+	if not in_row:
+		# Ask left the row (it heads the column, or waits): the chip takes the row's width back.
+		selection_bar.fit(right - x0)
+		chip_w = selection_bar.get_combined_minimum_size().x
 	if in_row:
 		ask.size = ask.get_combined_minimum_size()
 		ask.position = Vector2(roundf(right - ask.size.x), y)

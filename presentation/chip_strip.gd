@@ -32,7 +32,7 @@ func show_chips(
 		lines.append(
 			(
 				(
-					tr("chip.ask")
+					tr("chip.asks")
 					% [tr(StationCatalogue.name_key(str(c["from"]))), ChipsReader.label(c)]
 				)
 				+ " · %d s" % ceili(ChipsReader.left_s(snap, c))

@@ -956,6 +956,7 @@
     "chip.fabricate_probe": {"en": "Fabricate a probe", "pt_PT": "Fabricar uma sonda", "it": "Costruisci una sonda"},
     "chip.hold_fire": {"en": "Hold fire on %s", "pt_PT": "Cessar fogo sobre %s", "it": "Cessate il fuoco su %s"},
     "chip.ask": {"en": "Ask", "pt_PT": "Pedir", "it": "Chiedi"},
+    "chip.asks": {"en": "%s asks: %s", "pt_PT": "%s pede: %s", "it": "%s chiede: %s"},
     "chip.sent": {"en": "To %s: %s", "pt_PT": "Para %s: %s", "it": "A %s: %s"},
     "chip.hint": {"en": "Enter accepts · Backspace declines", "pt_PT": "Enter aceita · Backspace recusa", "it": "Invio accetta · Backspace rifiuta"},
     "chip.menu": {"en": "Send a request", "pt_PT": "Enviar um pedido", "it": "Invia una richiesta"},

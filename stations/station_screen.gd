@@ -322,16 +322,19 @@ func _process(delta: float) -> void:
 	radar.set_picture(ctx.picture(), ctx.crew.selection, ctx)
 	radar.blip_scale = focused_panel().blip_scale()
 	toasts.update(now)
-	var spot: Rect2 = top_bar.status_rect().intersection(get_global_rect())
-	toasts.place(Rect2(spot.position - get_global_rect().position, spot.size))
 	flash.update(now)
 	critical.update(now)
-	if critical.visible:
-		# Over the focused panel's view, clear of its rails (a phone's, a tablet's).
+	var card: FirstSeatCard = first_seat_card()
+	if card != null:
+		# Over the focused panel's view, clear of its rails and the rest of the HUD columns.
 		var p: StationPanel = focused_panel()
-		var area: Rect2 = p.view_rect()
-		area.position += p.global_position - global_position
-		critical.place(area)
+		card.bounds = Rect2(
+			p.global_position - global_position + p.view_rect().position, p.view_rect().size
+		)
+	var spot: Rect2 = _notice_rect()
+	toasts.place(spot)
+	if critical.visible:
+		critical.place(spot)
 	var left: Dictionary = ctx.crew.shares_left(now)
 	# A phone shows request chips only at the top of the view (ux-13); elsewhere, the strip.
 	if phone:
@@ -350,6 +353,31 @@ func _process(delta: float) -> void:
 	var own: bool = phone and focused_panel().shows_shares
 	share_bar.show_features(none if own else common.shareable(), left)
 	layout.sync_share()
+
+
+## Where the toasts and the critical banner show (C5, D319), in the screen's coordinates: the
+## top bar's free stretch on a desktop or a tablet (TopBar.notice_rect), so the ship's name,
+## hull, shields and power stay in view. A phone's bar has no stretch to spare: its glance
+## and the room after it, up to the page tabs or the alert chip, for the few seconds a notice
+## shows.
+func _notice_rect() -> Rect2:
+	var origin: Vector2 = get_global_rect().position
+	var spot: Rect2 = top_bar.notice_rect()
+	if phone:
+		var end: float = INF
+		for c: Control in [top_bar.tabs, top_bar.chip]:
+			var r: Rect2 = c.get_global_rect()
+			var empty: bool = c == top_bar.tabs and not top_bar.tabs.has_content()
+			if c.is_visible_in_tree() and not empty and r.position.x > spot.position.x:
+				end = minf(end, r.position.x - UiTheme.TOUCH_GAP)
+		if end < INF:
+			spot.size.x = maxf(spot.size.x, end - spot.position.x)
+		# The bar's height, as its menu button's, so a toast has room for two lines.
+		var row: Rect2 = top_bar.menu_button.get_global_rect()
+		spot.position.y = row.position.y
+		spot.size.y = row.size.y
+	spot = spot.intersection(get_global_rect())
+	return Rect2(spot.position - origin, spot.size)
 
 
 ## The notes of the toast queue (C5, ux-14): a partner's shared data when its share starts or
