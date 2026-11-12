@@ -388,16 +388,6 @@ static func touch_help() -> Array:
 					TranslationServer.translate("comms.hold_fire"),
 					TouchText.of("help.comms.hold_fire", "Ask Weapons to hold fire on the contact"),
 				],
-				[
-					Rect2(406, 132, 207, 48),
-					TranslationServer.translate("intent.ping"),
-					TouchText.of("help.comms.ping", "Ping the selection for the crew"),
-				],
-				[
-					Rect2(191, 188, 207, 48),
-					TranslationServer.translate("intent.mark"),
-					TouchText.of("help.comms.mark", "Mark the selection"),
-				],
 			],
 		},
 	]

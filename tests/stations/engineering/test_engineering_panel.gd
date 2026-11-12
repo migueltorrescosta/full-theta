@@ -353,3 +353,32 @@ func test_the_hull_clears_the_hint_and_the_board_scrolls() -> void:
 		assert_float(p.cutaway.subsystem_pos(i).y - p.cutaway.node_r()).is_greater_equal(top)
 	assert_float(p.board.custom_minimum_size.y).is_equal(p.board.content_height())
 	assert_float(p.board.content_height()).is_greater(300.0)
+
+
+# FT: FT-ENG-004, FT-STN-012
+# R22-17: one sentence over the cutaway in the words of the player's device (a mouse
+# right-drags, a pad turns with its right stick, a finger drags empty space) until the first
+# crew dragged onto a part; then it goes for good and the hull takes its room.
+func test_the_cutaway_hint_fits_the_device_until_the_first_drag() -> void:
+	var s: StationScreen = await _screen()
+	var p: EngineeringPanel = _panel(s)
+	var cut: EngineeringCutaway = p.cutaway
+	assert_str(cut.hint()).is_equal(tr("eng.cutaway_hint"))
+	s.ctx.matcher.device = IntentTable.PAD
+	assert_str(cut.hint()).is_equal(tr("eng.cutaway_hint_pad"))
+	assert_str(cut.hint()).not_contains("Right-drag")
+	s.ctx.matcher.device = IntentTable.KBM
+	cut.size = Vector2(300, 350)
+	assert_float(cut.hint_height()).is_greater(20.0)
+	# A refused drag (a whole part) teaches nothing yet.
+	_drag(cut, cut.token_pos(1), cut.subsystem_pos(1))
+	assert_str(cut.hint()).is_not_empty()
+	_drag(cut, cut.token_pos(1), cut.subsystem_pos(2))
+	assert_str(cut.hint()).is_empty()
+	assert_float(cut.hint_height()).is_equal(0.0)
+	assert_bool(s.ctx.settings.hint_seen(EngineeringCutaway.HINT_KEY)).is_true()
+	# "Show first-visit hints again" brings it back.
+	s.ctx.settings.reset_hints()
+	assert_str(cut.hint()).is_equal(tr("eng.cutaway_hint"))
+	if FileAccess.file_exists(s.ctx.settings.path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(s.ctx.settings.path))

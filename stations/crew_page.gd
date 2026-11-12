@@ -1,11 +1,10 @@
 class_name CrewPage
 extends ScrollContainer
-## The Crew page of a phone station (#28 follow-up, P28-Common, design 2.0): the station's
-## Ping and Mark on the selection (always first, the same on every station), the station's
-## request chips (FT-STN-010; a joint view's own pair acts directly, FT-JNT-005), and one
-## Share button per data shortcut this screen may share (D210), as half-width rail buttons,
-## scrolling past six. A chip waiting for an answer shows
-## its seconds left; a share shows its seconds left. Add it as a station's last page:
+## The Crew page of a phone station (#28 follow-up, P28-Common, design 2.0): one Share button
+## per data shortcut this screen may share (D210), as half-width rail buttons, each showing
+## its seconds left while it runs. Ping and Mark are on the selection sheet (and the Captain's
+## rail), the request chips at the top of the view (C4, C5): the page holds the shares only.
+## Add it as a station's last page:
 ##
 ##     var crew := CrewPage.new(self)
 ##     pages.add_page(TouchText.of("page.crew", "Crew"), [crew])
@@ -21,6 +20,12 @@ var grid: GridContainer = GridContainer.new()
 ## What the buttons show, to rebuild only on a change.
 var _shown: Array = []
 var _buttons: Array[RailButton] = []
+## What entries() reads (seat, toggles, language): entries are rebuilt only when it changes
+## (R20-12).
+var _inputs: Array = []
+## The size and texts the buttons were last fitted to: _fit_text and _snap_rows run only
+## when they change (R20-12).
+var _fitted: Array = []
 
 
 func _init(owner_panel: StationPanel = null) -> void:
@@ -37,57 +42,82 @@ func _init(owner_panel: StationPanel = null) -> void:
 func _process(_delta: float) -> void:
 	if is_visible_in_tree():
 		refresh()
+	elif _read_inputs() != _inputs:
+		# Hidden (another page, or no tab while it has nothing): its tab still follows.
+		refresh()
 
 
-## The buttons' entries: [kind, id, label] for Ping, Mark, each chip and each share.
+## The buttons' entries: [kind, id, label], one "share" per data shortcut this pick may share.
 func entries() -> Array:
 	var out: Array = []
-	if panel == null or panel.ctx == null:
+	if panel == null or panel.ctx == null or not panel.ctx.crew.is_crew():
 		return out
-	# Ping and Mark come first, so they sit in the same place on every station's page
-	# (R22-10); then the station's own requests, then the shares.
-	out.append(["ping", "", tr("intent.ping")])
-	if panel.ctx.crew.seat != StationCatalogue.VIEWER:
-		out.append(["mark", "", tr("intent.mark")])
-	for c: ChipDef in panel.request_chips():
-		out.append(["chip", String(c.id), panel.chip_label(c)])
 	var stations: Array[String] = []
 	stations.assign(panel.ctx.crew.stations())
-	if panel.ctx.crew.is_crew():
-		for id: StringName in ShareBar.features(stations, panel.ctx.crew.toggles):
-			out.append(["share", String(id), tr("share.button") % tr("lobby.toggle." + String(id))])
+	for id: StringName in ShareBar.features(stations, panel.ctx.crew.toggles):
+		out.append(["share", String(id), tr("share.button") % tr("lobby.toggle." + String(id))])
 	return out
 
 
-## Rebuilds the buttons when the entries change, and updates their seconds left.
+## Rebuilds the buttons when the entries' inputs change, and updates their seconds left; the
+## text fit and the row snap follow a change of size or text only. A page with no button has
+## no tab (PageHost.set_shown): an empty page is a dead end.
 func refresh() -> void:
-	var now: Array = entries()
-	if now != _shown:
-		_shown = now
-		for b: RailButton in _buttons:
-			grid.remove_child(b)
-			b.queue_free()
-		_buttons.clear()
-		for e: Array in now:
-			var b: RailButton = RailButton.make(str(e[2]))
-			b.name = "%s_%s" % [e[0], e[1]] if e[1] != "" else str(e[0])
-			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			# (by words: a long word never splits, "countdo wns")
-			b.autowrap_mode = TextServer.AUTOWRAP_WORD
-			b.clip_text = false
-			b.add_theme_font_size_override("font_size", 13)
-			b.pressed.connect(_press.bind(e))
-			grid.add_child(b)
-			_buttons.append(b)
-	for i: int in now.size():
-		var left: float = _left(now[i])
-		var text: String = str(now[i][2])
+	var inputs: Array = _read_inputs()
+	if inputs != _inputs:
+		_inputs = inputs
+		_rebuild(entries())
+		_sync_tab()
+	for i: int in _shown.size():
+		var left: float = _left(_shown[i])
+		var text: String = str(_shown[i][2])
 		if left > 0.0:
 			text = "%s · %d s" % [text, ceili(left)]
 		if _buttons[i].text != text:
 			_buttons[i].text = text
-	_fit_text()
-	_snap_rows()
+	var column: Control = get_parent() as Control
+	var fitted: Array = [size, column.size if column != null else Vector2.ZERO]
+	for b: RailButton in _buttons:
+		fitted.append(b.text)
+		fitted.append(b.size)
+	if fitted != _fitted:
+		_fitted = fitted
+		_fit_text()
+		_snap_rows()
+
+
+func _sync_tab() -> void:
+	var host: PageHost = panel.pages if panel != null else null
+	if host != null:
+		host.set_shown(host.page_of(self), not _shown.is_empty())
+
+
+func _read_inputs() -> Array:
+	if panel == null or panel.ctx == null:
+		return []
+	var crew: CrewState = panel.ctx.crew
+	return [crew.seat, crew.toggles.encode(), TranslationServer.get_locale()]
+
+
+func _rebuild(now: Array) -> void:
+	if now == _shown:
+		return
+	_shown = now
+	for b: RailButton in _buttons:
+		grid.remove_child(b)
+		b.queue_free()
+	_buttons.clear()
+	for e: Array in now:
+		var b: RailButton = RailButton.make(str(e[2]))
+		b.name = "%s_%s" % [e[0], e[1]]
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		# (by words: a long word never splits, "countdo wns")
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD
+		b.clip_text = false
+		b.add_theme_font_size_override("font_size", FONT_SIZES[0])
+		b.pressed.connect(_press.bind(e))
+		grid.add_child(b)
+		_buttons.append(b)
 
 
 ## Each button shows its text in the largest size where its longest word fits, so a long
@@ -146,26 +176,10 @@ func button(kind: String, id: String = "") -> RailButton:
 	return null
 
 
-## Seconds left of a waiting chip or a running share, else 0.
+## Seconds left of a running share, else 0.
 func _left(e: Array) -> float:
-	var ctx: StationContext = panel.ctx
-	match e[0]:
-		"chip":
-			for c: Dictionary in ChipsReader.outgoing(ctx.snap, [panel.station]):
-				if c["chip"] == e[1]:
-					return ChipsReader.left_s(ctx.snap, c)
-		"share":
-			return ctx.crew.share_left(StringName(e[1]), ctx.now_ms())
-	return 0.0
+	return panel.ctx.crew.share_left(StringName(e[1]), panel.ctx.now_ms())
 
 
 func _press(e: Array) -> void:
-	match e[0]:
-		"chip":
-			for c: ChipDef in panel.request_chips():
-				if String(c.id) == e[1]:
-					panel.send_chip(c)
-		"ping", "mark":
-			panel.common_requested.emit(str(e[0]))
-		"share":
-			panel.ctx.intents.share(str(e[1]))
+	panel.ctx.intents.share(str(e[1]))

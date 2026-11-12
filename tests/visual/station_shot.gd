@@ -24,6 +24,8 @@
 ## `render_3d` sets the 3D resolution setting (a RenderQuality mode, default "full").
 ## `comfort` turns the comfort switch on, `advanced` opens its Advanced group, `menu_scroll`
 ## scrolls the menu's tab to a node (e.g. "ChangeKeys").
+## `eng_rare` shows Engineering's rare rail actions (C3): a fault of unknown cause on the
+## engines and a second player at Engineering, so Guess cause and Take crew show.
 ## The "touch_kit" view shows the shared touch widgets (presentation/touch/) on a radar:
 ## overlay rails with a throttle, sticks, tabs and an open drawer; `docked` docks them.
 extends Control
@@ -66,6 +68,8 @@ var fullscreen: int = 0
 var audit: String = ""
 ## The touch_kit view's rails are docked.
 var docked: bool = false
+## Engineering's rare rail actions show (a fault of unknown cause, two players there).
+var eng_rare: bool = false
 
 ## The game was started with --dev (ClientSettings.dev_flag): the menu's Dev checkbox and the
 ## lobby's dev seat show (#35 A7).
@@ -129,6 +133,11 @@ func _ready() -> void:
 		_ctx.settings.reset_hints()
 	if claim != "":
 		_ctx.crew.claims[claim] = {"session": StationFixture.SESSION, "name": "Ana"}
+	if eng_rare:
+		_ctx.snap.blocks[StationCatalogue.Section.ENGINEERING]["subsystems"][0]["fault"] = true
+		_ctx.crew.lobby[0]["seats"] = [
+			{"name": "Ana", "seat": "engineering"}, {"name": "Bo", "seat": "engineering"}
+		]
 	if selected >= 0:
 		_ctx.crew.select("contact", selected)
 	if ping >= 0:

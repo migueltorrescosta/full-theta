@@ -169,13 +169,14 @@ func _walk_table(size: Vector2i, insets: Array) -> void:
 	assert_int(buy).override_failure_message(what).is_less_equal(3)
 	assert_int(_commands(s, "comms_trade").size()).is_equal(1)
 	p.overlay.close_button.pressed.emit()
-	# Ping on the Crew page: 2 taps.
+	# Ping on the selection sheet (C4): 2 taps.
 	log.sent.clear()
 	var ping: Dictionary = PhoneReach.walk(
 		s,
 		{
-			"page": CommsPanel.Page.CREW,
-			"control": func(_s: StationScreen) -> BaseButton: return p.crew_page.button("ping"),
+			"control":
+			func(sc: StationScreen) -> BaseButton: return sc.frame.selection_bar.name_button,
+			"option": 0,
 		}
 	)
 	assert_str(ping["error"]).is_empty()

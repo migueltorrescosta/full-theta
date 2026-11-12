@@ -8,7 +8,7 @@ Scripts for the engine fetch, gates, lints, traceability and provenance checks. 
 
 | Tier | What | When | Needs | Time |
 |---|---|---|---|---|
-| `l0` | formatting, lint, architecture, definitions, traceability, retired words, dialogue, palette, licences, the tools' own tests (`tools/l0.sh`, 15 checks in parallel) | CI and before every PR | `uv`, `git`, Godot (fetched) | about 1 min |
+| `l0` | formatting, lint, architecture, definitions, traceability, retired words, dialogue, rail label lengths, palette, licences, the tools' own tests (`tools/l0.sh`, 16 checks in parallel) | CI and before every PR | `uv`, `git`, Godot (fetched) | about 1 min |
 | `l1` | every gdUnit4 suite, `tests/net` included, in `L1_SHARDS` processes (default 3) split by recorded time (`tools/l1_shards.py`, `tools/l1_times.json`); this covers what the spec calls L1 to L3 | CI and before every PR | the above | about 4 min |
 | `l2` | the simulation-side suites only (`tests/sim`, `pairs`, `scenarios`, `director`) in one gdUnit4 process: a quick check while changing the sim, a subset of `l1` | while working | the above | 1 to 2 min |
 | `l4` | a server and 3 client processes on 2 cores (`tools/l4/run.sh`), then the browser station (`tools/l4/web.sh`) | before a PR that touches the net or the web build | `node`, `npm`, Chromium (via `tools/l6`), export templates (1.3 GB, fetched) | about 6 min |

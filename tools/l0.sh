@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # L0 static checks (FT-TST-001): formatting and lint, architecture lint,
-# definitions, traceability, retired words, dialogue and translations, licences, and the tools'
-# own fixture tests.
+# definitions, traceability, retired words, dialogue and translations, rail label lengths,
+# licences, and the tools' own fixture tests.
 # The checks run in parallel (L0_JOBS processes, default the CPUs this shell may use); each
 # one's output goes to build/l0/<check>.log and is printed when it fails.
 set -euo pipefail
@@ -24,7 +24,7 @@ bin=$(run python -c 'import os, sys; print(os.path.dirname(sys.executable))')
 chunked() { printf '%s\0' "${scripts[@]}" | xargs -0 -P "$jobs" -n $(((${#scripts[@]} + jobs - 1) / jobs)) "$@"; }
 
 checks=(tool-tests gdlint gdformat check-only definitions scenarios architecture traceability spec-cites words
-  dialogue palette colourblind licences ships)
+  dialogue rail-labels palette colourblind licences ships)
 check() {
   case $1 in
     gdlint) chunked "$bin/gdlint" ;;
@@ -40,6 +40,7 @@ check() {
     # No retired synonym of the glossary in code, player text or the spec (D392 to D407).
     words) run python tools/lint_words.py ;;
     dialogue) run python tools/check_dialogue.py ;; # FT-DAT-003, FT-DAT-004, FT-DAT-011
+    rail-labels) run python tools/check_rail_labels.py ;; # FT-STN-005: C3, labels fit a rail
     palette) run python tools/check_palette.py ;; # FT-STN-006
     colourblind) run python tools/check_colourblind.py ;; # FT-STN-006: letters, shapes
     # A baked ship is as old as its inputs (D308).

@@ -108,6 +108,8 @@ func _rebuild() -> void:
 			)
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL if upright else Control.SIZE_FILL
 			b.pressed.connect(_on_tap.bind(i))
+			# A page with nothing to show has no tab (PageHost.set_shown).
+			b.visible = host.shown(i)
 			add_child(b)
 			var label_w: float = (
 				b

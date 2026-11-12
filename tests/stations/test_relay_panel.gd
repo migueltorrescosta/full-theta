@@ -99,9 +99,11 @@ func test_map_is_ship_frame_centred_on_ship_or_selection_and_turns_freely() -> v
 	assert_float(p.map.period_m()).is_equal(StationFixture.PERIOD_M)
 	var kinds: Array = p.map.picture.items.map(func(it: Dictionary) -> String: return it["kind"])
 	assert_array(kinds).contains(["contact", "mark"])
-	# Centred on the own ship: the ship projects to the middle of what the HUD's boxes leave
-	# the map (D319).
-	var mid: Vector2 = p.hud.free_rect().get_center()
+	# Centred on the own ship: the ship projects to the middle of what the HUD's boxes and the
+	# hint over the map leave it (D319, w-dcc: nothing is drawn across the hint).
+	var mid: Vector2 = p.map.view_rect.get_center()
+	assert_float(p.map.view_rect.position.y).is_greater(p._hint.get_rect().end.y)
+	assert_float(p.map.view_rect.end.y).is_equal(p.hud.free_rect().end.y)
 	assert_vector(mid).is_not_equal(p.size / 2.0)
 	assert_vector(p.map.project(Vector3.ZERO)).is_equal_approx(mid, Vector2.ONE)
 	# Items sit at their ship-frame offsets from the centre (D124).
@@ -236,7 +238,7 @@ func test_attach_and_centre_take_the_minimum_image_across_the_seam() -> void:
 		{"kind": "contact", "id": StationFixture.H5}
 	)
 	# A mark dropped on the centre lands on Echo's spot (the server wraps it).
-	var mid: Vector2 = p.hud.free_rect().get_center()
+	var mid: Vector2 = p.map.view_rect.get_center()
 	_drag(p, _empty_spot(p, mid + Vector2(40, 0)), mid + Vector2(1, 1))
 	var placed: Vector3 = _sent(s, "place_mark")[0][1][3]
 	var echo: Vector3 = s.ctx.mark_position(s.ctx.crew.mark_in_slot(StationFixture.ECHO_SLOT))

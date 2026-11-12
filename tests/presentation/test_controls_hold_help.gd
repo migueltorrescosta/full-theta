@@ -13,18 +13,19 @@ func after_test() -> void:
 
 # FT: FT-STN-005
 func test_the_jargon_buttons_have_a_line_from_the_existing_help_strings() -> void:
-	assert_str(HoldHelp.explain("Cause")).is_equal(tr("help.eng.cause"))
-	assert_str(HoldHelp.explain("Probe")).is_equal(tr("help.eng.probe"))
-	assert_str(HoldHelp.explain("Harden")).is_equal(tr("help.eng.harden"))
+	assert_str(HoldHelp.explain("Guess cause")).is_equal(tr("help.eng.cause"))
+	assert_str(HoldHelp.explain("Build probe")).is_equal(tr("help.eng.probe"))
+	assert_str(HoldHelp.explain("Protect part")).is_equal(tr("help.eng.harden"))
 	assert_str(HoldHelp.explain("Hold fire")).is_equal(tr("help.comms.hold_fire"))
-	# A label with a suffix ("Claim A", the crew's letter) finds its box ("Claim").
-	assert_str(HoldHelp.explain("Claim A")).is_equal(tr("help.eng.claim"))
+	# A rail button's second line (the crew's letter, the picked part) is no part of its name.
+	assert_str(HoldHelp.explain("Take crew\nA")).is_equal(tr("help.eng.claim"))
+	assert_str(HoldHelp.explain("Repair part\nENG")).is_equal(tr("help.eng.repair"))
 	assert_str(HoldHelp.explain("No such button")).is_empty()
 
 
 # FT: FT-STN-005
 func test_the_line_follows_the_language() -> void:
-	var en: String = HoldHelp.explain("Cause")
+	var en: String = HoldHelp.explain("Guess cause")
 	I18n.apply("it")
 	var it: String = HoldHelp.explain(tr("eng.touch.cause"))
 	assert_str(it).is_not_empty()
@@ -36,7 +37,7 @@ func test_a_long_touch_shows_the_bubble_and_is_no_tap() -> void:
 	var holder: Control = auto_free(Control.new())
 	holder.size = Vector2(844, 390)
 	add_child(holder)
-	var b: RailButton = RailButton.make("Cause")
+	var b: RailButton = RailButton.make("Guess cause")
 	b.position = Vector2(100, 200)
 	b.size = Vector2(76, 48)
 	holder.add_child(b)
@@ -66,7 +67,7 @@ func test_a_long_touch_shows_the_bubble_and_is_no_tap() -> void:
 
 # FT: FT-STN-005
 func test_hold_buttons_are_not_explained() -> void:
-	var b: RailButton = RailButton.make("Cause")
+	var b: RailButton = RailButton.make("Guess cause")
 	b.hold = true
 	add_child(auto_free(b))
 	b._explain(-1)
