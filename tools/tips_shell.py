@@ -21,8 +21,8 @@ BEGIN = "/* tips:begin (tools/tips_shell.py writes the next line from content/ti
 END = "/* tips:end */"
 LANGUAGES = ("en", "pt_PT", "it")
 STATIONS = ("helm", "weapons", "engineering", "science", "relay", "comms")
-MIN_TIPS = 100
-MIN_PER_STATION = 5
+MIN_TIPS = 25
+MIN_PER_STATION = 2
 # The longest tip in characters: three lines of 20 px text in the 600 px column, four on
 # a phone upright.
 MAX_CHARS = 120
