@@ -1,7 +1,8 @@
 extends GdUnitTestSuite
 ## The debrief (L3, FT-MIS-006, FT-MIS-010, FT-MIS-038, FT-PAIR-013, D35): after the outcome every
 ## pick on the ship gets `debrief` with the encounters (losses and fled apart), the director's
-## decisions with reasons, the first use of each core action and the cooperative events per pair.
+## decisions with reasons, the first use of each core action, the cooperative events per pair
+## and the end card's highlights (ux-20).
 
 const PLAYER: int = NetHarness.PLAYER
 const ENEMY: int = NetHarness.ENEMY
@@ -60,6 +61,8 @@ func test_debrief_record_of_a_finished_run() -> void:
 	var coop: CoopEvents = CoopEvents.new()
 	coop.record(CoopEvents.SHORTCUT_SHARED, "p1", 0)
 	var d: Dictionary = RunDebrief.new(w, [decision], coop, FirstUse.new()).for_ship(0)
+	# No highlights kept: the record has none, not empty ones.
+	assert_dict(d["highlights"]).is_empty()
 	assert_int(d["encounters"].size()).is_equal(1)
 	assert_str(d["encounters"][0]["result"]).is_equal("won")
 	assert_bool(d["encounters"][0]["lost"]).is_false()
@@ -114,3 +117,9 @@ func test_the_debrief_follows_the_outcome_card() -> void:
 	assert_str(d["result"]).is_equal("win")
 	assert_float(d["first_use"]["relay"]["mark"]).is_greater_equal(0.0)
 	assert_int(d["coop"][0]["events"]).is_equal(1)
+	# ux-20: the card's highlights, by the fixed rules: this ship destroyed the enemy, the
+	# pair with the event is the best pair, and the hull never dropped (no closest call).
+	var hl: Dictionary = d["highlights"]
+	assert_str(hl["top_kill"]["name"]).is_equal(server.world.defs[ENEMY].display_name)
+	assert_str(hl["best_pair"]["pair"]).is_equal("p1")
+	assert_bool(hl.has("closest_call")).is_false()

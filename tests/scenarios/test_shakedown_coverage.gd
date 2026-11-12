@@ -1,7 +1,8 @@
 extends GdUnitTestSuite
 ## The Shakedown teaches every control (FT-MIS-039, D235): each IntentTable row of every
-## station group, and the common rows, has exactly one step on each track that has it, a
-## worked example and a line in all three languages; the data agrees with the code.
+## station group, and the common rows, has exactly one step on each track that has it (a
+## grouped step teaches the same control repeated, R25-16), a worked example and a line in all
+## three languages; the data agrees with the code.
 
 const LANGS: Array[String] = ["en", "pt_PT", "it"]
 const STATIONS: Array[String] = [
@@ -27,7 +28,7 @@ func before_test() -> void:
 func _steps_of(station: String, intent: String) -> Array[TrainingStepDef]:
 	return steps.steps.filter(
 		func(s: TrainingStepDef) -> bool:
-			return String(s.station) == station and String(s.intent) == intent
+			return String(s.station) == station and s.intents().has(StringName(intent))
 	)
 
 
@@ -55,11 +56,35 @@ func test_every_row_has_exactly_one_step_per_track() -> void:
 				. override_failure_message("%s/%s" % [station, id])
 				. has_size(1)
 			)
-		assert_int(steps.track(StringName(station)).size()).is_equal(_wanted(station).size())
-	# Every step teaches a real row (or is a pair step).
+		var taught: int = 0
+		for s: TrainingStepDef in steps.track(StringName(station)):
+			taught += s.intents().size()
+		assert_int(taught).is_equal(_wanted(station).size())
+	# Every step teaches real rows (or is a pair step).
 	for s: TrainingStepDef in steps.steps:
 		if not s.is_pair():
-			assert_bool(IntentTable.has(String(s.intent))).is_true()
+			for id: StringName in s.intents():
+				assert_bool(IntentTable.has(String(id))).override_failure_message(id).is_true()
+
+
+# FT: FT-MIS-039
+# R25-16: the same control repeated is one step (the six shield faces, mounts 1 to 4, the
+# main-screen views, the hack route, replies 1 to 4, ...), and its example names every one.
+func test_repeated_controls_are_one_step_whose_example_names_them_all() -> void:
+	var helm: Array[TrainingStepDef] = steps.track(&"helm")
+	var faces: Array[TrainingStepDef] = _steps_of("helm", "shield_ventral")
+	assert_array(faces).has_size(1)
+	assert_int(faces[0].intents().size()).is_equal(6)
+	assert_int(helm.size()).is_less(40)
+	for s: TrainingStepDef in steps.steps:
+		for id: StringName in s.also:
+			for lang: String in LANGS:
+				var text: String = str(strings[s.example][lang])
+				(
+					assert_bool(text.contains("{binding:%s}" % id))
+					. override_failure_message("%s %s: %s" % [s.example, lang, id])
+					. is_true()
+				)
 
 
 # FT: FT-MIS-039

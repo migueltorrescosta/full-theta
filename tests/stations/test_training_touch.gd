@@ -196,7 +196,7 @@ func test_a_touch_layout_gets_touch_words_and_a_desktop_gets_keys() -> void:
 	s.training.refresh()
 	await _frames(2)
 	assert_bool(s.training.touch_wording()).is_true()
-	assert_str(s.training._example.text).contains("All stop")
+	assert_str(s.training._text.text).contains("All stop")
 	assert_bool("{" in s.training._text.text).is_false()
 	assert_str(s.training._next.text).is_equal("Next")
 	# A pad in use gets the pad's words (only with a pad connected).
@@ -215,7 +215,7 @@ func test_a_touch_layout_gets_touch_words_and_a_desktop_gets_keys() -> void:
 	d.training.refresh()
 	assert_bool(d.training.touch_wording()).is_false()
 	assert_str(d.training._next.text).contains("(")
-	assert_str(d.training._example.text).contains("All stop")
+	assert_str(d.training._text.text).contains("All stop")
 
 
 # FT: FT-MIS-039
@@ -224,17 +224,17 @@ func test_the_card_folds_to_one_line_and_back() -> void:
 	_show_step(s, "weapons", "fire")
 	await _frames(6)
 	var card: TrainingBanner = s.training
-	assert_bool(card._example.visible).is_true()
+	assert_bool(card._text.clip_text).is_false()
 	var tall: float = card.size.y
 	card._fold.pressed.emit()
 	await _frames(6)
-	assert_bool(card._example.visible).is_false()
+	assert_bool(card._text.clip_text).is_true()
 	assert_float(card.size.y).is_less(tall)
 	assert_bool(card._next.visible).is_true()
 	assert_bool(card._next.is_visible_in_tree()).is_true()
 	card._fold.pressed.emit()
 	await _frames(6)
-	assert_bool(card._example.visible).is_true()
+	assert_bool(card._text.clip_text).is_false()
 
 
 # --- the card covers nothing -----------------------------------------------------------

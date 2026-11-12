@@ -1,7 +1,8 @@
 ## Station widgets for the L5 harness (#7): builds tests/stations/station_fixture.gd's
 ## context and shows one view of it, set from shots.json: "screen" (the StationScreen
 ## of `seat`), "lobby", "menu" or "menu_web" (the main menu, with or without the Host
-## section), or "radar" (the disc radar alone, large). Extras: `selected`
+## section), "training" (the Training picker), "callouts" (its Callouts quiz; `quiz_pick`
+## answers the first question) or "radar" (the disc radar alone, large). Extras: `selected`
 ## (a contact id, -1 none), `ping` (a contact id pinged a second ago, -1 none),
 ## `overlay` (the menu on its Controls tab; `controls_view` picks its view, a ControlsPane.VIEW_),
 ## `menu_tab` (the menu on that tab), `tooltip` (the first visit: it
@@ -87,6 +88,9 @@ var comfort: bool = false
 var advanced: bool = false
 ## A node of the open menu tab to scroll into view, e.g. "ChangeKeys" (ux-18); "" none.
 var menu_scroll: String = ""
+## The "callouts" view (the Training picker's Callouts quiz): the option picked on its first
+## question, -1 none.
+var quiz_pick: int = -1
 
 var _ctx: StationContext
 
@@ -140,7 +144,7 @@ func _ready() -> void:
 			m.token_path = "user://l5_menu_none.token"
 			m.pid_path = "user://l5_menu_none.pid"
 			add_child(m)
-		"training":
+		"training", "callouts":
 			var picker_menu: MainMenu = MainMenu.new()
 			picker_menu.web = true
 			picker_menu.settings = ClientSettings.new("user://l5_menu_training.cfg")
@@ -150,6 +154,10 @@ func _ready() -> void:
 			picker_menu.pid_path = "user://l5_menu_none.pid"
 			add_child(picker_menu)
 			picker_menu.open_training()
+			if view == "callouts":
+				picker_menu.open_callouts()
+				if quiz_pick >= 0:
+					picker_menu._quiz.pick(quiz_pick)
 		"lobby":
 			_ctx.crew.lobby[0]["started"] = false
 			_ctx.crew.lobby[0]["ready"] = false

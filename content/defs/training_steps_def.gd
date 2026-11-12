@@ -2,7 +2,8 @@ class_name TrainingStepsDef
 extends Resource
 ## The Shakedown's step list (FT-MIS-039, D235): every station's track in order, core
 ## actions first (D232), then the rest of its IntentTable group, then the common rows, one
-## control per step; then one pair step per cooperation pair. Read-only at runtime
+## control per step, or one group of the same control repeated (R25-16, TrainingStepDef.also);
+## then one pair step per cooperation pair. Read-only at runtime
 ## (FT-ARC-020). A test checks the list against IntentTable.
 
 @export var id: StringName = &"shakedown"
@@ -39,8 +40,9 @@ func validate() -> Array[String]:
 			continue
 		for e: String in s.validate():
 			errors.append("steps[%d].%s" % [i, e])
-		var key: String = "%s/%s" % [s.station, s.intent]
-		if seen.has(key):
-			errors.append("steps[%d]: %s listed twice" % [i, key])
-		seen[key] = true
+		for id: StringName in s.intents():
+			var key: String = "%s/%s" % [s.station, id]
+			if seen.has(key):
+				errors.append("steps[%d]: %s listed twice" % [i, key])
+			seen[key] = true
 	return errors

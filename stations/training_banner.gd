@@ -3,8 +3,9 @@ extends PanelContainer
 ## The Shakedown's step banner and Next button (FT-MIS-039, D235), shown on every station
 ## while a training run goes. The server says each station's step as a ship-computer line
 ## (content/dialogue/shakedown.json); the shell keeps the latest one per station in
-## StationContext.training. The banner shows the focused station's step: the line's text
-## with the player's current binding, its worked example, and Next. Next sends
+## StationContext.training. The banner shows the focused station's step: its worked example
+## with the player's current binding (the voice keeps the line, R25-15; the line's text only
+## when the step has no example), and Next. Next sends
 ## TrainingNextCommand; on a step that ends on a command it does nothing, and a player may
 ## press it anyway. Next has a key (the training_next intent), a pad chord and a tap.
 ##
@@ -44,8 +45,8 @@ var ctx: StationContext
 var station: String = ""
 
 var _title: Label
+## The step: its example (or the line), in one label (R25-15).
 var _text: Label
-var _example: Label
 var _next: Button
 var _skip: Button
 var _col: VBoxContainer
@@ -76,7 +77,8 @@ func setup(context: StationContext) -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	dock(false)
 	_col = VBoxContainer.new()
-	_col.add_theme_constant_override("separation", 6)
+	# (the touch gap: the fold button sits right above Next)
+	_col.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
 	add_child(_col)
 	_title = Label.new()
 	_title.theme_type_variation = "HeadingLabel"
@@ -95,9 +97,6 @@ func setup(context: StationContext) -> void:
 	_fold.pressed.connect(_toggle_fold)
 	_fold.visible = false
 	_head.add_child(_fold)
-	_example = Label.new()
-	_example.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_col.add_child(_example)
 	_next = Button.new()
 	_next.name = "Next"
 	_next.custom_minimum_size = Vector2(0.0, 52.0)
@@ -148,18 +147,24 @@ func refresh() -> void:
 	var intent: String = str(entry.get("intent", ""))
 	var example: String = ""
 	if words:
-		text = strip_markers(text)
 		example = touch_text(station, intent)
 	if example == "":
 		var key: String = str(entry.get("example", ""))
 		if key != "":
-			example = BindingText.fill_markers(tr(key), ctx.settings.bindings, device)
+			var raw: String = drop_unbound(tr(key), ctx.settings.bindings, device)
+			example = BindingText.fill_markers(raw, ctx.settings.bindings, device)
 	if not words:
 		var route: String = BindingText.radial_route(intent, ctx.settings.bindings, device)
 		if route != "" and ctx.settings.bindings.bindings(intent, device).is_empty():
 			example = tr("train.ex.radial") % route
-	_text.text = text if words else BindingText.fill_markers(text, ctx.settings.bindings, device)
-	_example.text = example
+	if example == "":
+		text = drop_unbound(text, ctx.settings.bindings, device)
+		example = (
+			strip_markers(text)
+			if words
+			else BindingText.fill_markers(text, ctx.settings.bindings, device)
+		)
+	_text.text = example
 	var done: bool = bool(entry.get("done", false))
 	_next.visible = not done
 	if words:
@@ -169,7 +174,6 @@ func refresh() -> void:
 	_set_touch_layout(touch)
 	_skip.text = tr("train.skip")
 	_skip.visible = not done and not touch and is_command_step(station, intent)
-	_example.visible = example != "" and not (touch and is_folded())
 	if touch:
 		var key: Array = _layout_key()
 		if key != _key:
@@ -206,6 +210,30 @@ func touch_wording() -> bool:
 static func strip_markers(text: String) -> String:
 	var re: RegEx = RegEx.create_from_string("\\s*\\{binding:[a-z][a-z0-9_]*\\}")
 	return re.sub(text, "", true).strip_edges()
+
+
+## `text` without the clause of each `{binding:...}` marker whose control has no binding on
+## `device` (R25-19): "Shields forward: press {binding:shield_fore}." reads "Shields
+## forward." instead of "press -". A pad's Helm-radial control keeps its marker (its route).
+static func drop_unbound(text: String, bindings: Bindings, device: String) -> String:
+	if not "{binding:" in text:
+		return text
+	var re: RegEx = RegEx.create_from_string("\\{binding:([a-z][a-z0-9_]*)\\}")
+	for m: RegExMatch in re.search_all(text):
+		var id: String = m.get_string(1)
+		if not bindings.bindings(id, device).is_empty():
+			continue
+		if device == IntentTable.PAD and id in HelmPanel.RADIAL:
+			continue
+		# The first item of a list after a colon gives its colon to the next one.
+		var first: RegEx = RegEx.create_from_string(":\\s*[^,:;.]*\\{binding:%s\\}\\s*,\\s*" % id)
+		var clause: RegEx = RegEx.create_from_string("[,:;]?\\s*[^,:;.]*\\{binding:%s\\}" % id)
+		text = (
+			first.sub(text, ": ", true)
+			if first.search(text) != null
+			else clause.sub(text, "", true)
+		)
+	return text.strip_edges()
 
 
 ## The touch how-to of a step: `train.touch.<station>.<intent>`, else `train.touch.<intent>`,
@@ -253,7 +281,6 @@ func _set_touch_layout(touch: bool) -> void:
 			TextServer.AUTOWRAP_OFF if is_folded() else TextServer.AUTOWRAP_WORD_SMART
 		)
 		_text.clip_text = is_folded()
-		_example.custom_minimum_size.x = width - 24.0
 		_text.custom_minimum_size.x = (
 			96.0 if is_folded() else width - 24.0 - UiTheme.TOUCH_PRIMARY - 8.0
 		)
@@ -326,14 +353,16 @@ func place() -> Rect2:
 
 
 ## Adds the rectangles of the pictures a finger taps (the radar, the shield ring), which are
-## not buttons, under `node`, with the touch gap around them.
+## not buttons, and of the docked rails, under `node`, with the touch gap around them.
 func _add_pickers(node: Node, taken: Array[Rect2]) -> void:
 	if node == self:
 		return
 	var c: Control = node as Control
 	if c != null and not c.is_visible_in_tree():
 		return
-	if c is ShieldRing or (c is DiscRadar and _is_inset(c)):
+	# A docked rail (a tablet's) is an opaque column drawn over the view: the card would hide
+	# under it.
+	if c is ShieldRing or (c is DiscRadar and _is_inset(c)) or (c is TouchRail and c.docked):
 		taken.append(c.get_global_rect().grow(UiTheme.TOUCH_GAP))
 		return
 	for ch: Node in node.get_children():
@@ -365,7 +394,6 @@ func _layout_key() -> Array:
 ## Lays the card out for its fold and returns its size.
 func _arrange() -> Vector2:
 	_set_touch_layout(true)
-	_example.visible = _example.text != "" and not is_folded()
 	reset_size()
 	return Vector2(card_width(), maxf(get_combined_minimum_size().y, 1.0))
 

@@ -13,6 +13,10 @@ enum Kind { COMMAND, NEXT }
 @export var station: StringName = &""
 ## The IntentTable id the step teaches, or pair_pN for a pair step.
 @export var intent: StringName = &""
+## The other IntentTable ids a grouped step teaches with `intent` (R25-16): the same control
+## repeated, such as the six shield faces or replies 1 to 4, is one step whose example names
+## them all. The step ends as `intent`'s would.
+@export var also: Array[StringName] = []
 ## A pair step's second station, else empty.
 @export var partner: StringName = &""
 @export var kind: Kind = Kind.NEXT
@@ -44,4 +48,17 @@ func validate() -> Array[String]:
 		errors.append("line: must be a shakedown.* dialogue line, got %s" % line)
 	if example == "":
 		errors.append("example: must not be empty")
+	if is_pair() and not also.is_empty():
+		errors.append("also: a pair step teaches no intents")
+	for id: StringName in also:
+		DefCheck.id(errors, "also", id)
+		if id == intent:
+			errors.append("also: repeats the intent %s" % id)
 	return errors
+
+
+## Every IntentTable id the step teaches: `intent`, then `also`.
+func intents() -> Array[StringName]:
+	var out: Array[StringName] = [intent]
+	out.append_array(also)
+	return out

@@ -26,6 +26,8 @@ var decisions: Callable
 ## Ship -> its debrief (RunDebrief.for_ship), built a few ticks after its outcome, so the
 ## encounter the ship was lost in has been closed by then.
 var debriefs: Dictionary[int, Dictionary] = {}
+## The end card's highlights, sampled after every step until the reset (ux-20).
+var highlights: RunHighlights = RunHighlights.new()
 
 var _rebuild: Callable
 ## Session id -> the connection and ship its card was last sent to.
@@ -58,6 +60,7 @@ func after_ticks(events: Array[SimEvent]) -> void:
 		}
 		votes[e.ship_id] = NetVote.new()
 		_outcome_tick[e.ship_id] = e.tick
+	highlights.sample(game.world, events, over)
 
 
 ## Every frame, after NetGame.process(): drops the votes of crew who left (and
@@ -112,6 +115,7 @@ func _reset() -> void:
 	debriefs.clear()
 	_outcome_tick.clear()
 	_told_debrief.clear()
+	highlights = RunHighlights.new()
 	_rebuild.call()
 
 
@@ -134,6 +138,7 @@ func _build_debrief(ship: int) -> void:
 		return
 	var list: Array = decisions.call() if decisions.is_valid() else []
 	var record: RunDebrief = RunDebrief.new(game.world, list, game.coop, game.first_use)
+	record.highlights = highlights
 	debriefs[ship] = record.for_ship(ship)
 	if game.server_log != null:
 		game.server_log.event("debrief", {"ship": ship, "debrief": debriefs[ship]})

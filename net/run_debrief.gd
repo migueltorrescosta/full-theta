@@ -3,9 +3,13 @@ extends RefCounted
 ## The end-of-run record of a ship (FT-MIS-006, FT-MIS-010, FT-MIS-038, FT-PAIR-013, D31,
 ## D35, D232): what the director decided and why, how each encounter ended with ship losses
 ## and fled encounters told apart, when each station first used each core action, and the
-## cooperative events per pair. Built on the server from the world and the sessions' own
+## cooperative events per pair, and the card's three highlights (RunHighlights, ux-20). Built
+## on the server from the world and the sessions' own
 ## counters; sent as the `debrief` notify with `ship_outcome`, written to the server log and
 ## read by the bot batch.
+
+## The highlights the server kept (NetRunReset), or null: none in the record.
+var highlights: RunHighlights = null
 
 var _world: SimWorld
 var _decisions: Array
@@ -23,7 +27,8 @@ func _init(world: SimWorld, decisions: Array, coop: CoopEvents, first_use: First
 
 ## The record for one crewed ship:
 ## {time, result "win|loss|abandoned|open", encounters: [{id, scenario, site, site_name_key,
-## result, lost, fled, time}], losses, fled, decisions, first_use, coop}.
+## result, lost, fled, time}], losses, fled, decisions, first_use, coop, highlights}
+## (highlights: RunHighlights.for_ship, {} without them).
 func for_ship(ship: int) -> Dictionary:
 	var rows: Array = []
 	var losses: int = 0
@@ -36,6 +41,8 @@ func for_ship(ship: int) -> Dictionary:
 		losses += 1 if row["lost"] else 0
 		fled += 1 if row["fled"] else 0
 		rows.append(row)
+	var coop: Array = _coop.debrief()
+	var destroyed: bool = DamageSystem.hull_fraction(_world, ship) <= 0.0
 	return {
 		"ship": ship,
 		"time": _world.tick * SimWorld.DT,
@@ -45,7 +52,8 @@ func for_ship(ship: int) -> Dictionary:
 		"fled": fled,
 		"decisions": _decisions_of(ship),
 		"first_use": _first_use.for_ship(ship),
-		"coop": _coop.debrief(),
+		"coop": coop,
+		"highlights": highlights.for_ship(ship, coop, destroyed) if highlights != null else {},
 	}
 
 

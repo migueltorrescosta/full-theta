@@ -50,6 +50,17 @@ func test_the_dev_checkbox_needs_the_dev_flag() -> void:
 	assert_bool((dev.find_child("DevAll", true, false) as CheckBox).visible).is_true()
 
 
+# FT: FT-NET-001, FT-MIS-039
+# ux-05 (reverses D245): the Host form has no Run/Shakedown picker; Host always hosts a run,
+# and the Shakedown with a crew is Training > Crew drill.
+func test_the_host_form_has_no_scenario_picker() -> void:
+	var m: MainMenu = _menu()
+	assert_object(m.find_child("Scenario", true, false)).is_null()
+	assert_object(m.find_child("Host", true, false)).is_not_null()
+	assert_str(MainMenu.RUN).is_equal("run")
+	assert_str(tr("train.mode")).is_equal("train.mode")
+
+
 # FT: FT-NET-013
 func test_a_bad_typed_address_says_why_and_a_good_one_connects() -> void:
 	var m: MainMenu = _menu()
