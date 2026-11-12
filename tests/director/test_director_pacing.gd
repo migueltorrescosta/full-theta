@@ -216,3 +216,31 @@ func test_a_race_plan_ends_with_the_finale() -> void:
 	assert_str(String(plan[-1]["site"])).is_equal("alpha")
 	for i: int in 3:
 		assert_str(String(plan[i]["scenario"])).is_equal("s_a")
+
+
+# FT: FT-MIS-025
+# A relaunch mid-gap (D259) restarts the fleet's plan: the gap's flag clears with it, so the
+# Ready card never sits at 0:00, and the next encounter is picked.
+func test_a_relaunch_in_a_gap_clears_the_gap_flag() -> void:
+	var def: RunDef = _def(2, 3, 10.0)
+	var w: SimWorld = ApiFixture.world(1, def)
+	var d: Director = Director.new(
+		def.director, &"normal", [TestScenario.make(&"s_a", 1)], 3, Factions.CREW
+	)
+	var host: ScenarioHost = ScenarioHost.new(w)
+	var flag: StringName = Director.gap_flag(Factions.CREW)
+	while w.encounters.size() < 1 or w.encounters.result[0] <= EncounterTable.Result.ACTIVE:
+		host.advance(SimWorld.DT * 1.001, d.before_tick)
+	for i: int in 60:
+		host.advance(SimWorld.DT * 1.001, d.before_tick)
+	assert_int(w.story_flags.get_flag(flag)).is_greater(w.tick)
+	var relaunched: SimEvent = SimEvent.new()
+	relaunched.kind = Director.RELAUNCHED
+	relaunched.ship_id = 0
+	w.step_events = [relaunched]
+	d.before_tick(ScenarioApi.new(w))
+	w.step()
+	for i: int in 3:
+		host.advance(SimWorld.DT * 1.001, d.before_tick)
+	assert_int(w.story_flags.get_flag(flag)).is_equal(0)
+	assert_int(w.encounters.size()).is_equal(2)

@@ -167,7 +167,7 @@ func _on_relaunches(api: ScenarioApi) -> void:
 			_ended_logged.erase(_faction)
 			_skip_logged.erase(_faction)
 			_finale_tries.erase(_faction)
-			_gap_from.erase(_faction)
+			_end_gap(api, _faction)
 
 
 ## Makes this Director leave the sites in `taken` alone and record its own there (FleetDirector

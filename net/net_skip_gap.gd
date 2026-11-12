@@ -52,6 +52,14 @@ func on_skip_gap(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	_update(faction)
 
 
+## A new world (NetGame.restart): no gap, no Ready, nothing sent or skipped yet.
+func reset() -> void:
+	_ready.clear()
+	_gap.clear()
+	_sent.clear()
+	_skipped.clear()
+
+
 ## Each server frame: follows the directors' gap flags and the voters, ends a gap once every
 ## voter is Ready, and sends the changed `gap` events.
 func step() -> void:

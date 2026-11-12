@@ -51,7 +51,7 @@ static func step(world: SimWorld) -> void:
 				if outcome[id] == ShipStateTable.ShipOutcome.WIN:
 					_emit_eliminated(world, id)
 		elif enabled[id] == 1 and mode[id] == AiTable.Mode.RETREAT and _escaped(world, id):
-			status[id] = ShipStateTable.Status.RETREATED
+			leave_world(world, id)
 			world.emit(&"retreated", id)
 	for id: int in n:
 		if enabled[id] == 1 or outcome[id] != ShipStateTable.ShipOutcome.NONE:
@@ -259,6 +259,14 @@ static func _killer(world: SimWorld, id: int) -> int:
 		if e.kind == &"destroyed" and e.ship_id == id:
 			return e.other_id if e.other_id != id and world.has_ship(e.other_id) else -1
 	return -1
+
+
+## An AI ship leaves the world without being destroyed (a retreat that is gone, gp-17; a
+## patrol that leaves, CallHelp): RETREATED and no longer alive, so no AI steers it, no sensor
+## sees it and it can never be killed (nor leave a wreck) later.
+static func leave_world(world: SimWorld, id: int) -> void:
+	world.ships.status[id] = ShipStateTable.Status.RETREATED
+	world.kin.alive[id] = 0
 
 
 ## An AI ship in RETREAT that has jumped out (retreating retreat_jump_after or longer) or left
