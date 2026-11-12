@@ -74,7 +74,9 @@ func test_bounty_and_salvage_are_toasts_on_comms_and_captain() -> void:
 		var s: StationScreen = _screen(seat)
 		_event(s, "bounty", {"value": 100.0})
 		_event(s, "salvage", {"value": 150.0})
-		assert_array(s.toasts.texts()).contains_exactly_in_any_order(["Bounty +100", "Salvage +150"])
+		assert_array(s.toasts.texts()).contains_exactly_in_any_order(
+			["Bounty +100", "Salvage +150"]
+		)
 	var helm: StationScreen = _screen("helm")
 	_event(helm, "bounty", {"value": 100.0})
 	assert_array(helm.toasts.texts()).is_empty()

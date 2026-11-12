@@ -244,7 +244,9 @@ func _ready() -> void:
 			s.focus(focus)
 			if comms in ["trade", "conversation", "dock2"]:
 				var panel: CommsPanel = s.panels[s.stations.find("comms")] as CommsPanel
-				panel.open_card(CommsFixture.OFFER if comms == "trade" else CommsFixture.HAIL)
+				panel.open_card(
+					CommsFixture.HAIL if comms == "conversation" else CommsFixture.OFFER
+				)
 			s.radar.side_strip = strip
 			if overlay:
 				s.help_requested.emit()
