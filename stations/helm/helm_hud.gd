@@ -753,10 +753,9 @@ func _edge_point(dir: Vector2) -> Vector2:
 	return c + dir * minf(tx, ty)
 
 
-## An arrow tip moved off the read-outs, the shield ring and the velocity markers, along the
-## view's edge: the
-## nearest spot on its edge clear of them (above or below on a side edge, beside on the top
-## or bottom edge); where none is clear it stays. Used on a phone.
+## An arrow tip moved off the read-outs, the shield ring and the velocity markers, along the view's
+## edge: the nearest spot on its edge clear of them (above or below on a side edge, beside on the
+## top or bottom edge); where none is clear it stays. Used on a phone.
 func arrow_tip(tip: Vector2) -> Vector2:
 	var a: Rect2 = area().grow(-EDGE)
 	# A view not yet laid out is narrower than two edges: nothing to move along.

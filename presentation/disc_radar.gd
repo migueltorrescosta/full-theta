@@ -557,12 +557,11 @@ func small() -> bool:
 	return disc_radius() < SMALL_R
 
 
-## Small radar: each chip (the selected item's first) takes the first free spot of right,
-## left, above, below and the four corners of its blip, clear of the clock numbers, the range
-## and site boxes, the own ship, every blip, the other items' stems and the chips placed
-## before it; a chip with no
-## free spot is left out unless selected, which then takes the spot covering only other chips,
-## else only blips, else the first (w-dcc).
+## Small radar: each chip (the selected item's first) takes the first free spot of right, left,
+## above, below and the four corners of its blip, clear of the clock numbers, the range and site
+## boxes, the own ship, every blip, the other items' stems and the chips placed before it; a chip
+## with no free spot is left out unless selected, which then takes the spot covering only other
+## chips, else only blips, else the first (w-dcc).
 func _place_small(entries: Array[Dictionary], font: Font) -> void:
 	var v: Rect2 = _view().grow(-CHIP_MARGIN)
 	if v.size.x <= 0.0 or v.size.y <= 0.0:
