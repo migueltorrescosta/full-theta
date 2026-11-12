@@ -205,8 +205,10 @@ func _fill_highlights(h: Dictionary) -> void:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		l.add_theme_color_override("font_color", Palette.color("accent"))
 		# (a phone's card has the screen's width: a long line ends in "…", as Votes does)
-		l.clip_text = _phone
-		l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		# (a trimmed label has no least width: only on a phone, whose card has a set width)
+		if _phone:
+			l.clip_text = true
+			l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		_highlights.add_child(l)
 	_highlights.visible = not lines.is_empty()
 

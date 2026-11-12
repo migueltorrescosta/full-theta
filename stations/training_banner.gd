@@ -353,14 +353,16 @@ func place() -> Rect2:
 
 
 ## Adds the rectangles of the pictures a finger taps (the radar, the shield ring), which are
-## not buttons, under `node`, with the touch gap around them.
+## not buttons, and of the docked rails, under `node`, with the touch gap around them.
 func _add_pickers(node: Node, taken: Array[Rect2]) -> void:
 	if node == self:
 		return
 	var c: Control = node as Control
 	if c != null and not c.is_visible_in_tree():
 		return
-	if c is ShieldRing or (c is DiscRadar and _is_inset(c)):
+	# A docked rail (a tablet's) is an opaque column drawn over the view: the card would hide
+	# under it.
+	if c is ShieldRing or (c is DiscRadar and _is_inset(c)) or (c is TouchRail and c.docked):
 		taken.append(c.get_global_rect().grow(UiTheme.TOUCH_GAP))
 		return
 	for ch: Node in node.get_children():
