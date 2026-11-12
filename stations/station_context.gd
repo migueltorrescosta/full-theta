@@ -39,7 +39,8 @@ func now_ms() -> int:
 
 
 ## The radar picture (ContactPicture) for this frame: rebuilt when the frame, the clock,
-## the interpolated state, the marks, the pings, the zones or the sites changed. The key
+## the interpolated state, the marks, the pings, the zones, the sites or the priority target
+## changed. The key
 ## holds their content hashes, not copies (R20-4): a call that hits the cache copies nothing.
 func picture() -> ContactPicture:
 	var key: Array = [
@@ -50,6 +51,7 @@ func picture() -> ContactPicture:
 		crew.pings.hash(),
 		crew.zones.hash(),
 		snap.sites.hash(),
+		crew.priority,
 	]
 	if _picture == null or _picture.interp != interp or key != _picture_key:
 		_picture = ContactPicture.build(self)

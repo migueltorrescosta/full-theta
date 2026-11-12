@@ -143,6 +143,9 @@ const EVENT_ROUTES: String = "routes"
 const EVENT_INBOX: String = "inbox"
 const EVENT_RELAY_LOG: String = "relay_log"
 const EVENT_MAIN_VIEW: String = "main_view"
+## The Captain's priority target (gp-15), to every pick on the ship: {ship, contact (-1 none),
+## callsign, by}.
+const EVENT_PRIORITY: String = "priority"
 ## A request chip the session sent was answered (NetChips): {chip, arg, accept, by}.
 const EVENT_CHIP_ANSWER: String = "chip_answer"
 ## The shortcuts shared to the session's ship (NetShares): {ship, left: {feature:

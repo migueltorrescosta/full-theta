@@ -80,12 +80,18 @@ func test_each_view_shows_its_parts() -> void:
 
 
 # FT: FT-MSC-004
-func test_a_plain_viewer_is_read_only() -> void:
+# A plain viewer picks only contacts (its click pings them, gp-15): never a mark or a site.
+func test_a_plain_viewer_picks_only_contacts() -> void:
 	var s: StationScreen = await _screen()
 	var v: ViewerPanel = s.panels[0] as ViewerPanel
 	assert_bool(v.interactive).is_false()
 	assert_dict(v.item_at(Vector2(640.0, 300.0))).is_empty()
-	assert_dict(v.item_at(v.radar.position + v.radar.size / 2.0)).is_empty()
+	var kinds: Dictionary = {}
+	for e: Dictionary in v.radar._layout():
+		kinds[e["item"]["kind"]] = true
+		var hit: Dictionary = v.item_at(v.radar.position + (e["pos"] as Vector2))
+		assert_str(str(hit.get("kind", "contact"))).is_equal("contact")
+	assert_bool(kinds.has("mark")).is_true()
 
 
 # FT: FT-MSC-006

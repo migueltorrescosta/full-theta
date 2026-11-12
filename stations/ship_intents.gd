@@ -47,6 +47,11 @@ func set_main_view(view: int) -> void:
 	_call(&"set_main_view", [view])
 
 
+## The Captain's priority target, a contact id; -1 clears it (gp-15).
+func set_priority(contact: int) -> void:
+	_call(&"set_priority", [contact])
+
+
 ## kind "contact" | "mark" | "card" | "site" | "point" (FT-SPA-016, FT-CPT-005).
 func ping(kind: String, id: int, pos: Vector3) -> void:
 	_call(&"ping", [kind, id, pos])

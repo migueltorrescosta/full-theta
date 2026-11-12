@@ -324,6 +324,18 @@
     {"name": "l5_phl_first_seat", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"seat": "helm", "insets": [47, 0, 47, 21], "tooltip": true}},
     {"name": "l5_php_first_seat", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"seat": "engineering", "insets": [0, 47, 0, 34], "tooltip": true}},
     {"name": "l5_hd_captain_requests", "scene": "res://tests/stations/captain/captain_shot.tscn", "size": [1920, 1080], "set": {"seat": "captain", "chip": true, "states": true}},
-    {"name": "l5_phl_captain_request_states", "scene": "res://tests/stations/captain/captain_shot.tscn", "size": [844, 390], "set": {"seat": "captain", "insets": [47, 0, 47, 21], "page": 1, "chip": true, "states": true}}
+    {"name": "l5_phl_captain_request_states", "scene": "res://tests/stations/captain/captain_shot.tscn", "size": [844, 390], "set": {"seat": "captain", "insets": [47, 0, 47, 21], "page": 1, "chip": true, "states": true}},
+    {"name": "l5_gp_helm_priority", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"seat": "helm", "selected": 3, "events": [{"type": "priority", "payload": {"ship": 0, "contact": 3, "callsign": "U3", "by": "Cy"}}]}},
+    {"name": "l5_gp_tl_helm_priority", "scene": "res://tests/visual/station_shot.tscn", "size": [1024, 768], "set": {"seat": "helm", "touch": true, "selected": 3, "events": [{"type": "priority", "payload": {"ship": 0, "contact": 3, "callsign": "U3", "by": "Cy"}}]}},
+    {"name": "l5_gp_ph_helm_priority", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"seat": "helm", "insets": [0, 0, 0, 0], "selected": 3, "events": [{"type": "priority", "payload": {"ship": 0, "contact": 3, "callsign": "U3", "by": "Cy"}}]}},
+    {"name": "l5_gp_weapons_priority", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"seat": "weapons", "selected": 3, "events": [{"type": "priority", "payload": {"ship": 0, "contact": 3, "callsign": "U3", "by": "Cy"}}], "claim": "mount:0"}},
+    {"name": "l5_gp_tl_weapons_priority", "scene": "res://tests/visual/station_shot.tscn", "size": [1024, 768], "set": {"seat": "weapons", "touch": true, "selected": 3, "events": [{"type": "priority", "payload": {"ship": 0, "contact": 3, "callsign": "U3", "by": "Cy"}}], "claim": "mount:0"}},
+    {"name": "l5_gp_ph_weapons_priority", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"seat": "weapons", "insets": [0, 0, 0, 0], "selected": 3, "events": [{"type": "priority", "payload": {"ship": 0, "contact": 3, "callsign": "U3", "by": "Cy"}}], "claim": "mount:0"}},
+    {"name": "l5_gp_captain_priority", "scene": "res://tests/visual/station_shot.tscn", "size": [1920, 1080], "set": {"seat": "captain"}},
+    {"name": "l5_gp_phl_captain_priority_sheet", "scene": "res://tests/visual/science_relay_shot.tscn", "size": [844, 390], "set": {"seat": "captain", "insets": [47, 0, 47, 21], "sheet": "selection", "events": []}},
+    {"name": "l5_gp_relay_pending", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"seat": "relay", "pending_site": true}},
+    {"name": "l5_gp_phl_relay_pending", "scene": "res://tests/visual/science_relay_shot.tscn", "size": [844, 390], "set": {"seat": "relay", "insets": [47, 0, 47, 21], "page": 0, "pending_site": true}},
+    {"name": "l5_gp_viewer_ping", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"seat": "viewer", "events": [{"type": "ping", "payload": {"ship": 0, "kind": "contact", "id": 2, "by": "Bo", "viewer": true, "copy": ""}}]}},
+    {"name": "l5_gp_phl_helm_viewer_ping", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [844, 390], "set": {"seat": "helm", "insets": [47, 0, 47, 21], "events": [{"type": "ping", "payload": {"ship": 0, "kind": "contact", "id": 2, "by": "Bo", "viewer": true, "copy": ""}}]}}
   ]
 }

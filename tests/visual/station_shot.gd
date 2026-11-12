@@ -85,6 +85,10 @@ var player: String = "Ana"
 ## The lobby's seats whose holders said Ready (#37 C1).
 var ready_seats: Array = []
 
+## A site of an encounter waiting for the ship, 4.3 km off, flagged pending: Relay's map draws
+## its "?" (gp-16).
+var pending_site: bool = false
+
 ## A Shakedown step on the focused station's banner (a solo lesson step, D303).
 var lesson: bool = false
 ## The intent of the lesson step ("" the station's default one), e.g. "align" (D1).
@@ -149,6 +153,11 @@ func _ready() -> void:
 		for i: int in crew_seats.size():
 			seats.append({"name": ["Ana", "Bo", "Cy", "Di"][i % 4], "seat": str(crew_seats[i])})
 		_ctx.crew.lobby[StationFixture.SHIP]["seats"] = seats
+	if pending_site:
+		var row: Dictionary = {"id": 5, "name_key": "site.kestrel_yard", "kind": &"station"}
+		row.merge({"dockable": false, "pending": true, "radius": 3000.0})
+		row["pos"] = StationFixture.OWN_POS + Vector3(-4000.0, 600.0, 1500.0)
+		_ctx.snap.sites.append(row)
 	if selected >= 0:
 		_ctx.crew.select("contact", selected)
 	if ping >= 0:
