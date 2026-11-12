@@ -29,7 +29,7 @@ func before_test() -> void:
 	world.spawn_ship(
 		ScienceFixture.weak_raider(),
 		ScienceFixture.RED,
-		Vector3(0, 0, -3000),
+		CubePoint.make(0, 0, -3000),
 		Quaternion(Vector3.UP, PI / 2.0)
 	)
 	world.step()

@@ -18,7 +18,7 @@ func _view(
 
 
 func _units(m: Vector3) -> Vector3i:
-	return NetCodec.quant_pos(m.x, m.y, m.z, P_UNITS)
+	return NetCodec.quant_pos(CubePoint.of(m), P_UNITS)
 
 
 # FT: FT-ARC-015

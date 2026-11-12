@@ -24,10 +24,10 @@ func test_constant_thrust_matches_analytic() -> void:
 	var t: float = 600 * DT
 	var expected: float = 0.5 * a * t * t
 	var tolerance: float = 600.0 * pow(2.0, -23.0)
-	assert_float(-kin.pz[0]).is_equal_approx(expected, expected * tolerance)
+	assert_float(-kin.pos_z[0]).is_equal_approx(expected, expected * tolerance)
 	assert_float(-kin.vel[0].z).is_equal_approx(a * t, a * t * tolerance)
-	assert_float(kin.px[0]).is_equal(0.0)
-	assert_float(kin.py[0]).is_equal(0.0)
+	assert_float(kin.pos_x[0]).is_equal(0.0)
+	assert_float(kin.pos_y[0]).is_equal(0.0)
 
 
 # FT: FT-SIM-003, FT-TST-007
@@ -43,7 +43,7 @@ func test_zero_input_holds_velocity() -> void:
 	assert_vector(kin.vel[0]).is_equal(Vector3(10.0, -3.0, 40.0))
 	assert_float(kin.ang_vel[0].z).is_equal_approx(0.4, 1e-6)
 	assert_float(kin.propellant[0]).is_equal(fuel)
-	assert_float(kin.px[0]).is_equal_approx(10.0 * 10.0, 1e-4)
+	assert_float(kin.pos_x[0]).is_equal_approx(10.0 * 10.0, 1e-4)
 
 
 # FT: FT-SIM-003, FT-TST-007

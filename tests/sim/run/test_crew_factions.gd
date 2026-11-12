@@ -19,7 +19,9 @@ func test_crew_sides_never_equal_an_npc_faction() -> void:
 		var copies: int = 0
 		var npcs: Array[int] = []
 		for npc: int in Factions.NPC:
-			npcs.append(w.spawn_ship(f.setup.run_def.player_ship, npc, Vector3(0.0, 5000.0, 0.0)))
+			npcs.append(
+				w.spawn_ship(f.setup.run_def.player_ship, npc, CubePoint.make(0.0, 5000.0, 0.0))
+			)
 		for id: int in crew:
 			var side: int = w.faction_of(id)
 			assert_bool(Factions.NPC.has(side)).override_failure_message(label).is_false()

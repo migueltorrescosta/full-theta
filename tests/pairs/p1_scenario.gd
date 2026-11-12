@@ -44,7 +44,7 @@ static func build() -> SimWorld:
 	w.set_relation(1, 2, SimWorld.Relation.HOSTILE)
 	w.spawn_ship(TestDefs.corvette(), 1)
 	var facing_player: Quaternion = Quaternion(Vector3.UP, PI / 2.0)
-	w.spawn_ship(TestDefs.raider(), 2, RAIDER_AT, facing_player)
+	w.spawn_ship(TestDefs.raider(), 2, CubePoint.of(RAIDER_AT), facing_player)
 	return w
 
 
@@ -55,7 +55,7 @@ static func raider(w: SimWorld) -> void:
 
 
 static func done(w: SimWorld) -> bool:
-	return w.kin.relative_to_point(PLAYER, POINT.x, POINT.y, POINT.z).length() < CAPTURE
+	return w.kin.relative_to_point(PLAYER, CubePoint.of(POINT)).length() < CAPTURE
 
 
 static func measure(w: SimWorld) -> Dictionary:
@@ -90,7 +90,7 @@ static func helm(w: SimWorld) -> void:
 		var focus: SetShieldFocusCommand = SetShieldFocusCommand.new()
 		focus.track_id = RAIDER
 		PairHarness.send(w, focus)
-	var to_point: Vector3 = w.kin.relative_to_point(PLAYER, POINT.x, POINT.y, POINT.z)
+	var to_point: Vector3 = w.kin.relative_to_point(PLAYER, CubePoint.of(POINT))
 	var on_point: bool = w.kin.forward(PLAYER).angle_to(to_point) < ON_POINT
 	if on_point and w.helm.input_translation[PLAYER].z == 0.0:
 		PairHarness.send(w, PairHarness.helm_input(1.0))

@@ -202,9 +202,7 @@ static func _targeted_offset(
 		):
 			return kin.relative(row, other)
 	elif kind == HelmTable.Target.POINT:
-		return kin.relative_to_point(
-			row, helm.target_x[row], helm.target_y[row], helm.target_z[row]
-		)
+		return kin.relative_to_column(row, helm.sel_x, helm.sel_y, helm.sel_z, row)
 	elif kind == HelmTable.Target.SITE:
 		return SiteTable.offset_to(world, row, helm.target_site[row])
 	return Vector3.INF
@@ -217,9 +215,7 @@ static func target_offset(world: SimWorld, row: int) -> Vector3:
 		return world.kin.relative(row, helm.target_ship[row])
 	if helm.target_kind[row] == HelmTable.Target.SITE:
 		return SiteTable.offset_to(world, row, helm.target_site[row])
-	return world.kin.relative_to_point(
-		row, helm.target_x[row], helm.target_y[row], helm.target_z[row]
-	)
+	return world.kin.relative_to_column(row, helm.sel_x, helm.sel_y, helm.sel_z, row)
 
 
 ## Velocity of the selected target in the world frame (m/s); points are at rest.

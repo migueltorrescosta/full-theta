@@ -141,7 +141,10 @@ func _turn_and_sprint(boost: bool) -> int:
 		w.step()
 	assert_int(w.tick).override_failure_message("turn did not finish").is_less(limit)
 	FlightFixture.input(w, 0, Vector3.ZERO, Vector3(0, 0, 1))
-	while w.kin.relative_to_point(0, 0.0, 0.0, 0.0).length() < 2000.0 and w.tick < limit:
+	while (
+		w.kin.relative_to_point(0, CubePoint.make(0.0, 0.0, 0.0)).length() < 2000.0
+		and w.tick < limit
+	):
 		w.step()
 	assert_int(w.tick).override_failure_message("sprint did not finish").is_less(limit)
 	return w.tick

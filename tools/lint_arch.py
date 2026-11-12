@@ -7,9 +7,10 @@
   in the repo resolves to its folder (top level, or sim/api/), and each module may
   name only the folders in ALLOWED (FT-ARC-010, FT-ARC-011, FT-ARC-016, FT-ARC-021,
   FT-DAT-007).
-- Space wraps per site, so pure modules read and write the position columns (.px,
-  .py, .pz) only through the Kinematics helpers; only the two files that own the
-  columns touch them (FT-SIM-035, D124).
+- Space wraps, so pure modules read and write the ship and projectile position columns
+  (kin.pos_x, .pos_y, .pos_z and the projectiles') only through the Kinematics helpers;
+  only the two files that own those columns touch them (FT-SIM-035, D124, D401). Other
+  tables' `<role>_x` columns (sites, probes, aim points) are read directly by hot loops.
 - ScenarioApi keeps the world in `_world`, which GDScript can't hide: pure modules
   outside sim/api/ may not access `._world` (FT-ARC-016).
 - Every module is classified: a .gd file outside ALLOWED's modules and UNRESTRICTED is a
@@ -118,11 +119,22 @@ BANNED = {
 }
 LOADERS = {"load", "preload"}  # banned only as bare calls, not as methods (x.load())
 SKIP_PREFIX = ("tools/tests/fixtures/",)
-# Position columns, and the files that own them (FT-SIM-035, D124).
-POSITION_COLUMNS = {"px", "py", "pz"}
+# Position columns, the receivers that name the ship and projectile tables, and the files
+# that own them (FT-SIM-035, D124, D401).
+POSITION_COLUMNS = {"pos_x", "pos_y", "pos_z"}
+POSITION_RECEIVERS = {"kin", "kinematics", "proj", "projectiles"}
 # Scenario API members that hold the world; GDScript has no private, so the lint does.
 PRIVATE_API = {"_world"}
 POSITION_OWNERS = {"sim/core/kinematics.gd", "sim/combat/projectile_table.gd"}
+
+
+def receiver(code: str, dot: int) -> str:
+    """The identifier just before the dot at code[dot] (spaces skipped), or ""."""
+    k = dot - 1
+    while k >= 0 and code[k] in " \t":
+        k -= 1
+    m = re.search(r"\w+$", code[: k + 1])
+    return m.group() if m else ""
 
 
 def strip(text: str) -> tuple[str, list[tuple[int, str]]]:
@@ -242,7 +254,10 @@ def lint(root: Path) -> list[str]:
                 if word in names:
                     ft = "FT-ARC-020" if what == "resource loading" else "FT-ARC-010"
                     report(pos, f"{word}: no {what} in {module}/ ({ft})")
-            if word in POSITION_COLUMNS and dotted and rel not in POSITION_OWNERS:
+            if (
+                word in POSITION_COLUMNS and dotted and rel not in POSITION_OWNERS
+                and receiver(code, j) in POSITION_RECEIVERS
+            ):
                 report(pos, f".{word}: use Kinematics.relative, relative_to_point, point_at, "
                        "wrap, place or translate, not raw position columns (FT-SIM-035, D124)")
             if word in PRIVATE_API and dotted and module != "sim/api":

@@ -35,7 +35,9 @@ static func world(
 	w.science_def = science()
 	w.spawn_ship(TestDefs.corvette(), BLUE)
 	var facing: Quaternion = Quaternion(Vector3.UP, PI / 2.0 if broadside else 0.0)
-	w.spawn_ship(foe if foe != null else TestDefs.raider(), RED, Vector3(0, 0, -dist), facing)
+	w.spawn_ship(
+		foe if foe != null else TestDefs.raider(), RED, CubePoint.make(0, 0, -dist), facing
+	)
 	w.step()
 	return w
 
@@ -44,7 +46,7 @@ static func world(
 static func cover(w: SimWorld, contact: int = FOE, ship: int = ME) -> void:
 	var p: PackedFloat64Array = w.kin.point_at(contact, Vector3.ZERO)
 	var at: Vector3 = Vector3(p[0], p[1], p[2])
-	var row: int = w.probes.launch(ship, w.faction_of(ship), 0, at, at)
+	var row: int = w.probes.launch(ship, w.faction_of(ship), 0, CubePoint.of(at), CubePoint.of(at))
 	w.probes.deployed[row] = 1
 	KnowledgeSystem.step(w)
 

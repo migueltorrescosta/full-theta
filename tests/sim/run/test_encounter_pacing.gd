@@ -196,7 +196,7 @@ func test_the_run_is_won_when_the_director_closes_it_after_the_fewest_encounters
 func test_no_clear_sky_win_in_a_director_run() -> void:
 	# The M1 rule (every hostile gone wins) is off while a run is in progress.
 	var w: SimWorld = _world()
-	var enemy: int = w.spawn_enemy(TestDefs.raider_enemy(), 2, Vector3(0.0, 0.0, -5000.0))
+	var enemy: int = w.spawn_enemy(TestDefs.raider_enemy(), 2, CubePoint.make(0.0, 0.0, -5000.0))
 	w.kin.alive[enemy] = 0
 	ApiFixture.step(w, 3)
 	assert_int(w.run.outcome[0]).is_equal(RunTable.Outcome.NONE)

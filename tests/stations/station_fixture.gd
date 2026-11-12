@@ -406,7 +406,7 @@ static func _mark(slot: int, mark_name: String, pos: Vector3) -> Dictionary:
 
 
 static func _units(p: Vector3, p_units: int) -> Vector3i:
-	return NetCodec.quant_pos(p.x, p.y, p.z, p_units)
+	return NetCodec.quant_pos(CubePoint.of(p), p_units)
 
 
 ## A multi-ship session (#11) on a fixture context: feeds the `fleet` event of `names` (lobby

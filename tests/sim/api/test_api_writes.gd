@@ -61,8 +61,11 @@ func test_spawn_at_offset_and_on_leg_land_where_asked() -> void:
 	var b: ApiHandle = api.spawn_on_leg(ApiFixture.RAIDER, 2, 0, 1, 0.5, 200.0)
 	w.step()
 	assert_int(b.id()).is_equal(a.id() + 1)
-	assert_float(w.kin.relative_to_point(a.id(), 0.0, 500.0, 2000.0).length()).is_less(1.0)
-	var mid: Vector3 = w.kin.relative_to_point(b.id(), 15000.0, 0.0, 0.0)
+	(
+		assert_float(w.kin.relative_to_point(a.id(), CubePoint.make(0.0, 500.0, 2000.0)).length())
+		. is_less(1.0)
+	)
+	var mid: Vector3 = w.kin.relative_to_point(b.id(), CubePoint.make(15000.0, 0.0, 0.0))
 	assert_float(mid.length()).is_equal_approx(200.0, 1.0)
 
 
@@ -120,7 +123,7 @@ func test_writes_take_effect_on_the_next_step() -> void:
 # next row a prediction would have named.
 func test_an_offered_card_resolves_to_its_real_id_after_a_crew_hail_in_the_same_tick() -> void:
 	var w: SimWorld = StoryFixture.wire(ApiFixture.world())
-	var raider: int = w.spawn_enemy(TestDefs.raider_enemy(), 2, Vector3(0.0, 0.0, -5000.0))
+	var raider: int = w.spawn_enemy(TestDefs.raider_enemy(), 2, CubePoint.make(0.0, 0.0, -5000.0))
 	w.hail_conversations[w.defs[raider].id] = &"conv.trader_bluff"
 	w.step()
 	var api: ScenarioApi = _api(w)

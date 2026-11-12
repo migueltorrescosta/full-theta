@@ -20,8 +20,8 @@ func _hull(world: SimWorld, ship: int) -> float:
 func test_ram_damage_is_capped_per_tick() -> void:
 	var def: ShipDef = TestDefs.corvette()
 	var world: SimWorld = SimWorld.new(1)
-	world.spawn_ship(def, 1, Vector3.ZERO, Quaternion.IDENTITY, Vector3(0, 0, 100))
-	world.spawn_ship(def, 1, Vector3(0, 0, 60), Quaternion.IDENTITY, Vector3(0, 0, -100))
+	world.spawn_ship(def, 1, CubePoint.make(), Quaternion.IDENTITY, Vector3(0, 0, 100))
+	world.spawn_ship(def, 1, CubePoint.make(0, 0, 60), Quaternion.IDENTITY, Vector3(0, 0, -100))
 	_coast(world)
 	for id: int in 2:
 		assert_bool(ShieldSystem.set_power_and_tightness(world, id, 0, -1.0)).is_true()
@@ -49,12 +49,14 @@ func test_docked_ship_takes_no_collision_or_weapon_damage() -> void:
 	w.step()
 	assert_int(w.helm.docked_site[docked]).is_equal(0)
 	var other: int = w.spawn_ship(
-		TestDefs.corvette(), 2, Vector3(0, 0, 150), Quaternion.IDENTITY, Vector3(0, 0, -60)
+		TestDefs.corvette(), 2, CubePoint.make(0, 0, 150), Quaternion.IDENTITY, Vector3(0, 0, -60)
 	)
 	var c: DecoupledCommand = DecoupledCommand.new()
 	c.ship_id = other
 	w.submit(c)
-	w.projectiles.spawn(other, 2, 0.0, 0.0, 400.0, Vector3(0, 0, -1500), 0.5, 5e6, 600)
+	w.projectiles.spawn(
+		other, 2, CubePoint.make(0.0, 0.0, 400.0), Vector3(0, 0, -1500), 0.5, 5e6, 600
+	)
 	var full: float = _hull(w, docked)
 	var events: Array[SimEvent] = SimFixture.run(w, 4 * SimWorld.HZ)
 	assert_float(_hull(w, docked)).is_equal(full)

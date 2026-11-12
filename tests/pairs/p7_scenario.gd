@@ -64,7 +64,9 @@ static func build() -> SimWorld:
 	w.set_relation(1, 2, SimWorld.Relation.HOSTILE)
 	var weapons: Array[WeaponDef] = [lance()]
 	w.spawn_ship(Gunnery.gunship(1, weapons), BLUE)
-	var raider: int = w.spawn_ship(target_def(), 2, RAIDER_AT, Quaternion(Vector3.UP, PI))
+	var raider: int = w.spawn_ship(
+		target_def(), 2, CubePoint.of(RAIDER_AT), Quaternion(Vector3.UP, PI)
+	)
 	w.shields.strength[raider] = 0.0
 	return w
 

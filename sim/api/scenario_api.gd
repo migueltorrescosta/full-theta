@@ -117,7 +117,7 @@ func ship(id: int) -> ShipView:
 		return v
 	v.id = id
 	v.faction = _world.faction_of(id)
-	v.pos = _world.kin.point_at(id, Vector3.ZERO)
+	v.pos = _world.kin.point(id)
 	v.velocity = _world.kin.vel[id]
 	v.nearest_site = SiteTable.nearest(_world, id)
 	v.at_site = SiteTable.within_radius(_world, id, v.nearest_site)
@@ -299,17 +299,12 @@ func spawn_on_leg(
 	var a: PackedFloat64Array = _world.sites.point(from_site)
 	var b: PackedFloat64Array = _world.sites.point(to_site)
 	var kin: Kinematics = _world.kin
-	var leg: Vector3 = kin.delta(b[0], b[1], b[2], a[0], a[1], a[2])
+	var leg: Vector3 = kin.delta(b, a)
 	var side: Vector3 = leg.cross(Vector3.UP)
 	if side.length_squared() < 1e-6:
 		side = leg.cross(Vector3.RIGHT)
 	var off: Vector3 = leg * t + side.normalized() * lateral_m
-	return _spawn(
-		enemy_key,
-		faction,
-		PackedFloat64Array([a[0] + off.x, a[1] + off.y, a[2] + off.z]),
-		Quaternion.IDENTITY
-	)
+	return _spawn(enemy_key, faction, CubePoint.plus(a, off), Quaternion.IDENTITY)
 
 
 ## Opens a site of the map's pool; returns a handle on its site id (resolved at once to the

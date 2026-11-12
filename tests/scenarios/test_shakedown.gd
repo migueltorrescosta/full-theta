@@ -56,7 +56,7 @@ func test_a_drone_without_weapons_is_the_target() -> void:
 # FT: FT-MIS-039, FT-SIM-029
 func test_a_ship_at_hull_zero_is_reset_at_the_yard_not_eliminated() -> void:
 	rig.tick(5)
-	rig.world.kin.place(0, 5000.0, 0.0, 0.0)
+	rig.world.kin.place(0, CubePoint.make(5000.0, 0.0, 0.0))
 	DamageSystem.damage_hull(rig.world, 0, 1.0e12)
 	assert_int(rig.world.kin.alive[0]).is_equal(0)
 	rig.tick(3)

@@ -67,9 +67,9 @@ func _aim(world: SimWorld) -> void:
 	if not aim.is_finite():
 		aim = kin.relative(ship, target)
 	var c: AimMountCommand = AimMountCommand.new()
-	c.aim_x = kin.px[ship] + aim.x
-	c.aim_y = kin.py[ship] + aim.y
-	c.aim_z = kin.pz[ship] + aim.z
+	c.aim_x = kin.pos_x[ship] + aim.x
+	c.aim_y = kin.pos_y[ship] + aim.y
+	c.aim_z = kin.pos_z[ship] + aim.z
 	_submit(world, c)
 
 

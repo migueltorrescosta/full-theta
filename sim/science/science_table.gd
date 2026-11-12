@@ -90,7 +90,7 @@ func has_scan_point(ship: int) -> bool:
 
 ## Sets the ship's scan point (m), or clears it when `at` is empty.
 func set_scan_point(ship: int, at: PackedFloat64Array) -> void:
-	var none: bool = at.size() != 3
+	var none: bool = at.size() != CubePoint.SIZE
 	scan_x[ship] = NO_POINT if none else at[0]
 	scan_y[ship] = 0.0 if none else at[1]
 	scan_z[ship] = 0.0 if none else at[2]

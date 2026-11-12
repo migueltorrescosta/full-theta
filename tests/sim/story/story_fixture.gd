@@ -16,7 +16,7 @@ static var _content: Dictionary = {}
 static func spawn(
 	world: SimWorld, def: ShipDef, faction: int, offset: Vector3 = Vector3.ZERO
 ) -> int:
-	return world.spawn_ship(def, faction, offset)
+	return world.spawn_ship(def, faction, CubePoint.of(offset))
 
 
 ## A world wired like app/ will wire it: conversations, markets, modules, reputation
@@ -62,7 +62,9 @@ static func dock(w: SimWorld, ship: int, site: int = SITE) -> void:
 		d.dock_max_speed = 10.0
 		w.add_site(d)
 	if SiteTable.offset_to(w, ship, site).length() > w.sites.dock_range[site]:
-		w.kin.place(ship, w.sites.pos_x[site], w.sites.pos_y[site], w.sites.pos_z[site])
+		w.kin.place(
+			ship, CubePoint.make(w.sites.pos_x[site], w.sites.pos_y[site], w.sites.pos_z[site])
+		)
 	w.helm.docked_site[ship] = -1  # a ship docked elsewhere lets go first
 	w.kin.vel[ship] = Vector3.ZERO
 	var c: DockCommand = DockCommand.new()

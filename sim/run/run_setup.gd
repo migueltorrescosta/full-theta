@@ -102,10 +102,10 @@ func build() -> SimWorld:
 	for i: int in crew_count():
 		var faction: int = faction_of_slot(i)
 		var site: int = starts[i]
-		var at: Vector3 = world.sites.point3(site) if site >= 0 else Vector3.ZERO
-		var offset: Vector3 = at + Vector3(i * CREW_SPACING_M, 0.0, 0.0)
-		var id: int = world.spawn_ship(run_def.player_ship, faction, offset)
-		world.ship_starts[id] = offset
+		var at: PackedFloat64Array = world.sites.point(site) if site >= 0 else CubePoint.make()
+		at = CubePoint.plus(at, Vector3(i * CREW_SPACING_M, 0.0, 0.0))
+		var id: int = world.spawn_ship(run_def.player_ship, faction, at)
+		world.ship_starts[id] = at
 		world.ship_start_site[id] = site
 		if site >= 0:
 			world.sites.reveal(site, faction)
@@ -162,9 +162,7 @@ static func _farthest_site(world: SimWorld, taken: PackedInt32Array) -> int:
 		var a: PackedFloat64Array = world.sites.point(s)
 		var gap: float = INF
 		for t: int in taken:
-			var b: PackedFloat64Array = world.sites.point(t)
-			var d: Vector3 = kin.delta(a[0], a[1], a[2], b[0], b[1], b[2])
-			gap = minf(gap, d.length())
+			gap = minf(gap, kin.delta(a, world.sites.point(t)).length())
 		if gap > best_gap:
 			best_gap = gap
 			best = s

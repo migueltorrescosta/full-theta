@@ -10,7 +10,7 @@ func _harness() -> PairHarness:
 		w.spawn_ship(TestDefs.corvette(), 1)
 		return w
 	var done: Callable = func(w: SimWorld) -> bool:
-		return w.kin.relative_to_point(0, 0.0, 0.0, 0.0).length() > 500.0
+		return w.kin.relative_to_point(0, CubePoint.make(0.0, 0.0, 0.0)).length() > 500.0
 	var measure: Callable = func(w: SimWorld) -> Dictionary:
 		return {"time": w.tick * SimWorld.DT, "speed": w.kin.vel[0].length()}
 	return PairHarness.new(build, func(_w: SimWorld) -> void: pass, done, measure, 60 * 30)

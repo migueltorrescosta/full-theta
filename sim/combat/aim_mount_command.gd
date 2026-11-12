@@ -16,11 +16,10 @@ func kind() -> StringName:
 
 func apply(world: SimWorld) -> bool:
 	var row: int = world.mounts.row_for(ship_id, mount_index)
-	var p: PackedFloat64Array = world.kin.wrap_point(aim_x, aim_y, aim_z)
+	var p: PackedFloat64Array = world.kin.wrap_point(CubePoint.make(aim_x, aim_y, aim_z))
 	if row < 0 or p.is_empty():
 		return false
-	world.mounts.aim_set[row] = 1
-	world.mounts.aim_x[row] = p[0]
-	world.mounts.aim_y[row] = p[1]
-	world.mounts.aim_z[row] = p[2]
+	var m: MountTable = world.mounts
+	m.aim_set[row] = 1
+	CubePoint.write(m.aim_x, m.aim_y, m.aim_z, row, p)
 	return true

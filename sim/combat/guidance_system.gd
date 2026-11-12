@@ -18,8 +18,7 @@ static func is_tracked(world: SimWorld, faction: int, ship_id: int) -> bool:
 		return false
 	if KnowledgeSystem.is_detected(world, faction, ship_id):
 		return true
-	var p: PackedFloat64Array = world.kin.point_at(ship_id, Vector3.ZERO)
-	return ProbeSystem.coverage_at(world, faction, Vector3(p[0], p[1], p[2]))
+	return ProbeSystem.coverage_at(world, faction, world.kin.point(ship_id))
 
 
 ## How good the faction's track of the ship is, 0..1 (D214, FT-WPN-007, P8): 0 when it is
@@ -45,8 +44,7 @@ static func track_quality(world: SimWorld, faction: int, ship_id: int) -> float:
 		if world.science_def != null:
 			noise = ScienceSystem.contact_noise(world, o, ship_id)
 		best = maxf(best, close * (1.0 - noise))
-	var p: PackedFloat64Array = kin.point_at(ship_id, Vector3.ZERO)
-	best = maxf(best, ProbeSystem.best_closeness(world, faction, Vector3(p[0], p[1], p[2])))
+	best = maxf(best, ProbeSystem.best_closeness(world, faction, kin.point(ship_id)))
 	return clampf(best, MIN_QUALITY, 1.0)
 
 

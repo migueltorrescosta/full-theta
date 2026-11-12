@@ -49,5 +49,4 @@ static func rows(world: SimWorld, ship: int) -> Array:
 
 
 static func _ship_at(world: SimWorld, ship: int) -> Vector3:
-	var p: PackedFloat64Array = world.kin.point_at(ship, Vector3.ZERO)
-	return Vector3(p[0], p[1], p[2])
+	return CubePoint.to_vector3(world.kin.point(ship))

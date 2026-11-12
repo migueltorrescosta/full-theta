@@ -28,9 +28,10 @@ func applies_to_destroyed() -> bool:
 ## (near) zero, which can't be normalised; an offset off the cube wraps onto it
 ## (FT-SIM-035, D124).
 func apply(world: SimWorld) -> bool:
-	if world.kin.wrap_point(x, y, z).is_empty():
+	var at: PackedFloat64Array = world.kin.wrap_point(CubePoint.make(x, y, z))
+	if at.is_empty():
 		return false
 	if not rotation.is_finite() or rotation.length_squared() < 1e-12:
 		return false
-	world.reset_ship(ship_id, x, y, z, rotation)
+	world.reset_ship(ship_id, at, rotation)
 	return true

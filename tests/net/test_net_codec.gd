@@ -31,7 +31,7 @@ func test_integer_prediction_rounds_half_up() -> void:
 
 func test_positions_wrap_into_the_cube() -> void:
 	var half: float = 0.5 * P_UNITS / 16.0
-	assert_that(NetCodec.quant_pos(half - 0.01, 0.0, -half, P_UNITS)).is_equal(
+	assert_that(NetCodec.quant_pos(CubePoint.make(half - 0.01, 0.0, -half), P_UNITS)).is_equal(
 		Vector3i(-P_UNITS / 2, 0, -P_UNITS / 2)
 	)
 	(

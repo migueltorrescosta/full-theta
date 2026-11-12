@@ -183,8 +183,8 @@ static func _engage(world: SimWorld, id: int, target: int, rel: Vector3) -> void
 		if (
 			not latched
 			or _off(
-				kin.relative_to_point(
-					id, world.mounts.aim_x[row], world.mounts.aim_y[row], world.mounts.aim_z[row]
+				kin.relative_to_column(
+					id, world.mounts.aim_x, world.mounts.aim_y, world.mounts.aim_z, row
 				),
 				wanted
 			)
@@ -213,10 +213,7 @@ static func _select_face_point(world: SimWorld, id: int, target: int, aim: Vecto
 	if aim.is_finite():
 		if (
 			helm.target_kind[id] == HelmTable.Target.POINT
-			and not _off(
-				kin.relative_to_point(id, helm.target_x[id], helm.target_y[id], helm.target_z[id]),
-				aim
-			)
+			and not _off(kin.relative_to_column(id, helm.sel_x, helm.sel_y, helm.sel_z, id), aim)
 		):
 			return
 		_set_point(select, kin, id, aim)
@@ -243,9 +240,7 @@ static func _retreat(world: SimWorld, id: int, threat: int) -> void:
 	var current: bool = helm.target_kind[id] == HelmTable.Target.POINT
 	var to_point: Vector3 = Vector3.ZERO
 	if current:
-		to_point = kin.relative_to_point(
-			id, helm.target_x[id], helm.target_y[id], helm.target_z[id]
-		)
+		to_point = kin.relative_to_column(id, helm.sel_x, helm.sel_y, helm.sel_z, id)
 	# Unit vector to run along; zero holds the current point (reached, threat lost).
 	var away: Vector3 = Vector3.ZERO
 	if threat >= 0:

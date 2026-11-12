@@ -248,7 +248,7 @@ func test_reaching_the_scan_position_is_counted() -> void:
 	(
 		assert_str(
 			server.session.crew.add_scan_position(
-				PLAYER, Vector3(4000.0, 0.0, 0.0), 500.0, NetCrewState.SCIENCE_BY
+				PLAYER, CubePoint.make(4000.0, 0.0, 0.0), 500.0, NetCrewState.SCIENCE_BY
 			)
 		)
 		. is_empty()
@@ -261,7 +261,7 @@ func test_reaching_the_scan_position_is_counted() -> void:
 	(
 		assert_str(
 			server.session.crew.add_scan_position(
-				PLAYER, Vector3(100.0, 0.0, 0.0), 500.0, NetCrewState.SCIENCE_BY
+				PLAYER, CubePoint.make(100.0, 0.0, 0.0), 500.0, NetCrewState.SCIENCE_BY
 			)
 		)
 		. is_empty()

@@ -49,7 +49,7 @@ func _place(ctx: StationContext, id: int, local: Vector3, vel: Vector3 = Vector3
 	var p: Vector3 = StationFixture.OWN_POS + StationFixture.own_rotation() * local
 	var model: Dictionary = ctx.view.contacts["model"]
 	model[id] = [
-		NetCodec.quant_pos(p.x, p.y, p.z, ctx.view.p_units),
+		NetCodec.quant_pos(CubePoint.of(p), ctx.view.p_units),
 		NetCodec.quant_vel(vel),
 		StationFixture.TICK
 	]
@@ -214,7 +214,7 @@ func test_aim_holds_in_world_while_the_ship_turns() -> void:
 	# point while the ship turns.
 	var def: ShipDef = load("res://content/ships/m1_corvette.tres")
 	var world: SimWorld = SimWorld.new(1)
-	var ship: int = world.spawn_ship(def, 0, StationFixture.OWN_POS, rot0)
+	var ship: int = world.spawn_ship(def, 0, CubePoint.of(StationFixture.OWN_POS), rot0)
 	var cmd: Dictionary = aims[0].duplicate()
 	var c: SimCommand = SimCommands.from_dict(cmd)
 	c.ship_id = ship

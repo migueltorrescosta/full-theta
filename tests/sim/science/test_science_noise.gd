@@ -108,7 +108,7 @@ func test_scan_position_mark_lowers_noise() -> void:
 	var t: ScienceTable = w.science
 	assert_bool(t.has_scan_point(ME)).is_true()
 	# Fly there: the mark is broadside to the raider, which faces the corvette.
-	w.kin.place(ME, t.scan_x[ME], t.scan_y[ME], t.scan_z[ME])
+	w.kin.place(ME, CubePoint.make(t.scan_x[ME], t.scan_y[ME], t.scan_z[ME]))
 	assert_bool(ScienceSystem.at_scan_point(w, ME)).is_true()
 	assert_float(ScienceSystem.contact_noise(w, ME, FOE)).is_less(before)
 

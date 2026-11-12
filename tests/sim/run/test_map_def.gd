@@ -114,9 +114,9 @@ func test_no_contact_bleed_at_the_minimum_spacing() -> void:
 		w.add_site(m.sites[0])
 		w.add_site(m.sites[1])
 		var toward: Vector3 = Vector3.RIGHT
-		var blue: int = w.spawn_ship(TestDefs.corvette(), 1, a + toward * 3000.0)
-		var red: int = w.spawn_ship(TestDefs.raider(), 2, b - toward * 3000.0)
-		var near_other: int = w.spawn_ship(TestDefs.raider(), 3, a + toward * 8000.0)
+		var blue: int = w.spawn_ship(TestDefs.corvette(), 1, CubePoint.of(a + toward * 3000.0))
+		var red: int = w.spawn_ship(TestDefs.raider(), 2, CubePoint.of(b - toward * 3000.0))
+		var near_other: int = w.spawn_ship(TestDefs.raider(), 3, CubePoint.of(a + toward * 8000.0))
 		w.step()
 		assert_float(w.kin.relative(blue, red).length()).is_equal_approx(40000.0, 1e-3)
 		assert_bool(KnowledgeSystem.is_detected(w, 1, red)).is_false()
@@ -133,17 +133,17 @@ func test_site_table_lookups() -> void:
 	var w: SimWorld = SiteFixture.world()
 	var m: MapDef = SiteFixture.map()
 	assert_int(w.sites.size()).is_equal(m.sites.size())
-	var yard: int = w.spawn_ship(TestDefs.corvette(), 1, Vector3(2900.0, 0, 0))
+	var yard: int = w.spawn_ship(TestDefs.corvette(), 1, CubePoint.make(2900.0, 0, 0))
 	assert_int(SiteTable.nearest(w, yard)).is_equal(0)
 	assert_int(SiteTable.at_site(w, yard)).is_equal(0)
-	w.kin.place(yard, 3100.0, 0.0, 0.0)
+	w.kin.place(yard, CubePoint.make(3100.0, 0.0, 0.0))
 	assert_int(SiteTable.nearest(w, yard)).is_equal(0)
 	assert_int(SiteTable.at_site(w, yard)).is_equal(-1)
 	assert_float(SiteTable.offset_to(w, yard, 0).x).is_equal(-3100.0)
 	# Near Hollow Gate's far side of the seam: x = +150 km, so a ship at -200 km + 40 km
 	# is closest to... Vesper (120, 40, -60) is 134 km from the origin; place a ship by it.
 	var vesper: int = SiteFixture.id_of(w, &"vesper_beacon")
-	w.kin.place(yard, 121000.0, 40000.0, -60000.0)
+	w.kin.place(yard, CubePoint.make(121000.0, 40000.0, -60000.0))
 	assert_int(SiteTable.nearest(w, yard)).is_equal(vesper)
 	assert_int(SiteTable.at_site(w, yard)).is_equal(vesper)
 	assert_bool(SiteTable.offset_to(w, yard, 99).is_finite()).is_false()
@@ -207,7 +207,7 @@ func test_select_a_site() -> void:
 	assert_int(w.helm.target_site[ship]).is_equal(vesper)
 	assert_bool(AssistSystem.has_target(w, ship)).is_true()
 	assert_vector(AssistSystem.target_offset(w, ship)).is_equal_approx(
-		w.sites.point3(vesper), Vector3.ONE * 0.01
+		CubePoint.to_vector3(w.sites.point(vesper)), Vector3.ONE * 0.01
 	)
 	var hidden: SelectTargetCommand = SelectTargetCommand.new()
 	hidden.ship_id = ship

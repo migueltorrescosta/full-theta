@@ -45,10 +45,10 @@ var align_mount: PackedByteArray = PackedByteArray()
 var target_kind: PackedByteArray = PackedByteArray()
 ## Selected ship id when target_kind is SHIP, else -1.
 var target_ship: PackedInt32Array = PackedInt32Array()
-## 64-bit offset in the cube of the selected point (m, D104).
-var target_x: PackedFloat64Array = PackedFloat64Array()
-var target_y: PackedFloat64Array = PackedFloat64Array()
-var target_z: PackedFloat64Array = PackedFloat64Array()
+## The selected point in the cube (m, 64-bit; the `sel` cube point of D397 and D401).
+var sel_x: PackedFloat64Array = PackedFloat64Array()
+var sel_y: PackedFloat64Array = PackedFloat64Array()
+var sel_z: PackedFloat64Array = PackedFloat64Array()
 ## Selected site id when target_kind is SITE, else -1 (FT-HLM-016).
 var target_site: PackedInt32Array = PackedInt32Array()
 ## Ticks of spool left before the jump (FT-SIM-034); 0 when no jump is under way.
@@ -81,9 +81,9 @@ func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	align_mount.append(0)
 	target_kind.append(Target.NONE)
 	target_ship.append(-1)
-	target_x.append(0.0)
-	target_y.append(0.0)
-	target_z.append(0.0)
+	sel_x.append(0.0)
+	sel_y.append(0.0)
+	sel_z.append(0.0)
 	target_site.append(-1)
 	jump_left.append(0)
 	jump_kind.append(JumpKind.SITE)

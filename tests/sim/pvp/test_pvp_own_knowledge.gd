@@ -19,7 +19,7 @@ func test_rivals_use_only_their_own_knowledge_and_marks() -> void:
 	var rival: int = w.faction_of(1)
 	assert_int(mine).is_not_equal(rival)
 	assert_float(f.api.distance(0, 1)).is_greater(100000.0)
-	var at: Vector3 = w.ship_starts[0] + Vector3(0.0, 0.0, -3000.0)
+	var at: PackedFloat64Array = CubePoint.plus(w.ship_starts[0], Vector3(0.0, 0.0, -3000.0))
 	w.set_relation(NEUTRAL, mine, SimWorld.Relation.NEUTRAL)
 	w.set_relation(NEUTRAL, rival, SimWorld.Relation.NEUTRAL)
 	var contact: int = w.spawn_ship(TestDefs.raider(), NEUTRAL, at)

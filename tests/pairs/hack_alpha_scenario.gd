@@ -77,7 +77,7 @@ static func build() -> SimWorld:
 	w.science_def = ScienceFixture.science()
 	w.set_relation(1, 2, SimWorld.Relation.HOSTILE)
 	w.spawn_ship(Gunnery.gunship(MOUNTS), 1)
-	w.spawn_ship(target_def(), 2, RAIDER_AT)
+	w.spawn_ship(target_def(), 2, CubePoint.of(RAIDER_AT))
 	return w
 
 

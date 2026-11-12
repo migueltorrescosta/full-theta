@@ -54,7 +54,7 @@ static func environment(w: SimWorld) -> void:
 		PairHarness.send(w, c)
 	if (
 		Story.docked_site(w, PLAYER) < 0
-		and w.kin.relative_to_point(PLAYER, YARD_AT.x, YARD_AT.y, YARD_AT.z).length() < DOCK_R
+		and ((w.kin.relative_to_point(PLAYER, CubePoint.of(YARD_AT)).length()) < DOCK_R)
 	):
 		StoryFixture.dock(w, PLAYER, _yard)
 
@@ -95,9 +95,7 @@ static func coop_crew() -> Callable:
 			return
 		if speed[0] == 0.0:
 			var middle_s: float = (window[0] + window[1]) / 2.0 * SimWorld.DT
-			var to_yard: float = (
-				w.kin.relative_to_point(PLAYER, YARD_AT.x, YARD_AT.y, YARD_AT.z).length()
-			)
+			var to_yard: float = w.kin.relative_to_point(PLAYER, CubePoint.of(YARD_AT)).length()
 			speed[0] = (to_yard - DOCK_R) / (middle_s - w.tick * SimWorld.DT)
 		helm(w, speed[0])
 
@@ -112,7 +110,7 @@ static func helm(w: SimWorld, speed: float) -> void:
 		select.y = YARD_AT.y
 		select.z = YARD_AT.z
 		PairHarness.send(w, select)
-	var to_yard: Vector3 = w.kin.relative_to_point(PLAYER, YARD_AT.x, YARD_AT.y, YARD_AT.z)
+	var to_yard: Vector3 = w.kin.relative_to_point(PLAYER, CubePoint.of(YARD_AT))
 	var on_point: bool = w.kin.forward(PLAYER).angle_to(to_yard) < ON_POINT
 	var throttle: float = 1.0 if w.helm.throttle_setpoint[PLAYER] < speed and on_point else 0.0
 	if w.tick == 0 or throttle != w.helm.input_translation[PLAYER].z:

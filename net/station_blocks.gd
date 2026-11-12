@@ -162,7 +162,7 @@ static func _relay(world: SimWorld, ship: int, filter: ViewFilter = null) -> Dic
 				{
 					"serial": t.serial[p],
 					"deployed": t.deployed[p] == 1,
-					"pos": Vector3(t.at_x[p], t.at_y[p], t.at_z[p]),
+					"pos": Vector3(t.pos_x[p], t.pos_y[p], t.pos_z[p]),
 					"range": world.defs[ship].probe_range,
 				}
 			)

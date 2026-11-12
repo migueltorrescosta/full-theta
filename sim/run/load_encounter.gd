@@ -60,10 +60,12 @@ func build() -> SimWorld:
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = world_seed
 	for i: int in crew_ships:
-		world.spawn_ship(player, Factions.CREW, _point(rng, CREW_SPREAD), _rotation(rng))
+		world.spawn_ship(
+			player, Factions.CREW, CubePoint.of(_point(rng, CREW_SPREAD)), _rotation(rng)
+		)
 	for i: int in world_ships - crew_ships:
 		var f: int = RAIDER_FACTIONS[i % RAIDER_FACTIONS.size()]
-		world.spawn_enemy(enemy, f, _point(rng, ARENA * 0.5), _rotation(rng))
+		world.spawn_enemy(enemy, f, CubePoint.of(_point(rng, ARENA * 0.5)), _rotation(rng))
 	return world
 
 

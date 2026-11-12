@@ -150,8 +150,8 @@ func test_station_views_map_entries() -> void:
 func test_contacts_wrap_across_the_seam() -> void:
 	var world: SimWorld = _world()
 	var half: float = 0.5 * world.kin.period
-	world.kin.place(PLAYER, half - 1500.0, 0.0, 0.0)
-	world.kin.place(ENEMY, half - 150.0, 0.0, -2000.0)
+	world.kin.place(PLAYER, CubePoint.make(half - 1500.0, 0.0, 0.0))
+	world.kin.place(ENEMY, CubePoint.make(half - 150.0, 0.0, -2000.0))
 	world.kin.vel[ENEMY] = Vector3(120.0, 0.0, 0.0)
 	var b: SnapshotBuilder = SnapshotBuilder.new()
 	var key: String = StationViews.key(PLAYER, "relay")
