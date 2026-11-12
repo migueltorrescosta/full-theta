@@ -106,6 +106,8 @@
     {"name": "l5_tbp_weapons", "scene": "res://tests/visual/station_shot.tscn", "size": [820, 1180], "set": {"seat": "weapons", "touch": true, "insets": [0, 0, 0, 24]}},
     {"name": "l5_tba_helm", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 800], "set": {"seat": "helm", "touch": true, "insets": [0, 0, 0, 24]}},
     {"name": "l5_tba_weapons", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 800], "set": {"seat": "weapons", "touch": true, "insets": [0, 0, 0, 24]}},
+    {"name": "l5_tl_weapons_shared", "scene": "res://tests/visual/station_shot.tscn", "size": [1024, 768], "set": {"seat": "weapons", "touch": true, "crew_seats": ["weapons", "weapons"]}},
+    {"name": "l5_phl_weapons_shared", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"seat": "weapons", "selected": 3, "claim": "mount:0", "crew_seats": ["weapons", "weapons"], "insets": [47, 0, 47, 21]}},
     {"name": "l5_tp_engineering", "scene": "res://tests/visual/station_shot.tscn", "size": [768, 1024], "set": {"seat": "engineering", "touch": true}},
     {"name": "l5_tp_science", "scene": "res://tests/visual/station_shot.tscn", "size": [768, 1024], "set": {"seat": "science", "touch": true}},
     {"name": "l5_tp_relay", "scene": "res://tests/visual/station_shot.tscn", "size": [768, 1024], "set": {"seat": "relay", "touch": true}},

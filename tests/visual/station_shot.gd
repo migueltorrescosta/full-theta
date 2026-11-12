@@ -7,7 +7,8 @@
 ## `menu_tab` (the menu on that tab), `tooltip` (the first visit: it
 ## opens by itself), `strip` (the radar's side strip) and
 ## `ui_scale` (the window's content scale, FT-STN-013; reset on exit), `claim` (a
-## claim item the player holds, e.g. "mount:0") and `events` (sim events fed to the
+## claim item the player holds, e.g. "mount:0"), `crew_seats` (the seats the ship's players
+## hold, e.g. ["weapons", "weapons"]) and `events` (sim events fed to the
 ## crew model 2 s before the shot, after the screen is built; a payload `vector` given
 ## as [x, y, z] becomes a Vector3), `focus` (the focused panel of a joint view, F1 = 0),
 ## `science` (a Science block with the cards, a scan or a hack open) and `touch` (the touch
@@ -48,6 +49,9 @@ var menu_tab: String = ""
 var strip: bool = false
 var ui_scale: float = 1.0
 var claim: String = ""
+## The seats of the ship's other players too, as the lobby lists them ([seat id, ...]): two
+## at Weapons show its Claim button (C3).
+var crew_seats: Array = []
 var events: Array = []
 var focus: int = 0
 ## Force the touch layout (a tablet-sized shot has no touch screen under Xvfb).
@@ -118,6 +122,11 @@ func _ready() -> void:
 		_ctx.settings.reset_hints()
 	if claim != "":
 		_ctx.crew.claims[claim] = {"session": StationFixture.SESSION, "name": "Ana"}
+	if not crew_seats.is_empty():
+		var seats: Array = []
+		for i: int in crew_seats.size():
+			seats.append({"name": ["Ana", "Bo", "Cy", "Di"][i % 4], "seat": str(crew_seats[i])})
+		_ctx.crew.lobby[StationFixture.SHIP]["seats"] = seats
 	if selected >= 0:
 		_ctx.crew.select("contact", selected)
 	if ping >= 0:

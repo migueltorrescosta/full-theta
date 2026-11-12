@@ -198,6 +198,24 @@ func view_rect() -> Rect2:
 	return Rect2(Vector2.ZERO, size)
 
 
+## True when the docked panel shows something of its own: a visible control that is no bare
+## container. A docked panel with nothing to show (Science in a joint view: the screen's radar
+## is its radar) keeps no least height in the side column, so the column doesn't scroll to a
+## blank (w-dcc); it still fills the room left as the tap target that focuses it.
+func shows_docked() -> bool:
+	return _shows_any(self)
+
+
+static func _shows_any(node: Node) -> bool:
+	for c: Node in node.get_children():
+		var k: Control = c as Control
+		if k == null or not k.visible:
+			continue
+		if not k is Container or _shows_any(k):
+			return true
+	return false
+
+
 ## True when the panel draws its own radar and wants the whole screen when it is alone
 ## (the main screen's wide radar, §5.8): the screen hides its side column.
 func full_screen() -> bool:

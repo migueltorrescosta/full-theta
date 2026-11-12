@@ -47,12 +47,11 @@ var phone: bool = false
 ## Full screen, an icon at the right of the bar (D323); shown where the device offers it.
 var fullscreen: FullscreenToggle = FullscreenToggle.new()
 ## The ship this player watches after a handover (its crew's ship is out, D91), or "": the
-## bar names it (R24-18), as "Watching Heron" in place of the ship name, beside a phone's glance.
+## bar names it (R24-18): "Watching Heron" in place of the ship name, and on a phone (whose
+## bar has no name) the ship in place of the goal under the timer.
 var watching: String = "":
 	set(value):
 		watching = value
-		_watch.text = tr("topbar.watching") % value if value != "" else ""
-		_watch.visible = phone and value != ""
 		_raw = []
 		_shown = []
 
@@ -76,8 +75,6 @@ var _stations: Label = Label.new()
 var _timer: Label = Label.new()
 var _phone_row: HBoxContainer = HBoxContainer.new()
 var _phone_timer: Label = Label.new()
-## A phone's "Watching Heron" (watching), after the glance.
-var _watch: Label = Label.new()
 ## The shape beside a banded hull, shields and reactor (BandBadge), by status key.
 var _badges: Dictionary = {}
 ## What show_state last got and last showed, to skip unchanged frames.
@@ -161,14 +158,7 @@ func _init() -> void:
 	_phone_timer.clip_text = true
 	_phone_timer.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_phone_timer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_watch.name = "Watching"
-	_watch.add_theme_font_size_override("font_size", 13)
-	_watch.add_theme_color_override("font_color", Palette.color("text"))
-	_watch.clip_text = true
-	_watch.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	_watch.size_flags_horizontal = SIZE_EXPAND_FILL
-	_watch.visible = false
-	for c: Control in [menu_button, glance, _watch, tabs, _phone_timer]:
+	for c: Control in [menu_button, glance, tabs, _phone_timer]:
 		c.size_flags_vertical = SIZE_SHRINK_CENTER
 		_phone_row.add_child(c)
 	fullscreen.name = "Fullscreen"
@@ -178,17 +168,23 @@ func _init() -> void:
 func _fit_timer() -> void:
 	var w: float = TIMER_W_NARROW if fullscreen.visible else TIMER_W
 	var fs: int = TIMER_SIZE
-	if _goal_short != "":
+	var second: String = _second_line()
+	if second != "":
 		# The goal line ("2 foes") is never cut (w5): beside the full-screen icon (a 390 px
 		# bar, no room to spare) the cell's text gets smaller first, then the cell widens.
 		var font: Font = _phone_timer.get_theme_font("font")
-		var need: float = font.get_string_size(_goal_short, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		var need: float = font.get_string_size(second, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		if fullscreen.visible and need > w:
 			fs = TIMER_SIZE_NARROW
-			need = font.get_string_size(_goal_short, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+			need = font.get_string_size(second, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		w = maxf(w, ceilf(need))
 	_phone_timer.add_theme_font_size_override("font_size", fs)
 	_phone_timer.custom_minimum_size.x = w
+
+
+## The phone timer cell's second line: the watched ship (R24-18), else the short goal.
+func _second_line() -> String:
+	return watching if watching != "" else _goal_short
 
 
 ## The bar's extra height for the goal row: none on a phone.
@@ -226,7 +222,6 @@ func _phone_for(on: bool, height: float) -> void:
 	_row.visible = not on
 	_goal.visible = not on
 	_phone_row.visible = on
-	_watch.visible = on and watching != ""
 	if on:
 		chip.reparent(_phone_row, false)
 		_phone_row.move_child(chip, _phone_row.get_child_count() - 2)
@@ -334,7 +329,8 @@ func show_state(
 	_stations.text = " + ".join(names)
 	var secs: int = int(mission_s)
 	_timer.text = "%02d:%02d" % [secs / 60, secs % 60]
-	_phone_timer.text = _timer.text if _goal_short == "" else "%s\n%s" % [_timer.text, _goal_short]
+	var second: String = _second_line()
+	_phone_timer.text = _timer.text if second == "" else "%s\n%s" % [_timer.text, second]
 	_fit_timer()
 	glance.set_values(
 		_fill(status, "hull", summaries, float(maxes.get("hull", 0.0))),

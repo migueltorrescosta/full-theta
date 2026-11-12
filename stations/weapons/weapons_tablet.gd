@@ -103,6 +103,7 @@ func _build_right() -> void:
 func _button(button_name: String, label: String) -> RailButton:
 	var b: RailButton = RailButton.make(label)
 	b.name = button_name
+	RailButton.wrap(b)
 	b.resized.connect(RailButton.fit_text.bind(b))
 	return b
 

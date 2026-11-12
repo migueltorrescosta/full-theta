@@ -40,6 +40,10 @@ func show_side() -> void:
 	var alone: bool = s.panels.size() == 1 or phone_alone
 	s._side.visible = not (alone and s.focused_panel().full_screen())
 	s._dock.visible = not phone_alone
+	for p: StationPanel in s.panels:
+		if p.docked:
+			var least: float = StationScreen.DOCK_MIN_HEIGHT if p.shows_docked() else 0.0
+			p.custom_minimum_size.y = least
 	if s._tabs != null:
 		s._tabs.visible = not phone_form
 	s.frame.show_tabs(form_now, phone_alone)

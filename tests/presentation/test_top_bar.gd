@@ -153,16 +153,16 @@ func test_apply_undoes_the_phone_bar() -> void:
 
 # FT: FT-MIS-030
 # R24-18: after a handover the bar names the ship the player watches: in place of the ship
-# name on a desktop, beside the glance on a phone.
+# name on a desktop, under the timer on a phone (whose bar has no name).
 func test_names_the_watched_ship() -> void:
 	bar.watching = "Heron"
 	bar.show_state("Heron", {"hull": 1.0}, 0, [], 0.0)
 	assert_str(bar._name.text).is_equal("Watching Heron")
-	assert_bool(bar._watch.visible).is_false()
 	bar.apply(LayoutMode.Form.PHONE_PORTRAIT, false, 48.0)
-	assert_bool(bar._watch.is_visible_in_tree()).is_true()
-	assert_str(bar._watch.text).is_equal("Watching Heron")
+	bar.show_goal("Goal: stop the hostiles (2 left)", "2 foes")
+	bar.show_state("Heron", {"hull": 1.0}, 0, [], 0.0)
+	assert_str(bar._phone_timer.text).is_equal("00:00\nHeron")
 	bar.watching = ""
-	assert_bool(bar._watch.visible).is_false()
 	bar.show_state("Kestrel", {"hull": 1.0}, 0, [], 0.0)
 	assert_str(bar._name.text).is_equal("Kestrel")
+	assert_str(bar._phone_timer.text).is_equal("00:00\n2 foes")

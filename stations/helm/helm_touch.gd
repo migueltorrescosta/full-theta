@@ -171,6 +171,8 @@ func _button(id: String, role: RailButton.Role = RailButton.Role.PLAIN) -> RailB
 			touch.button(b, id)
 	if not buttons.has(id):
 		buttons[id] = b
+	if id in ["face", "align", "shield_track", "dock", "jump"]:
+		RailButton.wrap(b)
 	b.resized.connect(RailButton.fit_text.bind(b))
 	return b
 
@@ -305,10 +307,21 @@ func _fill_pages(box: VBoxContainer) -> void:
 	var parts: Array[Array] = []
 	for p: int in titles.size():
 		parts.append([])
-		if not (PAGE_IDS[p] as Array).is_empty():
-			var grid: GridContainer = _grid(PAGE_IDS[p], 2, p)
-			box.add_child(grid)
-			parts[p].append(grid)
+		var ids: Array = PAGE_IDS[p]
+		if ids.is_empty():
+			continue
+		# An odd last button takes the whole row: its label fits on one line (C3).
+		var odd: bool = ids.size() % 2 == 1
+		var grid: GridContainer = _grid(ids.slice(0, ids.size() - 1) if odd else ids, 2, p)
+		box.add_child(grid)
+		parts[p].append(grid)
+		if odd:
+			var last: RailButton = _button(ids[-1])
+			last.autowrap_mode = TextServer.AUTOWRAP_OFF
+			last.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			page_buttons[p][ids[-1]] = last
+			box.add_child(last)
+			parts[p].append(last)
 	crew.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.add_child(crew)
 	parts[PAGE_CREW].append(crew)
@@ -319,6 +332,22 @@ func _fill_pages(box: VBoxContainer) -> void:
 	# (Nav's six buttons leave the glyph no room.)
 	for p: int in [PAGE_FLY, PAGE_SHIELD, PAGE_RADAR]:
 		parts[p].append(ring)
+	# Under the Shield page's caption a little room, so its last line's descenders keep the
+	# rail's 8 px gap to the Slide stick (w-dcc).
+	var pad: Control = Control.new()
+	pad.name = "CaptionPad"
+	pad.custom_minimum_size.y = ShieldRing.CAPTION_GAP
+	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(pad)
+	parts[PAGE_SHIELD].append(pad)
+	# Nav has no glyph to fill the zone: a spacer keeps the Slide stick at the thumb (its
+	# rare buttons hide, C3).
+	var rest: Control = Control.new()
+	rest.name = "NavRest"
+	rest.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	rest.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(rest)
+	parts[PAGE_NAV].append(rest)
 	parts[PAGE_RADAR].append(radar_box)
 	for p: int in titles.size():
 		pages.add_page(titles[p], parts[p])
