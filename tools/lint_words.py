@@ -8,6 +8,7 @@ A rule's kind says where it applies:
   our GDScript (tools/l0.sh's scripts list: tracked and untracked .gd files outside addons/ and
   tools/tests/fixtures/), every line of docs/spec/*.md and docs/protocol.md, and every key of the
   player-text JSON files below (string keys such as `sci.minigame_x` are names);
+- "code": an identifier on every line of our GDScript only;
 - "words": an English phrase, matched case-insensitively, on those code and doc lines and in
   English player text: every "en" value of content/i18n/strings.json, content/tips/*.json and
   content/dialogue/*.json (not the schemas);
@@ -16,7 +17,11 @@ A rule's kind says where it applies:
 
 Nothing else is read, so docs/decisions.md (history), docs/research, docs/spikes, addons/,
 tests/golden, the generated app/web/shell.html, tools/l1_times.json and tests/visual/baselines
-are exempt. Unit suffixes are not linted yet (bead w-483).
+are exempt.
+
+The "unit suffix" rule (D403, bead w-483) flags names ending `_m`, `_s`, `_kg`, `_rad`, `_j` or `_w` in any case:
+SI quantities carry no unit suffix, and a width is `_width`. Non-SI compounds (`_deg_s`, `_px_s`, `_spans_s`)
+and `deg_to_rad` pass. tools/rename_units.py rewrites names from tools/rename_units.tsv.
 
 ALLOW lists the legitimate uses: a path glob, a rule name ("*" for any), a regex the line (or
 JSON key or value) must match, and the reason. An entry that drops nothing is itself a finding,
@@ -35,6 +40,9 @@ import subprocess
 import sys
 from collections.abc import Callable
 from pathlib import Path
+
+# A name ending in an SI unit suffix (D403); tools/rename_units.py scans with the same pattern.
+UNIT_NAME = r"(?i:[a-z_][a-z0-9_]*?(?<!_deg)(?<!_px)(?<!_spans)(?<!_to)_(?:m|s|kg|rad|j|w))"
 
 # (rule name, kind, pattern, use instead, decision); kinds as in the module docstring.
 RULES: list[tuple[str, str, str, str, str]] = [
@@ -80,11 +88,19 @@ RULES: list[tuple[str, str, str, str, str]] = [
     ("enemy ship", "words", r"enemy ships?", "hostile ship", "D399"),
     ("enemy AI", "words", r"enemy (?:AI|keys?|catalogue)", "NPC AI, NPC key, NPC catalogue", "D399"),
     # D404: table rows are keyed by owner_ship and owner_faction.
+    ("unit suffix", "code", UNIT_NAME, "no suffix on SI quantities: drop it or use a noun (FAR_DISTANCE, hit_energy); a width is _width", "D403"),
     ("key columns", "name", r"(?<=[.\"'`])(?:ship_ids|factions)(?![(])", "owner_ship, owner_faction", "D404"),
 ]
 
 # (path glob, rule name, line regex, reason)
 ALLOW: list[tuple[str, str, str, str]] = [
+    # D403: a few names only look like units.
+    ("sim/combat/collision_system.gd", "unit suffix", r"\b(?:inv|rel)_j\b", "j is the index of the second body, as in inv_i"),
+    ("presentation/controls_diagram.gd", "unit suffix", r"\bwas_j\b", "j is the loop index of the segment"),
+    ("tests/stations/test_client_settings.gd", "unit suffix", r"\bKEY_J\b", "Godot's Key enum"),
+    ("stations/helm/helm_hud.gd", "unit suffix", r"helm\.range_m", "the translation key in content/i18n/strings.json, which holds its own names"),
+    ("net/voice/piper_binary_synth.gd", "unit suffix", r"noise_w\b", "Piper's own command-line flag"),
+    ("tests/net/voice/test_piper_adapters.gd", "unit suffix", r"noise_w\b", "Piper's own command-line flag"),
     ("docs/protocol.md", "*", r"^Protocol version: ", "the version history names the wire names each version changed"),
     ("docs/spec/14-open-questions.md", "SessionRules", r"^- D350:", "tools/traceability.py copies D350's title, which docs/decisions.md keeps as history"),
     # D396: a team is a lobby label; outside the sim a ship's team is still looked up by name.
@@ -106,7 +122,7 @@ def words_regex(pattern: str) -> re.Pattern[str]:
 
 def compiled(rules=RULES) -> list[tuple[str, str, re.Pattern[str], str, str]]:
     return [
-        (name, kind, name_regex(pattern) if kind == "name" else words_regex(pattern), use, decision)
+        (name, kind, name_regex(pattern) if kind in ("name", "code") else words_regex(pattern), use, decision)
         for name, kind, pattern, use, decision in rules
     ]
 
@@ -153,8 +169,9 @@ def run(root: Path, rules=RULES, allow=ALLOW, check_unused=False) -> list[str]:
     root = Path(root)
     table = compiled(rules)
     name_rules = [(name, rx, use, decision) for name, kind, rx, use, decision in table if kind == "name"]
-    text_rules = [(name, rx, use, decision) for name, kind, rx, use, decision in table if kind != "name"]
-    line_rules = [(name, rx, use, decision) for name, kind, rx, use, decision in table if kind != "player"]
+    text_rules = [(name, rx, use, decision) for name, kind, rx, use, decision in table if kind in ("words", "player")]
+    line_rules = [(name, rx, use, decision) for name, kind, rx, use, decision in table if kind not in ("player", "code")]
+    code_rules = line_rules + [(name, rx, use, decision) for name, kind, rx, use, decision in table if kind == "code"]
     findings: list[tuple[str, int, str, str, str]] = []
     used = [False] * len(allow)
 
@@ -187,7 +204,7 @@ def run(root: Path, rules=RULES, allow=ALLOW, check_unused=False) -> list[str]:
     # code: the same scripts as tools/l0.sh
     for path in code_files(root):
         rel = path.relative_to(root).as_posix()
-        scan_lines(rel, path.read_text(encoding="utf-8"), line_rules)
+        scan_lines(rel, path.read_text(encoding="utf-8"), code_rules)
 
     # player text: every key is a name, every "en" value is English
     for path in text_files(root):

@@ -1,0 +1,163 @@
+# old	new	scope	note  (tools/rename_units.py; D403, w-483)
+AIM_SEND_M	AIM_SEND_DISTANCE	*	bare AIM_SEND reads as an action
+ATTACK_S	ATTACK_TIME	*	bare ATTACK is an envelope stage, not a duration
+BAR_W	BAR_WIDTH	*	width in px
+BLIND_S	BLIND_DURATION	*	bare adjective
+BUFFER_S	BUFFER_DURATION	*	BUFFER alone reads as the audio buffer
+BUTTON_W	BUTTON_WIDTH	*	width in px
+CAP_S	CAP_TIME	*	bare CAP is ambiguous
+CARD_S	CARD_DURATION	*	bare CARD reads as a card
+CARD_W	CARD_WIDTH	*	width in px
+CHASE_BACK_M	CHASE_BACK_DISTANCE	*	bare adjective
+CHASE_UP_M	CHASE_UP_DISTANCE	*	bare adjective
+CHIP_W	CHIP_WIDTH	*	width in px
+CLOSE_M	CLOSE_DISTANCE	*	bare adjective
+CLOSE_UP_STANDOFF_M	CLOSE_UP_STANDOFF	*	STANDOFF is already a noun
+CLOSE_W	CLOSE_WIDTH	*	width in px
+COL_W	COL_WIDTH	*	width in px
+CONFIRM_S	CONFIRM_TIME	*	CONFIRM is a verb
+COUNTER_W	COUNTER_WIDTH	*	width in px
+DAMAGE_W	DAMAGE_POWER	*	watts (J/s), not a width
+DEADLINE_S	DEADLINE	*	noun
+DEBRIS_M	DEBRIS_REACH	*	a range, as range_m (also keeps bot_crew.gd:7 under 100 columns)
+DEFAULT_CAP_S	DEFAULT_CAP_TIME	*	as CAP_S
+DEFAULT_GRACE_S	DEFAULT_GRACE	*	noun
+DEFAULT_RANGE_M	DEFAULT_REACH	*	as range_m
+DEFAULT_TIMEOUT_S	DEFAULT_TIMEOUT	*	noun
+DESIGN_W	DESIGN_WIDTH	*	width in px
+DRAW_W	DRAW_WIDTH	*	width in px
+DRONE_RANGE_M	DRONE_REACH	*	as range_m
+ENGAGE_M	ENGAGE_REACH	*	a range, as range_m (also keeps bot_crew.gd:7 under 100 columns)
+ENGINEER_LEAD_S	ENGINEER_LEAD_TIME	*	LEAD reads as a verb or a metal
+FAR_M	FAR_DISTANCE	*	bare adjective (the brief's example)
+FAULT_J	FAULT_ENERGY	*	joules are energy
+FIRE_W	FIRE_WIDTH	*	width in px
+FOCUS_LABEL_W	FOCUS_LABEL_WIDTH	*	width in px
+FREIGHTER_RANGE_M	FREIGHTER_REACH	*	as range_m
+GAIN_S	GAIN_TIME	*	GAIN is a level in audio and input code
+GOAL_LABEL_W	GOAL_LABEL_WIDTH	*	width in px
+GRACE_S	GRACE	*	noun
+HACK_READ_S	HACK_READ_TIME	*	reads as an action
+HALF_LIFE_S	HALF_LIFE	*	noun
+HAZARD_RADIUS_M	HAZARD_RADIUS	*	noun
+HOLD_S	HOLD_TIME	*	HOLD is a verb
+HULL_HALF_M	HULL_HALF_LENGTH	*	bare HULL_HALF is half of what
+HULL_J	HULL_ENERGY	*	as FAULT_J
+LANE_OPEN_S	LANE_OPEN_TIME	*	bare adjective
+LANE_S	LANE_DURATION	*	bare LANE is a place
+LAPSE_S	LAPSE_TIME	*	LAPSE is a verb
+LATERAL_M	LATERAL_OFFSET	*	bare adjective
+LEFT_W	LEFT_WIDTH	*	width in px
+LEGEND_S	LEGEND_TIME	*	bare LEGEND is the legend itself
+LISTS_W	LISTS_WIDTH	*	width in px
+LIST_W	LIST_WIDTH	*	width in px
+LOG_MIN_W	LOG_MIN_WIDTH	*	width in px
+LOG_W	LOG_WIDTH	*	width in px
+LOOK_S	LOOK_TIME	*	LOOK is a verb
+MAX_S	MAX_TIME	*	bare MAX shadows the max idiom
+MAX_W	MAX_WIDTH	*	width in px
+MOVE_S	MOVE_TIME	*	MOVE is a verb
+NAME_MIN_W	NAME_MIN_WIDTH	*	width in px
+NAME_W	NAME_WIDTH	*	width in px
+NARROW_W	NARROW_WIDTH	*	width in px
+NEXT_EVERY_S	NEXT_EVERY	*	noun phrase
+OPENER_W	OPENER_WIDTH	*	width in px
+PCT_W	PCT_WIDTH	*	width in px
+PERIOD_M	PERIOD	*	noun
+PHONE_BAR_W	PHONE_BAR_WIDTH	*	width in px
+PHONE_BUTTON_W	PHONE_BUTTON_WIDTH	*	width in px
+PHONE_RAIL_W	PHONE_RAIL_WIDTH	*	width in px
+PHONE_TWO_COLS_W	PHONE_TWO_COLS_WIDTH	*	width in px
+PHONE_W	PHONE_WIDTH	*	width in px
+PROBE_AHEAD_M	PROBE_AHEAD_DISTANCE	*	bare adverb
+RADAR_S	RADAR_TIME	*	bare RADAR is the radar
+RADAR_W	RADAR_WIDTH	*	width in px
+RAIDERS_AFTER_S	RAIDERS_AFTER	*	noun phrase
+RAIDER_GAP_S	RAIDER_GAP	*	noun
+RAIDER_RANGE_M	RAIDER_REACH	*	as range_m
+RAIL_W	RAIL_WIDTH	*	width in px
+RANGES_M	RANGES	*	noun; plural of the radar rings
+RELEASE_S	RELEASE_TIME	*	RELEASE is a verb
+REMIND_S	REMIND_INTERVAL	*	REMIND is a verb
+RIGHT_W	RIGHT_WIDTH	*	width in px
+ROW_CLAIM_W	ROW_CLAIM_WIDTH	*	width in px
+SALVAGE_RANGE_M	SALVAGE_REACH	*	as range_m
+SALVAGE_S	SALVAGE_TIME	*	SALVAGE is a verb
+SCAN_READ_S	SCAN_READ_TIME	*	as HACK_READ_S
+SCROLL_BAR_W	SCROLL_BAR_WIDTH	*	width in px
+SECOND_AFTER_S	SECOND_AFTER	*	noun phrase
+SETTLE_S	SETTLE_TIME	*	verb
+SHAKE_RAD	SHAKE_ANGLE	*	radians are an angle
+SHIELD_J	SHIELD_ENERGY	*	as FAULT_J
+SHOOT_M	SHOOT_REACH	*	a range, as range_m (also keeps bot_crew.gd:7 under 100 columns)
+SHOW_S	SHOW_TIME	*	verb
+SIDE_BY_SIDE_W	SIDE_BY_SIDE_WIDTH	*	width in px
+SIGHT_M	SIGHT_REACH	*	a range, as range_m (also keeps bot_crew.gd:7 under 100 columns)
+SMALL_RADAR_W	SMALL_RADAR_WIDTH	*	width in px
+SPAN_DEFAULT_M	SPAN_DEFAULT	*	noun
+SPAN_MIN_M	SPAN_MIN	*	noun
+STRIP_W	STRIP_WIDTH	*	width in px
+TAB_W	TAB_WIDTH	*	width in px
+TAUNT_AFTER_S	TAUNT_AFTER	*	noun phrase
+TEXT_W	TEXT_WIDTH	*	width in px
+TICKS_PER_S	TICK_RATE	*	ticks per second is a rate (check: not with TICK_HZ in one file)
+TIGHT_BAR_W	TIGHT_BAR_WIDTH	*	width in px
+TIMEOUT_S	TIMEOUT	*	the brief's example
+TIMER_W	TIMER_WIDTH	*	width in px
+TRADE_W	TRADE_WIDTH	*	width in px
+WEB_POLL_S	WEB_POLL_INTERVAL	*	POLL is a verb
+ZONE_W	ZONE_WIDTH	*	width in px
+_bar_w	_bar_width	*	width in px
+_elapsed_s	_elapsed	*	as elapsed_s
+_quiet_s	_quiet_time	*	bare adjective
+_text_w	_text_width	*	width in px
+age_s	age	*	noun
+cap_s	cap_time	*	as CAP_S
+caption_w	caption_width	*	width in px
+chip_w	chip_width	*	width in px
+col_w	col_width	*	width in px
+comms_s	comms_time	*	bare comms is the station
+duration_s	duration	*	noun
+elapsed_s	elapsed	*	noun
+first_hit_s	first_hit_time	*	bare first_hit is an event
+grace_s	grace	*	noun
+hint_w	hint_width	*	width in px
+kb_w	kb_width	*	width in px
+keys_w	keys_width	*	width in px
+label_w	label_width	*	width in px
+last_raider_s	last_raider_time	*	bare last_raider is a ship
+latency_s	output_latency	*	a local next to the frame count `latency`
+left_s	time_left	*	bare adjective; also the dict key of chip_list and helm_hud lane marks
+left_w	left_width	*	width in px
+limit_s	limit	*	noun
+max_s	max_time	*	as MAX_S
+middle_s	middle_time	*	bare adjective
+mission_s	mission_time	*	bare mission is the mission
+name_w	name_width	*	width in px
+near_range_m	near_reach	*	as range_m
+now_s	now	*	IdleExitTimer.now() is the monotonic clock
+period_m	period	*	noun; matches kin.period in sim/
+pos_tol_m	pos_tol	*	tolerance
+proj_range_m	proj_reach	*	as range_m
+radius_m	radius	*	noun
+rail_w	rail_width	*	width in px
+range_m	reach	*	range shadows the range() builtin; sim/ already uses reach
+reaction_s	reaction_time	*	noun phrase
+row_w	row_width	*	width in px
+scan_s	scan_time	*	bare scan is a verb
+side_m	side_offset	*	bare side is an adjective
+span_m	map_span	*	tests keep a local `span` beside the member
+test_every_effect_window_is_at_least_8_s	test_every_effect_window_is_at_least_8_seconds	*	a number with its unit spelled out
+test_throttle_ramps_the_setpoint_like_w	test_throttle_ramps_the_setpoint_like_the_w_key	*	w is the W key here, not a unit
+text_w	text_width	*	width in px
+time_s	time_left	*	clock() argument; a local `time` is in the same file
+timeout_s	timeout	*	noun
+total_s	total_time	*	bare total is a number of anything
+view_w	view_width	*	width in px
+warmup_s	warmup	*	noun
+window_s	window	*	noun
+TICK_HZ	TICK_RATE	*	brief: frequency names become *_RATE
+tick_hz	tick_rate	*	as TICK_HZ
+SHAKE_HZ	SHAKE_FREQUENCY	*	hertz are a frequency
+BAND_LOW_HZ	BAND_LOW_FREQUENCY	*	as SHAKE_HZ
+BAND_HIGH_HZ	BAND_HIGH_FREQUENCY	*	as SHAKE_HZ
