@@ -347,7 +347,10 @@ func _step_runs(api: ScenarioApi, now: int) -> void:
 							strength_for(
 								_def,
 								_preset,
-								_ramp_at(api, _done.get(run.ship, 0), run.finale),
+								(
+									_ramp_at(api, _done.get(run.ship, 0), run.finale)
+									* api.modifier_strength()
+								),
 								ev.ships.size()
 							),
 							"escorts": _def.finale_escorts,

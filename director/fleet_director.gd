@@ -147,7 +147,9 @@ func _maybe_wave(api: ScenarioApi) -> void:
 	var now: int = api.tick()
 	if every <= 0 or now < every * (_waves + 1):
 		return
-	var strength: float = Director.strength_for(_def, _difficulty, wave_strength(_waves))
+	var strength: float = Director.strength_for(
+		_def, _difficulty, wave_strength(_waves) * api.modifier_strength()
+	)
 	var wanted: int = Scenario.count_for(RAIDERS_PER_WAVE, strength)
 	for ship: int in api.crew_ships():
 		if _waves == 0:
