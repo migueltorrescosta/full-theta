@@ -455,7 +455,7 @@ func view_bottom_inset() -> float:
 func update(ring: ShieldRing) -> void:
 	_drive_throttle()
 	if tablet:
-		_place_corner_radar()
+		radar_box.follow_corner(panel.screen(), size)
 	else:
 		_place_radar()
 		_place_ring(ring)
@@ -506,15 +506,6 @@ func _show_rare() -> void:
 				b.text = dock_text
 		if page.has("jump"):
 			(page["jump"] as RailButton).visible = can_jump
-
-
-## A tablet: the radar in the view's top right corner while the screen hides its radar column
-## (Helm alone, C14); a joint view keeps the column and no inset.
-func _place_corner_radar() -> void:
-	var s: StationScreen = panel.screen()
-	radar_box.visible = s != null and not s.layout.side_shown()
-	if radar_box.visible:
-		radar_box.place(RadarInset.corner_rect(Rect2(Vector2.ZERO, size)))
 
 
 ## The ring: tappable with its caption on the Shield page, a glyph that takes no taps

@@ -139,11 +139,8 @@ func refresh() -> void:
 	claim_button.role = RailButton.Role.ACCENT if p.is_mine(p.mount) else RailButton.Role.PLAIN
 	claim_button.disabled = not p.is_usable(p.mount)
 	WeaponsStatus.show_fire(p, fire_button, p.mount)
-	var s: StationScreen = p.screen()
-	radar_box.visible = s != null and not s.layout.side_shown()
-	if radar_box.visible:
-		radar_box.place(RadarInset.corner_rect(Rect2(Vector2.ZERO, size)))
-		radar_box.refresh()
+	radar_box.follow_corner(p.screen(), size)
+	radar_box.refresh()
 
 
 ## The radar inset's box in `control`'s coordinates while it shows, else an empty rect.

@@ -52,6 +52,15 @@ static func corner_rect(view: Rect2) -> Rect2:
 	return Rect2(Vector2(view.end.x - gap - w, view.position.y + gap), Vector2(w, h))
 
 
+## A tablet's inset: shown in the corner (corner_rect) of a view of `view_size` while the
+## screen `s` hides its radar column (Helm or Weapons alone, C14); a joint view keeps the
+## column and no inset.
+func follow_corner(s: StationScreen, view_size: Vector2) -> void:
+	visible = s != null and not s.layout.side_shown()
+	if visible:
+		place(corner_rect(Rect2(Vector2.ZERO, view_size)))
+
+
 ## Puts the inset at `box` (its parent's coordinates).
 func place(box: Rect2) -> void:
 	box = Rect2(box.position.round(), box.size.round())

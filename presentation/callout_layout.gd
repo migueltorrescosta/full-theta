@@ -45,18 +45,17 @@ static func callout_forms(font: Font, callout: String, font_size: int = 13) -> A
 	return [variants, sizes]
 
 
-## Places each callout next to its own blip, then moves it by the least that clears what it
-## must not cover (spots tried: beside the default, right, left, above, below, a line off).
-## Hard obstacles: the clock numbers and other boxes in `fixed`, every blip's box (entries
-## with a "pos"), the callouts already placed and the other items' stems; a spot also has to
-## keep inside `limit` and within CALLOUT_REACH of its own blip. Crossing the line of `disc`'s
-## rim, its half-range ring or one of `rings` (the selection's range ring) only costs, as
-## leaving `disc`'s ellipse does: a callout never moves away or shortens for a line (D319). When
-## no spot is free, the callout is shortened (its "variants", longest first, with their
-## "sizes"), then may cross other stems (soft), then takes the free spot nearest its blip with
-## the
-## callsign alone. Selected callouts are placed first,
-## then top to bottom. Without a blip a callout with no free spot drops below what it overlaps.
+## Places each callout next to its own blip, then moves it by the least that clears what it must not
+## cover (spots tried: beside the default, right, left, above, below, a line off). Hard obstacles:
+## the clock numbers and other boxes in `fixed`, every blip's box (entries with a "pos"), the
+## callouts already placed and the other items' stems; a spot also has to keep inside `limit` and
+## within CALLOUT_REACH of its own blip. Crossing the line of `disc`'s rim, its half-range ring or
+## one of `rings` (the selection's range ring) only costs, as leaving `disc`'s ellipse does: a
+## callout never moves away or shortens for a line (D319). When no spot is free, the callout is
+## shortened (its "variants", longest first, with their "sizes"), then may cross other stems (soft),
+## then takes the free spot nearest its blip with the callsign alone. Selected callouts are placed
+## first, then top to bottom. Without a blip a callout with no free spot drops below what it
+## overlaps.
 static func declutter(
 	entries: Array[Dictionary],
 	fixed: Array = [],

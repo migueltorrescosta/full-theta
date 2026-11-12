@@ -188,7 +188,9 @@ func shown(id: String) -> bool:
 		"fabricate_probe":
 			return spare_parts() >= ship_def.probe_parts
 		"claim":
-			return crew_count() > 0 and (players_here() >= 2 or holds_crew())
+			return (
+				crew_count() > 0 and (StationPanel.seated(ctx, "engineering") >= 2 or holds_crew())
+			)
 	return true
 
 
@@ -198,17 +200,6 @@ func any_fault() -> bool:
 		if has_fault(i) and not ship_def.subsystems[i].fault_causes.is_empty():
 			return true
 	return false
-
-
-## The players seated at Engineering on this ship (a joint view holding it counts), from the
-## lobby's seats.
-func players_here() -> int:
-	var n: int = 0
-	for seat: Variant in ctx.crew.ship_state(ctx.crew.ship).get("seats", []):
-		var def: Dictionary = ctx.crew.def_of(str((seat as Dictionary).get("seat", "")))
-		if "engineering" in def.get("stations", []):
-			n += 1
-	return n
 
 
 ## Whether this player holds a repair crew's claim (FT-NET-023).

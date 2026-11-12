@@ -207,9 +207,14 @@ func lesson_wants(intent: String) -> bool:
 ## The players seated at this station on this ship (a joint seat holding it counts), from
 ## the lobby's seats: a claim matters only with two or more (C3, D412).
 func players_here() -> int:
+	return seated(ctx, station)
+
+
+## The players `ctx`'s lobby seats put at `station_id` on its ship (a joint seat counts).
+static func seated(ctx: StationContext, station_id: String) -> int:
 	var n: int = 0
 	for seat: Variant in ctx.crew.ship_state(ctx.crew.ship).get("seats", []):
-		if station in StationCatalogue.stations_of(str((seat as Dictionary).get("seat", ""))):
+		if station_id in StationCatalogue.stations_of(str((seat as Dictionary).get("seat", ""))):
 			n += 1
 	return n
 
