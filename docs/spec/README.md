@@ -39,7 +39,7 @@ One meaning per term; code, wire, docs and player text use these words (D392 to 
 | Term | Meaning |
 |---|---|
 | Station | One of the six crew (functional) stations: Helm, Weapons, Engineering, Science, Relay, Comms. All six must be covered to launch. Not a seat (D395). |
-| Seat | What a player picks in the lobby: a station, a joint view, Captain or Viewer (`SeatDef`, wire field `seat`, keys `seat.<id>`; D395). |
+| Seat | What a player picks in the lobby: a station, a joint view, Captain or Viewer (`SeatDef`, wire field `seat`; D395). Every one of the 24 seats has a `seat.<id>` string key; the six stations also keep `station.<id>`, and `StationViews.name_key(id)` picks `station.<id>` for a station and `seat.<id>` for any other seat. |
 | Pick | To choose a seat, and the `Pick` message that does it; what is picked is the seat (D407). |
 | Captain | Optional, information-only seat that directs the main screen and places pings and marks. Never counts for coverage. |
 | Viewer | A read-only main-screen seat. Its connection counts toward the 64-connection cap. |
