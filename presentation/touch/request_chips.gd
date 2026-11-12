@@ -1,11 +1,11 @@
 class_name RequestChips
 extends VBoxContainer
-## Request chips on a phone's view-top row: the station's own requests to send, then the incoming ones (#28 follow-up, P28-Common, design 1.3,
-## FT-PAIR-013): one row per chip another station sent here, "Helm: Boost · 18 s", with ✓
-## (accept) and ✕ (decline), and under it what accepting does (`effect`, C5). On a phone this
-## top-of-view strip is the only place chips show (the Crew page has none, ux-13); a chip that
-## lapses and a partner's shared data are toasts (StationScreen). The rows rebuild only when
-## the set changes; the seconds update in place.
+## Request chips on a phone's view-top row (#28 follow-up, P28-Common, design 1.3, FT-PAIR-013):
+## first the station's own requests to send (ux-13), then one row per chip another station sent
+## here, "Helm: Boost · 18 s", with ✓ (accept) and ✕ (decline), and under it what accepting does
+## (`effect`, C5). On a phone this top-of-view strip is the only place chips show (the Crew page has
+## none, ux-13); a chip that lapses and a partner's shared data are toasts (StationScreen). The rows
+## rebuild only when the set changes; the seconds update in place.
 ##
 ##     chips.answered.connect(func(id: int, yes: bool) -> void: ctx.intents.answer_chip(id, yes))
 ##     chips.show_chips([{"id": 4, "text": "Helm: Boost", "left": 18.0, "effect": "..."}])
