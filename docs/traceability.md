@@ -123,7 +123,7 @@ Active ids per area: FT-GEN 14, FT-ARC 22, FT-NET 46, FT-SIM 37, FT-STN 17, FT-H
 | FT-SIM-032 | tests | `tests/stations/test_station_alerts.gd` |
 | FT-SIM-033 | tests | `tests/content/test_content_defs.gd` |
 | FT-SIM-034 | tests | `tests/sim/core/test_no_space_id.gd`, `tests/sim/flight/test_jump.gd`, `tests/sim/story/test_conversation_guards.gd` |
-| FT-SIM-035 | tests | `tests/shared/test_cube_point.gd`, `tests/sim/ai/test_enemy_ai.gd`, `tests/sim/combat/test_weapons.gd`, `tests/sim/core/test_no_space_id.gd`, `tests/sim/core/test_sim_world.gd`, `tests/sim/flight/test_jump.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/sim/relay/test_probes.gd`, `tests/sim/replay/test_command_log.gd`, `tests/sim/run/test_map_def.gd`, `tests/sim/run/test_precision.gd`, `tests/sim/run/test_run_setup_map.gd`, `tests/sim/run/test_site_wrap.gd`, `tools/tests/test_lint_arch.py` |
+| FT-SIM-035 | tests | `tests/net/test_net_relay_l3.gd`, `tests/shared/test_cube_point.gd`, `tests/sim/ai/test_enemy_ai.gd`, `tests/sim/combat/test_weapons.gd`, `tests/sim/core/test_cube_point_paths.gd`, `tests/sim/core/test_no_space_id.gd`, `tests/sim/core/test_sim_world.gd`, `tests/sim/flight/test_jump.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/sim/relay/test_probes.gd`, `tests/sim/replay/test_command_log.gd`, `tests/sim/run/test_map_def.gd`, `tests/sim/run/test_precision.gd`, `tests/sim/run/test_run_setup_map.gd`, `tests/sim/run/test_site_wrap.gd`, `tools/tests/test_lint_arch.py` |
 | FT-SIM-036 | tests | `tests/sim/flight/test_assist_modes.gd` |
 | FT-SIM-037 | tests | `tests/sim/flight/test_assist_modes.gd`, `tests/sim/run/test_site_wrap.gd` |
 | FT-SIM-038 | tests | `tests/sim/core/test_hot_path_equivalence.gd`, `tests/sim/core/test_integrator.gd` |

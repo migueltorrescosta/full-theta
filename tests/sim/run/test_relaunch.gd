@@ -50,13 +50,13 @@ func test_relaunch_resets_only_that_ship() -> void:
 	for k: int in 2:
 		var f: FleetFixture = FleetFixture.make(SessionRules.Mode.HOLDOUT, 3)
 		var w: SimWorld = f.world
-		var start: Vector3 = CubePoint.to_vector3(w.ship_starts[1])
+		var start: PackedFloat64Array = w.ship_starts[1]
 		f.step(5)
 		Economy.add_credits(w, 1, 900)
 		Economy.add_credits(w, 0, 300)
 		w.run.encounters_done[1] = 2
 		w.run.kills[1] = 1
-		w.kin.place(1, CubePoint.make(start.x + 5000.0, start.y, start.z))
+		w.kin.place(1, CubePoint.plus(start, Vector3(5000.0, 0.0, 0.0)))
 		destroy(f, 1)
 		var gone: Array[SimEvent] = of_kind(f.step(1), SessionOutcome.EVENT_ELIMINATED)
 		assert_int(int(gone[0].value)).is_equal(SessionRules.HOLDOUT_LIVES)

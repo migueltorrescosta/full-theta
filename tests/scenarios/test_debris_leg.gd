@@ -11,12 +11,11 @@ func test_the_leg_has_debris_on_the_route_and_weapons_destroys_it() -> void:
 	f.run(3)
 	var pieces: Array[int] = f.ships_of(&"m3_debris")
 	assert_int(pieces.size()).is_equal(6)
-	var from: Vector3 = CubePoint.to_vector3(f.world.sites.point(f.site))
-	var yard: Vector3 = CubePoint.to_vector3(f.world.sites.point(0))
+	var from: PackedFloat64Array = f.world.sites.point(f.site)
+	var line: Vector3 = f.world.kin.delta(f.world.sites.point(0), from)
 	for id: int in pieces:
 		# On the route: within the lateral spread of the line between the sites.
-		var rel: Vector3 = f.world.kin.relative_to_point(id, CubePoint.of(from))
-		var line: Vector3 = yard - from
+		var rel: Vector3 = f.world.kin.relative_to_point(id, from)
 		var along: float = -rel.dot(line.normalized())
 		assert_float(along).is_between(0.0, line.length())
 		assert_float((-rel - line.normalized() * along).length()).is_less(200.0)
@@ -45,8 +44,8 @@ func test_arriving_at_the_yard_ends_the_leg() -> void:
 	var f: ScenarioFixture = ScenarioFixture.make()
 	f.begin(&"debris_leg", &"vesper_beacon")
 	f.run(3)
-	var yard: Vector3 = CubePoint.to_vector3(f.world.sites.point(0))
-	f.world.kin.place(0, CubePoint.of(yard))
+	var yard: PackedFloat64Array = f.world.sites.point(0)
+	f.world.kin.place(0, yard)
 	assert_int(f.run_until_end(10)).is_equal(Scenario.Result.WON)
 
 
@@ -76,15 +75,14 @@ func test_impulse_flight_reaches_the_next_site() -> void:
 func test_a_ship_at_the_yard_has_not_crossed_the_leg() -> void:
 	var f: ScenarioFixture = ScenarioFixture.make()
 	f.begin(&"debris_leg", &"vesper_beacon")
-	var yard: Vector3 = CubePoint.to_vector3(f.world.sites.point(0))
-	f.world.kin.place(0, CubePoint.of(yard))
+	var yard: PackedFloat64Array = f.world.sites.point(0)
+	f.world.kin.place(0, yard)
 	f.run(60 * 5)
 	assert_int(f.api.encounter(f.encounter).result).is_equal(Scenario.Result.ACTIVE)
 	assert_int(f.ships_of(&"m3_debris").size()).is_equal(6)
-	var away: Vector3 = CubePoint.to_vector3(f.world.sites.point(f.site))
-	f.world.kin.place(0, CubePoint.of(away))
+	f.world.kin.place(0, f.world.sites.point(f.site))
 	f.run(5)
-	f.world.kin.place(0, CubePoint.of(yard))
+	f.world.kin.place(0, yard)
 	assert_int(f.run_until_end(10)).is_equal(Scenario.Result.WON)
 
 
@@ -100,8 +98,8 @@ func _accepted_leg() -> Array:
 
 
 func _dock_at_yard(f: ScenarioFixture) -> void:
-	var yard: Vector3 = CubePoint.to_vector3(f.world.sites.point(0))
-	f.world.kin.place(0, CubePoint.of(yard))
+	var yard: PackedFloat64Array = f.world.sites.point(0)
+	f.world.kin.place(0, yard)
 	f.world.kin.vel[0] = Vector3.ZERO
 	var dock: DockCommand = DockCommand.new()
 	dock.site_id = 0

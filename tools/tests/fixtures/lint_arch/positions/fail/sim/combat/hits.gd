@@ -6,3 +6,7 @@ func dx(kin: Kinematics, i: int, j: int) -> float:
 func drop(proj: ProjectileTable, k: int) -> void:
 	proj.pos_z[k] = 0.0
 	world.kin . pos_y.fill(0.0)
+
+func alias(world: Object) -> float:
+	var k: Kinematics = world.kin
+	return k.pos_y[0]

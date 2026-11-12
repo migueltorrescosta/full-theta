@@ -29,14 +29,14 @@ static func id_of(w: SimWorld, key: StringName) -> int:
 
 
 ## A corvette at `at` with its bow on the point `toward` (by minimum image).
-static func corvette_facing(w: SimWorld, at: Vector3, toward: Vector3) -> int:
-	var id: int = w.spawn_ship(TestDefs.corvette(), SHIP_FACTION, CubePoint.of(at))
+static func corvette_facing(w: SimWorld, at: PackedFloat64Array, toward: PackedFloat64Array) -> int:
+	var id: int = w.spawn_ship(TestDefs.corvette(), SHIP_FACTION, at)
 	face(w, id, toward)
 	return id
 
 
-static func face(w: SimWorld, id: int, toward: Vector3) -> void:
-	var offset: Vector3 = w.kin.relative_to_point(id, CubePoint.of(toward))
+static func face(w: SimWorld, id: int, toward: PackedFloat64Array) -> void:
+	var offset: Vector3 = w.kin.relative_to_point(id, toward)
 	w.kin.rot[id] = Quaternion(Basis.looking_at(offset.normalized(), Vector3.UP))
 
 
@@ -49,13 +49,13 @@ static func jump_to_site(w: SimWorld, id: int, site: int) -> JumpCommand:
 	return c
 
 
-static func jump_to_mark(w: SimWorld, id: int, p: Vector3) -> JumpCommand:
+static func jump_to_mark(w: SimWorld, id: int, p: PackedFloat64Array) -> JumpCommand:
 	var c: JumpCommand = JumpCommand.new()
 	c.ship_id = id
 	c.target_kind = HelmTable.JumpKind.MARK
-	c.x = p.x
-	c.y = p.y
-	c.z = p.z
+	c.x = p[0]
+	c.y = p[1]
+	c.z = p[2]
 	w.submit(c)
 	return c
 

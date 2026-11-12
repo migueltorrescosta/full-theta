@@ -43,7 +43,9 @@ func test_ram_damage_is_capped_per_tick() -> void:
 # A docked ship takes no damage from a ram or a shot; the ramming ship still does.
 func test_docked_ship_takes_no_collision_or_weapon_damage() -> void:
 	var w: SimWorld = SiteFixture.world()
-	var docked: int = SiteFixture.corvette_facing(w, Vector3(1000.0, 0.0, 0.0), Vector3(0, 0, -9))
+	var docked: int = SiteFixture.corvette_facing(
+		w, CubePoint.make(1000.0, 0.0, 0.0), CubePoint.make(0, 0, -9)
+	)
 	w.kin.vel[docked] = Vector3(5.0, 0.0, 0.0)
 	SiteFixture.dock(w, docked, 0)
 	w.step()

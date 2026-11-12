@@ -45,7 +45,7 @@ static func _hold(world: SimWorld, row: int) -> void:
 	var kin: Kinematics = world.kin
 	var site: int = world.helm.docked_site[row]
 	var sites: SiteTable = world.sites
-	kin.place(row, sites.point(site))
+	kin.place_column(row, sites.pos_x, sites.pos_y, sites.pos_z, site)
 	kin.vel[row] = Vector3.ZERO
 	kin.force_cmd[row] = Vector3.ZERO
 	kin.torque_cmd[row] = Vector3.ZERO

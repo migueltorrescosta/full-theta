@@ -6,8 +6,7 @@ extends GdUnitTestSuite
 
 func _docked() -> ScenarioFixture:
 	var f: ScenarioFixture = ScenarioFixture.make()
-	var yard: Vector3 = CubePoint.to_vector3(f.world.sites.point(0))
-	f.world.kin.place(0, CubePoint.make(yard.x + 500.0, yard.y, yard.z))
+	f.world.kin.place(0, CubePoint.plus(f.world.sites.point(0), Vector3(500.0, 0.0, 0.0)))
 	f.world.kin.vel[0] = Vector3.ZERO
 	var dock: DockCommand = DockCommand.new()
 	dock.site_id = 0
@@ -64,8 +63,7 @@ func test_the_offer_lapses_on_undocking_and_a_new_dock_posts_a_new_one() -> void
 func test_a_dock_without_a_market_posts_no_offer() -> void:
 	var f: ScenarioFixture = ScenarioFixture.make()
 	f.world.site_markets.clear()
-	var yard: Vector3 = CubePoint.to_vector3(f.world.sites.point(0))
-	f.world.kin.place(0, CubePoint.make(yard.x + 500.0, yard.y, yard.z))
+	f.world.kin.place(0, CubePoint.plus(f.world.sites.point(0), Vector3(500.0, 0.0, 0.0)))
 	var dock: DockCommand = DockCommand.new()
 	dock.site_id = 0
 	assert_bool(f.send(dock)).is_true()

@@ -1,6 +1,6 @@
 class_name CubePoint
 extends RefCounted
-## A position in the scenario's wrapping cube (D104, D401, FT-SIM-035): one
+## A position in the map's wrapping cube (D104, D401, FT-SIM-035): one
 ## PackedFloat64Array of three 64-bit floats [x, y, z] (m). Every API that passes a
 ## position passes one, never separate x, y, z arguments or a float32 Vector3; velocities,
 ## directions and offsets between points stay Vector3. Tables keep a point as three float64

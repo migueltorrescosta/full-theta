@@ -9,8 +9,11 @@
   FT-DAT-007).
 - Space wraps, so pure modules read and write the ship and projectile position columns
   (kin.pos_x, .pos_y, .pos_z and the projectiles') only through the Kinematics helpers;
-  only the two files that own those columns touch them (FT-SIM-035, D124, D401). Other
-  tables' `<role>_x` columns (sites, probes, aim points) are read directly by hot loops.
+  only the two files that own those columns touch them (FT-SIM-035, D124, D401). The
+  receiver is matched by name: kin, kinematics, proj, projectiles, or any name the file
+  types as Kinematics or ProjectileTable (`var k: Kinematics`, a parameter); an untyped
+  alias (`var k := world.kin`) is not caught. Other tables' `<role>_x` columns (sites,
+  probes, aim points) are read directly by hot loops.
 - ScenarioApi keeps the world in `_world`, which GDScript can't hide: pure modules
   outside sim/api/ may not access `._world` (FT-ARC-016).
 - Every module is classified: a .gd file outside ALLOWED's modules and UNRESTRICTED is a
@@ -212,6 +215,9 @@ def lint(root: Path) -> list[str]:
                    "tools/lint_arch.py ALLOWED or UNRESTRICTED (spec §2.2)")
         layer = None if rel in SIM_ROOTS else sim_layer(rel)
         client_safe = rel in NET_CLIENT_SAFE
+        position_receivers = POSITION_RECEIVERS | set(
+            re.findall(r"\b(\w+)\s*:\s*(?:Kinematics|ProjectileTable)\b", code)
+        )
 
         for pos, s in strings:
             for m in re.finditer(r"res://([^\"']+/)", s):
@@ -256,7 +262,7 @@ def lint(root: Path) -> list[str]:
                     report(pos, f"{word}: no {what} in {module}/ ({ft})")
             if (
                 word in POSITION_COLUMNS and dotted and rel not in POSITION_OWNERS
-                and receiver(code, j) in POSITION_RECEIVERS
+                and receiver(code, j) in position_receivers
             ):
                 report(pos, f".{word}: use Kinematics.relative, relative_to_point, relative_to_column, "
                        "point, point_at, wrap, place or translate, not raw position columns "

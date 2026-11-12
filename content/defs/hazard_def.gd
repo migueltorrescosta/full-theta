@@ -42,7 +42,8 @@ enum Shape { SPHERE, PLANE }
 ## How close the own sensors must be to the hazard's surface to know of it (m); a probe's
 ## bubble (ShipDef.probe_range) shows it from further.
 @export var detect_range: float = 0.0
-## The centre as a cube point (D401), kept with `center`; read-only (it is shared).
+## The centre as a cube point (D401), kept with `center`. Shared with the def: callers
+## duplicate() it before keeping or changing it.
 var center_point: PackedFloat64Array = CubePoint.make()
 
 

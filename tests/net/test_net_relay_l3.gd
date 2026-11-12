@@ -491,3 +491,16 @@ func test_science_scan_mark_makes_a_scan_position() -> void:
 	again.ship_id = PLAYER
 	crew.on_sim_event(again)
 	assert_int(crew.relay.zones_of(PLAYER).size()).is_equal(1)
+
+
+# FT: FT-SPA-028, FT-SIM-035
+# A scan position keeps its point 64-bit (D104, D401): one float32 cannot hold, near the
+# seam on each axis, is stored exactly.
+func test_scan_position_keeps_the_point_64_bit() -> void:
+	var server: NetServer = h.server()
+	var crew: NetCrewState = server.session.crew
+	var a: float = 0.5 * server.world.kin.period - 1000.123
+	for p: PackedFloat64Array in [CubePoint.make(a, -a, a), CubePoint.make(-a, a, -a)]:
+		assert_str(crew.add_scan_position(PLAYER, p, 500.0, "science")).is_empty()
+		var z: Dictionary = crew.relay.zones_of(PLAYER).back()
+		assert_array([z["x"], z["y"], z["z"]]).is_equal(Array(p))

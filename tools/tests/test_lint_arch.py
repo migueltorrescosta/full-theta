@@ -43,6 +43,7 @@ FAILS = {
         "sim/combat/hits.gd:4",
         "sim/combat/hits.gd:7",
         "sim/combat/hits.gd:8",
+        "sim/combat/hits.gd:12",
     ],
     # Clients name only NET_CLIENT_SAFE, which names no sim/ or server net/ class (F4, R14-1).
     "net_client": ["net/net_protocol.gd:4", "net/net_protocol.gd:5", "stations/hud.gd:4"],

@@ -105,8 +105,7 @@ func test_ignoring_the_call_pays_nothing() -> void:
 func test_a_ship_arriving_at_speed_does_not_hit_the_freighter() -> void:
 	var f: ScenarioFixture = ScenarioFixture.make()
 	f.begin(&"rescue", &"vesper_beacon")
-	var at: Vector3 = CubePoint.to_vector3(f.world.sites.point(f.site))
-	f.world.kin.place(0, CubePoint.make(at.x + 3000.0, at.y, at.z))
+	f.world.kin.place(0, CubePoint.plus(f.world.sites.point(f.site), Vector3(3000.0, 0.0, 0.0)))
 	f.world.kin.vel[0] = Vector3(-300.0, 0.0, 0.0)
 	var nearest: float = INF
 	for i: int in 60 * 18:

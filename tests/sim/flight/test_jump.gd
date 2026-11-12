@@ -17,9 +17,7 @@ func _vesper(w: SimWorld) -> int:
 func test_spool_takes_the_data_defined_time() -> void:
 	var w: SimWorld = SiteFixture.world()
 	var vesper: int = _vesper(w)
-	var ship: int = SiteFixture.corvette_facing(
-		w, Vector3.ZERO, CubePoint.to_vector3(w.sites.point(vesper))
-	)
+	var ship: int = SiteFixture.corvette_facing(w, CubePoint.make(), w.sites.point(vesper))
 	SiteFixture.jump_to_site(w, ship, vesper)
 	var ticks: int = ceili(TestDefs.corvette().jump_spool_s * SimWorld.HZ)
 	assert_int(ticks).is_equal(480)
@@ -34,9 +32,7 @@ func test_spool_takes_the_data_defined_time() -> void:
 func test_spool_event_and_state() -> void:
 	var w: SimWorld = SiteFixture.world()
 	var vesper: int = _vesper(w)
-	var ship: int = SiteFixture.corvette_facing(
-		w, Vector3.ZERO, CubePoint.to_vector3(w.sites.point(vesper))
-	)
+	var ship: int = SiteFixture.corvette_facing(w, CubePoint.make(), w.sites.point(vesper))
 	SiteFixture.jump_to_site(w, ship, vesper)
 	w.step()
 	var spool: Array[SimEvent] = SiteFixture.events_of(w, &"jump_spool")
@@ -56,14 +52,11 @@ func test_arrives_at_the_standoff_from_a_site() -> void:
 	var w: SimWorld = SiteFixture.world()
 	var vesper: int = _vesper(w)
 	var def: ShipDef = TestDefs.corvette()
-	var ship: int = SiteFixture.corvette_facing(
-		w, Vector3.ZERO, CubePoint.to_vector3(w.sites.point(vesper))
-	)
+	var ship: int = SiteFixture.corvette_facing(w, CubePoint.make(), w.sites.point(vesper))
 	w.kin.vel[ship] = Vector3(3.0, 0.0, 0.0)
 	var fuel: float = w.kin.propellant[ship]
 	SiteFixture.jump_to_site(w, ship, vesper)
-	var from: Vector3 = Vector3.ZERO
-	var line: Vector3 = CubePoint.to_vector3(w.sites.point(vesper)) - from
+	var line: Vector3 = w.kin.delta(w.sites.point(vesper), CubePoint.make())
 	SiteFixture.steps_until(w, &"jump_arrive", ship, 600)
 	var left: Vector3 = SiteTable.offset_to(w, ship, vesper)
 	assert_float(left.length()).is_equal_approx(def.jump_standoff_m, 0.5)
@@ -89,12 +82,12 @@ func test_arrives_at_the_standoff_from_a_site() -> void:
 # when the jump starts in open space, value -1.
 func test_arrives_at_the_standoff_from_a_mark() -> void:
 	var w: SimWorld = SiteFixture.world()
-	var start: Vector3 = Vector3(50000.0, 20000.0, 0.0)
-	var mark: Vector3 = Vector3(50000.0, 20000.0, -60000.0)
+	var start: PackedFloat64Array = CubePoint.make(50000.0, 20000.0, 0.0)
+	var mark: PackedFloat64Array = CubePoint.make(50000.0, 20000.0, -60000.0)
 	var ship: int = SiteFixture.corvette_facing(w, start, mark)
 	SiteFixture.jump_to_mark(w, ship, mark)
 	SiteFixture.steps_until(w, &"jump_arrive", ship, 600)
-	var left: Vector3 = w.kin.relative_to_point(ship, CubePoint.of(mark))
+	var left: Vector3 = w.kin.relative_to_point(ship, mark)
 	assert_float(left.length()).is_equal_approx(TestDefs.corvette().jump_standoff_m, 0.5)
 	var arrive: Array[SimEvent] = SiteFixture.events_of(w, &"jump_arrive")
 	assert_float(arrive[0].value).is_equal(-1.0)
@@ -106,13 +99,13 @@ func test_arrives_at_the_standoff_from_a_mark() -> void:
 # mark just past the -X face it is a short hop, and the ship ends inside [-P/2, P/2).
 func test_jump_across_the_seam() -> void:
 	var w: SimWorld = SiteFixture.world()
-	var start: Vector3 = Vector3(199000.0, 0.0, 0.0)
-	var mark: Vector3 = Vector3(-196000.0, 0.0, 0.0)
+	var start: PackedFloat64Array = CubePoint.make(199000.0, 0.0, 0.0)
+	var mark: PackedFloat64Array = CubePoint.make(-196000.0, 0.0, 0.0)
 	var ship: int = SiteFixture.corvette_facing(w, start, mark)
-	assert_float(w.kin.relative_to_point(ship, CubePoint.of(mark)).x).is_equal(5000.0)
+	assert_float(w.kin.relative_to_point(ship, mark).x).is_equal(5000.0)
 	SiteFixture.jump_to_mark(w, ship, mark)
 	SiteFixture.steps_until(w, &"jump_arrive", ship, 600)
-	var left: Vector3 = w.kin.relative_to_point(ship, CubePoint.of(mark))
+	var left: Vector3 = w.kin.relative_to_point(ship, mark)
 	assert_float(left.length()).is_equal_approx(TestDefs.corvette().jump_standoff_m, 0.5)
 	assert_float(w.kin.pos_x[ship]).is_between(-200000.0, 200000.0)
 
@@ -121,8 +114,8 @@ func test_jump_across_the_seam() -> void:
 # A target already inside the stand-off leaves the ship where it is (it only stops).
 func test_jump_to_a_nearby_target_does_not_back_off() -> void:
 	var w: SimWorld = SiteFixture.world()
-	var mark: Vector3 = Vector3(0.0, 0.0, -1200.0)
-	var ship: int = SiteFixture.corvette_facing(w, Vector3.ZERO, mark)
+	var mark: PackedFloat64Array = CubePoint.make(0.0, 0.0, -1200.0)
+	var ship: int = SiteFixture.corvette_facing(w, CubePoint.make(), mark)
 	SiteFixture.jump_to_mark(w, ship, mark)
 	SiteFixture.steps_until(w, &"jump_arrive", ship, 600)
 	assert_float(w.kin.relative_to_point(ship, CubePoint.make(0.0, 0.0, 0.0)).length()).is_less(
@@ -136,9 +129,7 @@ func test_jump_to_a_nearby_target_does_not_back_off() -> void:
 func test_refused_unless_faced() -> void:
 	var w: SimWorld = SiteFixture.world()
 	var vesper: int = _vesper(w)
-	var ship: int = SiteFixture.corvette_facing(
-		w, Vector3.ZERO, CubePoint.to_vector3(w.sites.point(vesper))
-	)
+	var ship: int = SiteFixture.corvette_facing(w, CubePoint.make(), w.sites.point(vesper))
 	var fuel: float = w.kin.propellant[ship]
 	var aim: Quaternion = w.kin.rot[ship]
 	w.kin.rot[ship] = aim * Quaternion(Vector3.UP, deg_to_rad(20.0))
@@ -161,14 +152,12 @@ func test_refused_unless_faced() -> void:
 func test_refusals() -> void:
 	var w: SimWorld = SiteFixture.world()
 	var vesper: int = _vesper(w)
-	var ship: int = SiteFixture.corvette_facing(
-		w, Vector3.ZERO, CubePoint.to_vector3(w.sites.point(vesper))
-	)
+	var ship: int = SiteFixture.corvette_facing(w, CubePoint.make(), w.sites.point(vesper))
 	var raider: int = w.spawn_ship(TestDefs.raider(), 2, CubePoint.make(0, 0, 3000))
-	SiteFixture.face(w, raider, CubePoint.to_vector3(w.sites.point(vesper)))
+	SiteFixture.face(w, raider, w.sites.point(vesper))
 	var no_drive: JumpCommand = SiteFixture.jump_to_site(w, raider, vesper)
 	var unknown_id: JumpCommand = SiteFixture.jump_to_site(w, ship, 99)
-	var nan_mark: JumpCommand = SiteFixture.jump_to_mark(w, ship, Vector3(NAN, 0, 0))
+	var nan_mark: JumpCommand = SiteFixture.jump_to_mark(w, ship, CubePoint.make(NAN, 0, 0))
 	w.sites.known_mask[vesper] = 0
 	var hidden: JumpCommand = SiteFixture.jump_to_site(w, ship, vesper)
 	w.step()

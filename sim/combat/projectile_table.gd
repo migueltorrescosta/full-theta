@@ -3,7 +3,7 @@ extends SimTable
 ## Live projectiles, one row each, keyed by the shooter's ship id and faction
 ## (FT-ARC-012). Positions are 64-bit offsets in the cube like ships' (D104), wrapped
 ## onto it (FT-SIM-035); only this class and Kinematics read them
-## (tools/lint_arch.pos_y). Velocity is float32 in the world frame. Packed columns keep 500
+## (tools/lint_arch.py). Velocity is float32 in the world frame. Packed columns keep 500
 ## projectiles cheap (S6). Rows are appended when a shot is fired and removed when the
 ## projectile hits or expires, so a ship has no rows at spawn.
 

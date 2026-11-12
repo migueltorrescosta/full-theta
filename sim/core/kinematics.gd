@@ -105,6 +105,16 @@ func place(row: int, p: PackedFloat64Array) -> void:
 	pos_z[row] = at[2]
 
 
+## Places a ship at the point at row r of the columns xs, ys, zs (m), which the caller
+## keeps wrapped onto this cube (a site's point): no point is made, for per-tick holds (D401).
+func place_column(
+	row: int, xs: PackedFloat64Array, ys: PackedFloat64Array, zs: PackedFloat64Array, r: int
+) -> void:
+	pos_x[row] = xs[r]
+	pos_y[row] = ys[r]
+	pos_z[row] = zs[r]
+
+
 ## Moves a ship by a displacement given per axis in 64-bit (m), wrapping across the
 ## cube's faces (FT-SIM-035): the integrator and contact separation move ships this way.
 func translate(row: int, dx: float, dy: float, dz: float) -> void:

@@ -13,7 +13,9 @@ const YARD_SPEED: float = 10.0
 # rest, and the dock event names the site.
 func test_dock_holds_the_ship_at_the_point() -> void:
 	var w: SimWorld = SiteFixture.world()
-	var ship: int = SiteFixture.corvette_facing(w, Vector3(1000.0, 0.0, 0.0), Vector3(0, 0, -9))
+	var ship: int = SiteFixture.corvette_facing(
+		w, CubePoint.make(1000.0, 0.0, 0.0), CubePoint.make(0, 0, -9)
+	)
 	w.kin.vel[ship] = Vector3(5.0, 0.0, 0.0)
 	var c: DockCommand = SiteFixture.dock(w, ship, 0)
 	w.step()
@@ -36,11 +38,15 @@ func test_dock_holds_the_ship_at_the_point() -> void:
 func test_dock_refusals() -> void:
 	var w: SimWorld = SiteFixture.world()
 	var vesper: int = SiteFixture.id_of(w, &"vesper_beacon")
-	var far: int = SiteFixture.corvette_facing(w, Vector3(YARD_RANGE + 50.0, 0, 0), Vector3.ZERO)
-	var fast: int = SiteFixture.corvette_facing(w, Vector3(0, 100.0, 0), Vector3(0, 0, -9))
+	var far: int = SiteFixture.corvette_facing(
+		w, CubePoint.make(YARD_RANGE + 50.0, 0, 0), CubePoint.make()
+	)
+	var fast: int = SiteFixture.corvette_facing(
+		w, CubePoint.make(0, 100.0, 0), CubePoint.make(0, 0, -9)
+	)
 	w.kin.vel[fast] = Vector3(YARD_SPEED + 1.0, 0.0, 0.0)
 	var at_vesper: int = SiteFixture.corvette_facing(
-		w, CubePoint.to_vector3(w.sites.point(vesper)), Vector3(0, 0, -9)
+		w, w.sites.point(vesper), CubePoint.make(0, 0, -9)
 	)
 	var cmds: Array[DockCommand] = [
 		SiteFixture.dock(w, far, 0),
@@ -71,14 +77,14 @@ func test_undock_and_the_jump_dock_exclusion() -> void:
 	var w: SimWorld = SiteFixture.world()
 	var vesper: int = SiteFixture.id_of(w, &"vesper_beacon")
 	var ship: int = SiteFixture.corvette_facing(
-		w, Vector3(100.0, 0, 0), CubePoint.to_vector3(w.sites.point(vesper))
+		w, CubePoint.make(100.0, 0, 0), w.sites.point(vesper)
 	)
 	var loose: UndockCommand = SiteFixture.undock(w, ship)
 	SiteFixture.dock(w, ship, 0)
 	w.step()
 	assert_bool(loose.accepted).is_false()
 	assert_int(w.helm.docked_site[ship]).is_equal(0)
-	SiteFixture.face(w, ship, CubePoint.to_vector3(w.sites.point(vesper)))
+	SiteFixture.face(w, ship, w.sites.point(vesper))
 	var jump: JumpCommand = SiteFixture.jump_to_site(w, ship, vesper)
 	w.step()
 	assert_bool(jump.accepted).is_false()
@@ -87,7 +93,7 @@ func test_undock_and_the_jump_dock_exclusion() -> void:
 	assert_bool(off.accepted).is_true()
 	assert_int(w.helm.docked_site[ship]).is_equal(-1)
 	assert_int(SiteFixture.events_of(w, &"undocked").size()).is_equal(1)
-	SiteFixture.face(w, ship, CubePoint.to_vector3(w.sites.point(vesper)))
+	SiteFixture.face(w, ship, w.sites.point(vesper))
 	var go: JumpCommand = SiteFixture.jump_to_site(w, ship, vesper)
 	var dock_now: DockCommand = SiteFixture.dock(w, ship, 0)
 	w.step()
