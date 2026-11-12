@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="RunModifierDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/run_modifier_def.gd" id="1_mod"]
+
+[resource]
+script = ExtResource("1_mod")
+id = &"lean_times"
+name_key = &"modifier.lean_times.name"
+detail_key = &"modifier.lean_times.detail"
+bounty = 1.5
+prices = 1.25

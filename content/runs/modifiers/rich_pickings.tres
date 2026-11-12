@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="RunModifierDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/run_modifier_def.gd" id="1_mod"]
+
+[resource]
+script = ExtResource("1_mod")
+id = &"rich_pickings"
+name_key = &"modifier.rich_pickings.name"
+detail_key = &"modifier.rich_pickings.detail"
+strength = 1.1
+bounty = 2.0
+salvage = 2.0

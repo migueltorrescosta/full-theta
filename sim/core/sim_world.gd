@@ -83,6 +83,9 @@ var help: HelpTable = HelpTable.new()
 var catalog: Dictionary[StringName, NpcDef] = {}
 var scenario_ids: PackedStringArray = PackedStringArray()
 var run_def: RunDef
+## The run modifier the host rolled (gp-11, GameRules.modifier_id), read-only like run_def;
+## the default multiplies nothing. RunSetup sets it.
+var modifier: RunModifierDef = RunModifierDef.new()
 ## The session's rules (#11, E11, E12): COOP with one slot unless RunSetup was given slots.
 ## Fixed for the run, like run_def, so not in a table or the state hash.
 var rules: GameRules = GameRules.new()
@@ -100,6 +103,8 @@ var step_log_from: int = 0
 var script_rng: SimRng
 ## The named sites, points in the one cube (D229); add_site() fills it from a MapDef.
 var sites: SiteTable = SiteTable.new()
+## Wrecks of destroyed AI ships and their salvage (gp-11).
+var wrecks: WreckTable = WreckTable.new()
 
 ## Crew and server commands in application order, each stamped with its tick and
 ## whether it was accepted (FT-ARC-008, D122); rejected ones stay so replays reproduce
@@ -171,6 +176,7 @@ func tables() -> Array[SimTable]:
 		encounters,
 		sites,
 		help,
+		wrecks,
 	]
 
 
@@ -335,6 +341,8 @@ func step() -> void:
 	CallHelp.step(self)
 	# Last: statuses and outcomes see this tick's destructions and knowledge (T036).
 	OutcomeSystem.step(self)
+	# After the outcomes: a raider destroyed this tick leaves its wreck (gp-11).
+	SalvageSystem.step(self)
 	step_events = events.slice(events_from)
 	tick += 1
 

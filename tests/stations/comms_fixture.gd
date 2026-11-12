@@ -111,6 +111,27 @@ static func block() -> Dictionary:
 	}
 
 
+## The block of a dock offering two of Kappa's three modules (gp-11): the afterburner for the
+## reactor slot and the long-range scanner for the empty sensor slot.
+static func block_two_modules() -> Dictionary:
+	var blk: Dictionary = block()
+	(
+		(blk["modules"] as Array)
+		. append(
+			{
+				"card": OFFER,
+				"module": "lx1_longscan",
+				"name": "module.lx1_longscan",
+				"slot": 1,
+				"price": 600,
+				"old": "",
+				"trade_in": 0,
+			}
+		)
+	)
+	return blk
+
+
 ## Puts the block, site 0's name and the context's claim of the hail on `ctx`.
 static func install(ctx: StationContext, blk: Dictionary = block()) -> void:
 	ctx.snap.blocks[StationCatalogue.Section.COMMS] = blk

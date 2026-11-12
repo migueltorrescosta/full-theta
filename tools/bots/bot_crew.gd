@@ -9,6 +9,8 @@ extends RefCounted
 ##   at the profile's cadence, from the mount whose arc holds the target (one Weapons player);
 ## - Relay: a decoy when a hostile targets the ship and the hull is under the profile's
 ##   decoy_hull; Comms: a call for help once the profile's help_hostiles are in play;
+## - limps home: crippled in an active encounter (gp-09), with the propellant for a jump and
+##   the profile willing, it jumps to the nearest dock, stops and docks within the time;
 ## - flees: below the profile's hull fraction, in an active encounter with a hostile in
 ##   sight, it faces Kestrel Yard and jumps (the sim then counts the encounter as fled);
 ## - travels: to the site of its pending encounter (the yard on a debris leg) by jump or by
@@ -56,7 +58,10 @@ func act(world: SimWorld) -> void:
 	if profile.repairs and world.tick % profile.repair_every < profile.think_ticks:
 		_repair(world)
 	var target: int = _pick_target(world)
-	if target >= 0 and _wants_flee(world):
+	var dock: int = _limp_site(world)
+	if dock >= 0:
+		_limp_home(world, dock)
+	elif target >= 0 and _wants_flee(world):
 		_flee(world)
 	elif target >= 0:
 		_going = NONE
@@ -194,6 +199,58 @@ func _wants_flee(world: SimWorld) -> bool:
 func _flee(world: SimWorld) -> void:
 	_target = -1
 	_go(world, HOME, true)
+
+
+## The nearest dock a crippled crew can limp home to in time (gp-09), or -1: crippled in its
+## active encounter less than RunDef.limp_home_time ago, with the propellant for one jump.
+func _limp_site(world: SimWorld) -> int:
+	var at: int = world.ships.crippled_tick[ship]
+	if not profile.limps_home or at < 0 or world.run_def == null:
+		return -1
+	if world.tick > at + SimRate.ticks(world.run_def.limp_home_time):
+		return -1
+	if world.kin.propellant[ship] < world.defs[ship].jump_propellant:
+		return -1
+	var best: int = -1
+	var best_d: float = INF
+	for site: int in world.sites.size():
+		if (
+			not world.sites.dockable_of(site)
+			or not world.sites.is_known(site, world.faction_of(ship))
+		):
+			continue
+		var d: float = SiteTable.offset_to(world, ship, site).length()
+		if d < best_d:
+			best_d = d
+			best = site
+	return best
+
+
+## Jumps to the dock when it is farther than a jump's standoff, flies the rest by impulse,
+## then stops and docks.
+func _limp_home(world: SimWorld, site: int) -> void:
+	_target = -1
+	var d: float = SiteTable.offset_to(world, ship, site).length()
+	var near: float = world.sites.dock_range[site]
+	if d > near:
+		var far: bool = d > world.defs[ship].jump_standoff + near
+		if _going == site and _by_jump == far:
+			_go(world, site, far)
+		else:
+			# (a new plan, or the jump landed short: the last stretch by impulse)
+			_going = NONE
+			_go(world, site, far)
+			_by_jump = far
+			_helm(world, true, not far)
+		return
+	if _moving:
+		_moving = false
+		_helm(world, false, false)
+		_submit(world, AllStopCommand.new())
+	if world.kin.vel[ship].length() <= world.sites.dock_max_speed[site]:
+		var dock: DockCommand = DockCommand.new()
+		dock.site_id = site
+		_submit(world, dock)
 
 
 func _travel(world: SimWorld) -> void:

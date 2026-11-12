@@ -270,6 +270,12 @@ func rand(stream: StringName) -> float:
 	return _world.script_rng.stream(stream).randf()
 
 
+## The run modifier's enemy strength multiplier (gp-11, RunModifierDef.strength; 1 for none):
+## the director multiplies the encounters' strength by it.
+func modifier_strength() -> float:
+	return _world.modifier.strength
+
+
 # --- writes (each one queued SERVER command) ---
 
 

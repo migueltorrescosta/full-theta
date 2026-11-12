@@ -40,7 +40,9 @@ static func step(world: SimWorld) -> void:
 			if _training_reset(world, id):
 				continue
 			status[id] = ShipStateTable.Status.DESTROYED
-			if enabled[id] == 0:
+			if enabled[id] == 1:
+				_pay_bounty(world, id)
+			else:
 				_count_kill(world, id)
 				# A ship that won and was then destroyed is out of play too: it has no
 				# LOSS to emit the elimination from (R17-5).
@@ -126,9 +128,9 @@ static func game_outcome(world: SimWorld) -> GameOutcome:
 	return out
 
 
-## Whether a crewed ship that lost may still relaunch under its side's policy.
+## Whether a crewed ship that lost may still relaunch under its side's policy (and pay for it).
 static func _may_relaunch(world: SimWorld, id: int) -> bool:
-	return world.rules.relaunch_for(world.faction_of(id)).allows(world.ships.relaunches[id])
+	return RelaunchShipCommand.allowed(world, id)
 
 
 ## FIRST_TO_FINISH: the crewed ships that won on the earliest finish tick; with teams, every
@@ -223,20 +225,38 @@ static func _holdout(
 ## A crewed ship destroyed this tick by a crewed ship of another side: one kill for that ship
 ## (the &"destroyed" event names the source, DamageSystem).
 static func _count_kill(world: SimWorld, id: int) -> void:
+	var killer: int = _killer(world, id)
+	if killer < 0 or not world.is_crew(killer) or world.faction_of(killer) == world.faction_of(id):
+		return
+	world.ships.kills[killer] += 1
+
+
+## A raider (an armed AI ship of a faction hostile to its killer's) destroyed this tick by a crewed
+## ship pays that ship RunDef.bounty times the run modifier (gp-11, #38 D7); a retreat pays
+## nothing. &"bounty" is emitted (ship_id the killer, other_id the raider, value the credits).
+static func _pay_bounty(world: SimWorld, id: int) -> void:
+	if world.run_def == null:
+		return
+	var credits: int = SalvageSystem.scaled(world.run_def.bounty, world.modifier.bounty)
+	var killer: int = _killer(world, id)
+	if credits <= 0 or killer < 0 or not world.is_crew(killer) or world.defs[id].mounts.is_empty():
+		return
+	if not world.is_hostile(world.faction_of(killer), world.faction_of(id)):
+		return
+	Economy.add_credits(world, killer, credits)
+	world.emit(&"bounty", killer, id, credits)
+
+
+## The ship that destroyed `id` this tick (the &"destroyed" event's source), or -1.
+static func _killer(world: SimWorld, id: int) -> int:
 	var events: Array[SimEvent] = world.events
 	var i: int = events.size() - 1
 	while i >= 0 and events[i].tick == world.tick:
 		var e: SimEvent = events[i]
 		i -= 1
-		if e.kind != &"destroyed" or e.ship_id != id:
-			continue
-		var killer: int = e.other_id
-		if killer == id or not world.has_ship(killer):
-			return
-		if not world.is_crew(killer) or world.faction_of(killer) == world.faction_of(id):
-			return
-		world.ships.kills[killer] += 1
-		return
+		if e.kind == &"destroyed" and e.ship_id == id:
+			return e.other_id if e.other_id != id and world.has_ship(e.other_id) else -1
+	return -1
 
 
 ## An AI ship in RETREAT that no live ship of a hostile faction detects.
@@ -304,12 +324,9 @@ static func _emit_eliminated(world: SimWorld, id: int) -> void:
 	var tag: StringName = &"destroyed"
 	if world.ships.status[id] == ShipStateTable.Status.ABANDONED:
 		tag = &"forfeit" if world.rules.is_pvp() else &"abandoned"
+	# A relaunch the purse can't pay for is none left (gp-10): the crew is not offered the vote.
 	var policy: RelaunchPolicy = world.rules.relaunch_for(world.faction_of(id))
-	world.emit(
-		GameOutcome.EVENT_ELIMINATED,
-		id,
-		-1,
-		policy.left(world.ships.relaunches[id]),
-		Vector3.ZERO,
-		tag
-	)
+	var left: int = policy.left(world.ships.relaunches[id])
+	if not RelaunchShipCommand.allowed(world, id):
+		left = 0
+	world.emit(GameOutcome.EVENT_ELIMINATED, id, -1, left, Vector3.ZERO, tag)

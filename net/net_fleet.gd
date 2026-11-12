@@ -544,7 +544,8 @@ func _lives_left(ship: int) -> int:
 func _eliminate(ship: int, reason: String, lives: int) -> void:
 	eliminated[ship] = reason
 	_lives[ship] = lives
-	var payload: Dictionary = FleetMessages.eliminated(ship, reason, lives)
+	var cost: int = RelaunchShipCommand.cost(game.world)
+	var payload: Dictionary = FleetMessages.eliminated(ship, reason, lives, cost)
 	game.broadcast(NetProtocol.EVENT_ELIMINATED, payload)
 	var crew: Array = []
 	for s: NetSession in game.by_id.values():

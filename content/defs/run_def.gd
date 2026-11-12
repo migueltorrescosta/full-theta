@@ -30,6 +30,28 @@ const PRESETS: Array[StringName] = [&"easy", &"normal", &"hard"]
 ## The share of a card's reward paid when its encounter's time runs out before the
 ## objective is met, a PARTIAL result (dimensionless, 0 to 1).
 @export var partial_pay: float = 1.0
+## Crippled (gp-09, #38 D4): a crewed ship in an active encounter whose hull fraction falls
+## under crippled_hull (dimensionless, 0 to 1; 0 never), or with crippled_subsystems destroyed,
+## has limp_home_time to dock anywhere: the encounter then ends PARTIAL ("limped home") and its
+## accepted cards pay partial_pay.
+@export var crippled_hull: float = 0.0
+## Destroyed subsystems that cripple a ship (count; 0 never).
+@export var crippled_subsystems: int = 0
+## Time a crippled ship has to dock and limp home (s; 0 turns crippling off).
+@export var limp_home_time: float = 0.0
+## Co-op relaunches per ship per run (count; 0 none, D259), gp-10 (#38 D4).
+@export var coop_relaunches: int = 0
+## What a co-op relaunch costs, from the lost ship's purse (count, credits).
+@export var relaunch_cost: int = 0
+## Credits a crewed ship earns for destroying a raider, an armed AI ship of a hostile faction
+## (count; gp-11, #38 D7).
+@export var bounty: int = 0
+## Credits a destroyed armed AI ship's wreck holds (count).
+@export var salvage: int = 0
+## The first crewed ship this close to a wreck collects it (m).
+@export var salvage_range: float = 300.0
+## How long a wreck can be collected (s).
+@export var salvage_lifetime: float = 300.0
 ## A training run (the Shakedown, FT-MIS-039): a crewed ship at hull 0 is reset at the yard
 ## instead of eliminated. A rule of the training world, not a stat change (FT-SIM-029).
 @export var training: bool = false
@@ -72,4 +94,13 @@ func validate() -> Array[String]:
 		errors.append("partial_pay must be within 0 and 1, got %s" % partial_pay)
 	if start_credits < 0:
 		errors.append("start_credits must be at least 0, got %d" % start_credits)
+	DefCheck.in_range(errors, "crippled_hull", crippled_hull, 0.0, 1.0)
+	DefCheck.non_negative(errors, "crippled_subsystems", crippled_subsystems)
+	DefCheck.non_negative(errors, "limp_home_time", limp_home_time)
+	DefCheck.non_negative(errors, "coop_relaunches", coop_relaunches)
+	DefCheck.non_negative(errors, "relaunch_cost", relaunch_cost)
+	DefCheck.non_negative(errors, "bounty", bounty)
+	DefCheck.non_negative(errors, "salvage", salvage)
+	DefCheck.non_negative(errors, "salvage_range", salvage_range)
+	DefCheck.non_negative(errors, "salvage_lifetime", salvage_lifetime)
 	return errors

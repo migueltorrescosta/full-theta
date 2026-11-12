@@ -7,7 +7,8 @@ extends SimTable
 ## command log rebuilds it. A ship reset leaves it alone: encounters are run history.
 
 ## PENDING: opened, waiting for the ship to arrive at the site or for the arrival timeout.
-## ACTIVE: running. WON, LOST, FLED, ABANDONED and PARTIAL (the scenario's time ran out) end it.
+## ACTIVE: running. WON, LOST, FLED, ABANDONED and PARTIAL (the scenario's time ran out, or a
+## crippled ship limped home, gp-09) end it.
 enum Result { PENDING, ACTIVE, WON, LOST, FLED, ABANDONED, PARTIAL }
 
 ## Most ship bits a mask holds (an int64 mask; crewed ships take the first ids).
@@ -29,6 +30,8 @@ var cost: PackedInt32Array = PackedInt32Array()
 ## Ships destroyed or abandoned in the encounter, and ships that fled it (bits like ships_mask).
 var losses_mask: PackedInt64Array = PackedInt64Array()
 var fled_mask: PackedInt64Array = PackedInt64Array()
+## Ships that limped home (gp-09): docked while crippled, which ended the encounter PARTIAL.
+var limped_mask: PackedInt64Array = PackedInt64Array()
 
 
 func add_ship(_ship_id: int, _faction: int, _def: ShipDef) -> void:
@@ -50,6 +53,7 @@ func add_encounter(
 	cost.append(threat)
 	losses_mask.append(0)
 	fled_mask.append(0)
+	limped_mask.append(0)
 	return row
 
 

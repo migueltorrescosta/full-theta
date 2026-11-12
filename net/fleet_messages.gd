@@ -45,7 +45,8 @@ const PAYLOADS: Dictionary = {
 	{"ship": TYPE_INT, "seat": TYPE_STRING, "by": TYPE_STRING, "from_ship": TYPE_INT},
 	NetProtocol.EVENT_HANDOVER: {"ship": TYPE_INT, "to_ship": TYPE_INT},
 	NetProtocol.EVENT_SCOREBOARD: {"rows": TYPE_ARRAY},
-	NetProtocol.EVENT_ELIMINATED: {"ship": TYPE_INT, "reason": TYPE_STRING, "lives": TYPE_INT},
+	NetProtocol.EVENT_ELIMINATED:
+	{"ship": TYPE_INT, "reason": TYPE_STRING, "lives": TYPE_INT, "cost": TYPE_INT},
 	NetProtocol.EVENT_RELAUNCH_VOTES:
 	{"ship": TYPE_INT, "voters": TYPE_ARRAY, "sessions": TYPE_ARRAY, "needed": TYPE_INT},
 	NetProtocol.EVENT_RELAUNCHED: {"ship": TYPE_INT, "lives": TYPE_INT},
@@ -185,8 +186,9 @@ static func scoreboard(rows: Array) -> Dictionary:
 
 
 ## lives: the relaunches the ship's side has left, -1 for unlimited.
-static func eliminated(ship: int, reason: String, lives: int) -> Dictionary:
-	return {"ship": ship, "reason": reason, "lives": lives}
+## cost: the credits a relaunch takes from the ship's purse (gp-10; 0 free).
+static func eliminated(ship: int, reason: String, lives: int, cost: int = 0) -> Dictionary:
+	return {"ship": ship, "reason": reason, "lives": lives, "cost": cost}
 
 
 static func relaunched(ship: int, lives: int) -> Dictionary:
