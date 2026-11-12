@@ -459,24 +459,17 @@ func test_every_joint_view_has_both_glance_cards() -> void:
 	assert_int(PartnerGlance.CARDS.size()).is_equal(30)
 
 
-# FT: FT-STN-010, FT-PAIR-007, FT-STN-005
-# The Crew page holds the station's request chips, Ping, Mark and its shares; each sends.
+# FT: FT-PAIR-007, FT-STN-005
+# The Crew page holds the station's shares and nothing else (C4: Ping and Mark are the
+# selection sheet's; ux-13: requests at the top of the view); each share sends.
 func test_crew_page_buttons_send() -> void:
-	var s: StationScreen = await _screen(Vector2i(844, 390), "engineering", LANDSCAPE, false)
+	var s: StationScreen = await _screen(Vector2i(844, 390), "relay", LANDSCAPE, false)
 	var page: CrewPage = CrewPage.new(s.focused_panel())
 	s.focused_panel().add_child(page)
 	page.refresh()
-	s.ctx.crew.select("contact", StationFixture.H2)
-	assert_object(page.button("ping")).is_not_null()
-	assert_object(page.button("mark")).is_not_null()
-	page.button("ping").pressed.emit()
-	assert_int(_sent(s, "ping").size()).is_equal(1)
-	page.button("mark").pressed.emit()
-	assert_int(_sent(s, "place_mark").size()).is_equal(1)
-	var chips: Array[ChipDef] = s.focused_panel().request_chips()
-	if not chips.is_empty():
-		page.button("chip", String(chips[0].id)).pressed.emit()
-		assert_int(_sent(s, "send_chip").size() + _sent(s, "command").size()).is_greater(0)
+	for kind: String in ["ping", "mark", "chip"]:
+		assert_object(page.button(kind)).override_failure_message(kind).is_null()
+	assert_array(s.common.shareable()).is_not_empty()
 	for id: StringName in s.common.shareable():
 		page.button("share", String(id)).pressed.emit()
 	assert_int(_sent(s, "share").size()).is_equal(s.common.shareable().size())

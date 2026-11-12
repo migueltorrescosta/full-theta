@@ -217,6 +217,10 @@ func test_touch_rules_on_every_page_both_ways() -> void:
 		s.rotate_banner.dismiss()
 		await _frames(2)
 		for i: int in p.pages.count():
+			# A Crew page with nothing to share has no tab (C4).
+			if not p.pages.shown(i):
+				assert_array(t.crew.entries()).is_empty()
+				continue
 			await _page(s, i)
 			var what: String = "%s %s" % [c[0], p.pages.title(i)]
 			_assert_touch_rules(s, what)

@@ -42,6 +42,9 @@ func _init(owner_panel: StationPanel = null) -> void:
 func _process(_delta: float) -> void:
 	if is_visible_in_tree():
 		refresh()
+	elif _read_inputs() != _inputs:
+		# Hidden (another page, or no tab while it has nothing): its tab still follows.
+		refresh()
 
 
 ## The buttons' entries: [kind, id, label], one "share" per data shortcut this pick may share.
@@ -57,12 +60,14 @@ func entries() -> Array:
 
 
 ## Rebuilds the buttons when the entries' inputs change, and updates their seconds left; the
-## text fit and the row snap follow a change of size or text only.
+## text fit and the row snap follow a change of size or text only. A page with no button has
+## no tab (PageHost.set_shown): an empty page is a dead end.
 func refresh() -> void:
 	var inputs: Array = _read_inputs()
 	if inputs != _inputs:
 		_inputs = inputs
 		_rebuild(entries())
+		_sync_tab()
 	for i: int in _shown.size():
 		var left: float = _left(_shown[i])
 		var text: String = str(_shown[i][2])
@@ -79,6 +84,12 @@ func refresh() -> void:
 		_fitted = fitted
 		_fit_text()
 		_snap_rows()
+
+
+func _sync_tab() -> void:
+	var host: PageHost = panel.pages if panel != null else null
+	if host != null:
+		host.set_shown(host.page_of(self), not _shown.is_empty())
 
 
 func _read_inputs() -> Array:

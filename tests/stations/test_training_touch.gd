@@ -33,6 +33,12 @@ const NOT_BUTTONS: Array[String] = [
 	"intent.route_clear",
 	"sci.short_active",
 	"touch.fullscreen_exit",
+	# The selection sheet's options: the sheet opens from the target's name (C4).
+	"intent.ping",
+	"sheet.mark_here",
+	# Rail actions shown only while they matter (C3): the lesson makes them matter.
+	"eng.touch.cause",
+	"eng.touch.claim",
 ]
 
 var _vp: SubViewport

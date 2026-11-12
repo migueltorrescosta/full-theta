@@ -174,11 +174,15 @@ func test_landscape_pages_and_persistent_zone() -> void:
 	# The radar covers the view: the HUD hides under it, and its foot stays above the band.
 	assert_bool(_panel.hud.visible).is_false()
 	assert_float(radar.end.y).is_less_equal(_ui().layout.right.get_global_rect().end.y)
-	_ui().pages.current = HelmTouch.PAGE_CREW
-	await _frames()
-	assert_bool(_panel.ring.is_visible_in_tree()).is_false()
-	assert_bool(_ui().crew.is_visible_in_tree()).is_true()
-	assert_bool(_panel.hud.visible).is_true()
+	# The Crew page has a tab only with something to share (C4).
+	var crew_tab: bool = _ui().pages.shown(HelmTouch.PAGE_CREW)
+	assert_bool(crew_tab).is_equal(not _ui().crew.entries().is_empty())
+	if crew_tab:
+		_ui().pages.current = HelmTouch.PAGE_CREW
+		await _frames()
+		assert_bool(_panel.ring.is_visible_in_tree()).is_false()
+		assert_bool(_ui().crew.is_visible_in_tree()).is_true()
+		assert_bool(_panel.hud.visible).is_true()
 
 
 # FT: FT-STN-005
