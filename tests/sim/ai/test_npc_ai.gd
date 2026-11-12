@@ -170,6 +170,11 @@ func test_retreats_below_hull_threshold() -> void:
 	var start: float = _distance(world)
 	var events: Array[SimEvent] = _run_until_mode(world, AiTable.Mode.RETREAT, 2)
 	assert_array(_mode_tags(events)).is_equal([&"retreat"])
+	# gp-17: the retreat's start tick is kept for the jump-out rule.
+	var switched: Array[SimEvent] = events.filter(
+		func(e: SimEvent) -> bool: return e.kind == &"ai_mode"
+	)
+	assert_int(world.ai.retreat_tick[1]).is_equal(switched[0].tick)
 	var fired: int = 0
 	var n: int = 0
 	while _distance(world) < start + 2000.0 and n < 30 * HZ:
@@ -296,7 +301,10 @@ func test_reset_keeps_ai_and_clears_mode() -> void:
 	assert_bool(world.ai.is_enabled(1)).is_true()
 	assert_float(world.ai.engage_range_max[1]).is_equal(3000.0)
 	assert_float(world.ai.fire_cone[1]).is_equal(0.05)
+	assert_float(world.ai.retreat_jump_after[1]).is_equal(45.0)
+	assert_float(world.ai.retreat_gone_factor[1]).is_equal(1.5)
 	assert_int(world.ai.mode[1]).is_equal(AiTable.Mode.HOLD)
+	assert_int(world.ai.retreat_tick[1]).is_equal(-1)
 	assert_int(world.ai.target[1]).is_equal(-1)
 
 
@@ -304,27 +312,26 @@ func test_reset_keeps_ai_and_clears_mode() -> void:
 # Sites wrap (D124), so a retreat has no edge: a raider 5 km short of the +X face,
 # retreating from a corvette 5 km behind it on -X (bow already on +X, hull at 20 %,
 # below its 25 % threshold), runs straight on across the seam. Every tick its offsets
-# stay in [-P/2, P/2); it crosses (its X becomes negative and then grows again); every
-# 10 s the minimum-image distance to the corvette is larger; and it escapes: the
-# corvette's faction loses it (sensors 20 km) and &"retreated" is emitted, within 180 s.
-func test_retreat_crosses_the_seam_and_escapes() -> void:
+# stay in [-P/2, P/2); it crosses (its X becomes negative and then grows again); and every
+# 10 s the minimum-image distance to the corvette is larger. A test copy of the raider never
+# counts as gone (gp-17's jump and range rules pushed out of reach), so it keeps running.
+func test_retreat_crosses_the_seam() -> void:
 	var world: SimWorld = SimWorld.new(23)
 	var half: float = 0.5 * world.kin.period
 	world.spawn_ship(_tough_corvette(), CORVETTE_FACTION, CubePoint.make(half - 10000.0, 0, 0))
 	var bow_out: Quaternion = Quaternion(Vector3.UP, -PI / 2.0)
-	world.spawn_npc(
-		TestDefs.raider_enemy(), RAIDER_FACTION, CubePoint.make(half - 5000.0, 0, 0), bow_out
-	)
+	var raider: NpcDef = TestDefs.raider_enemy().duplicate()
+	raider.retreat_gone_factor = 1000.0
+	raider.retreat_jump_after = 1000.0
+	world.spawn_npc(raider, RAIDER_FACTION, CubePoint.make(half - 5000.0, 0, 0), bow_out)
 	world.damage.health[world.damage.hull_row(1)] = 0.2 * world.defs[1].hull_max
 	var crossed: bool = false
-	var retreated: bool = false
 	var last: float = _distance(world)
 	var n: int = 0
-	while not retreated and n < 180 * HZ:
+	while n < 90 * HZ:
 		world.step()
 		n += 1
-		for e: SimEvent in world.drain_events():
-			retreated = retreated or (e.kind == &"retreated" and e.ship_id == 1)
+		world.drain_events()
 		var k: Kinematics = world.kin
 		for v: float in [k.pos_x[1], k.pos_y[1], k.pos_z[1]]:
 			assert_bool(v >= -half and v < half).override_failure_message(str(v)).is_true()
@@ -334,7 +341,6 @@ func test_retreat_crosses_the_seam_and_escapes() -> void:
 			assert_float(_distance(world)).override_failure_message(msg).is_greater(last)
 			last = _distance(world)
 	assert_bool(crossed).is_true()
-	assert_bool(retreated).override_failure_message("no escape in 180 s").is_true()
 	assert_int(world.ai.mode[1]).is_equal(AiTable.Mode.RETREAT)
-	assert_bool(KnowledgeSystem.is_detected(world, CORVETTE_FACTION, 1)).is_false()
+	assert_int(world.ships.status[1]).is_equal(ShipStateTable.Status.IN_PLAY)
 	assert_float(world.kin.pos_x[1]).is_between(-half, 0.0)

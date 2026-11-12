@@ -25,7 +25,8 @@ extends RefCounted
 ## - RETREAT: hull below retreat_hull_fraction: face a point straight away from the
 ##   threat and run at full throttle; with no threat detected, keep running on the same
 ##   bearing. The cube wraps (FT-SIM-035, D229), so there is no edge: the ship runs straight
-##   on across the seams until hostiles no longer detect it (D120).
+##   on across the seams until it is gone (OutcomeSystem: it jumps out, or leaves every
+##   hostile ship behind, gp-17).
 ## - A hostile decoy within its decoy_range (ProbeSystem.decoy_near, gp-13): while the ship
 ##   has a target it attacks the decoy as above instead of the target.
 ## Mode changes emit &"ai_mode": ship_id the AI ship, other_id its target (or -1),
@@ -122,6 +123,7 @@ static func _think(world: SimWorld, id: int, candidates: PackedInt32Array) -> vo
 	var ai: AiTable = world.ai
 	if mode != ai.mode[id]:
 		ai.mode[id] = mode
+		ai.retreat_tick[id] = world.tick if mode == AiTable.Mode.RETREAT else -1
 		world.emit(&"ai_mode", id, target, mode, Vector3.ZERO, AiTable.MODE_NAMES[mode])
 	ai.target[id] = target
 	match mode:
@@ -242,7 +244,7 @@ static func _off(latched: Vector3, wanted: Vector3) -> bool:
 ## RETREAT: face a point RETREAT_POINT_DISTANCE straight away from the threat (on along
 ## the current retreat point's bearing when no threat is detected; nothing without one)
 ## and run at full throttle. The cube wraps, so the ship crosses the seams and keeps going
-## (FT-SIM-035, D124) until hostiles lose it (D120).
+## (FT-SIM-035, D124) until it is gone (gp-17).
 static func _retreat(world: SimWorld, id: int, threat: int) -> void:
 	var kin: Kinematics = world.kin
 	var helm: HelmTable = world.helm

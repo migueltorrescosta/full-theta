@@ -315,3 +315,9 @@ Every provisional value, once. Code comments that call a value provisional point
   - `bounty`: `ship` the killer, `other` the raider, `value` the credits. `salvage`: `ship` the collector, `other` the wrecked ship, `value` the credits. Comms and the Captain toast them.
   - `eliminated` gains `cost` (int): the credits a relaunch takes from the ship's purse (co-op, RunDef.relaunch_cost; 0 elsewhere). Its `lives` is 0 when the purse can't pay, so no relaunch is offered.
   - The `debrief` encounter rows gain `limped` (bool): the ship limped home from it.
+
+### Skip the quiet gap (gp-07, NetSkipGap)
+
+- The director announces each quiet gap of a crew faction in the story flag `director.gap.<faction>` (the tick the gap ends, 0 for none). While it is set, SkipGap `{ready}` sets or clears the sender's Ready. Voters are the connected sessions, not bots (client kind `bot`), holding a station or the Captain seat on a ship of the faction in play; viewers don't vote. When every voter is Ready the server submits `SetFlagCommand` `director.skip.<faction>` = the tick (logged, so a replay holds) and the director picks the next encounter at once. Ready clears when the gap ends.
+- Refusals (`request_rejected`, request 51): `no_gap` when the sender's fleet has no gap on, `not_crew` from a non-voter.
+- Event `gap` `{faction, ends_at, ready, voters}` (`ends_at` a sim tick, 0 once the gap is over; `ready` and `voters` session ids) to every session with a pick on a ship of the faction, whenever it changes.

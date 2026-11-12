@@ -80,6 +80,8 @@ var critical: CriticalBanner
 var chip_strip: ChipStrip
 var share_bar: ShareBar
 var training: TrainingBanner
+## The quiet gap's Ready card (gp-07).
+var gap: GapBanner
 ## Makes the panel of a station; tests swap it (default StationRegistry.make).
 var panel_factory: Callable = StationRegistry.make
 ## Controls of the shell that take the input while visible (Settings, the outcome card).
@@ -177,6 +179,9 @@ func setup(context: StationContext) -> void:
 	training.station = stations[0]
 	add_child(training)
 	training.setup(ctx)
+	gap = GapBanner.new()
+	add_child(gap)
+	gap.setup(ctx)
 	Input.joy_connection_changed.connect(_on_joy_changed)
 	layout.build_tabs()
 	focus(0)

@@ -12,6 +12,8 @@ var api: ScenarioApi
 var encounter: int = -1
 var site: int = -1
 var strength: float = 1.0
+## Further start parameters the Director passes (the finale's escorts and time_limit).
+var params: Dictionary = {}
 ## Ships the encounter holds (default: every crewed ship).
 var ships: PackedInt32Array = PackedInt32Array([0])
 var _started: bool = false
@@ -55,7 +57,9 @@ func tick() -> void:
 	if view.result == Scenario.Result.ACTIVE:
 		if not _started:
 			_started = true
-			scenario.start(api, {"site": site, "ships": view.ships, "strength": strength})
+			var start: Dictionary = {"site": site, "ships": view.ships, "strength": strength}
+			start.merge(params)
+			scenario.start(api, start)
 		scenario.step(api)
 		var result: int = scenario.finished(api)
 		if result != Scenario.Result.ACTIVE:

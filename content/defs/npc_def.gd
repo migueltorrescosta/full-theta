@@ -18,6 +18,12 @@ extends Resource
 @export var retreat_hull_fraction: float = 0.0
 ## Half-angle off the bow within which the AI fires (rad, in (0, pi]).
 @export var fire_cone: float = 0.0
+## A ship in retreat is gone from play (RETREATED) this long after the retreat began: it
+## jumps out (s, gp-17, D9).
+@export var retreat_jump_after: float = 45.0
+## ... or once every live ship of a hostile faction is farther than this many times
+## engage_range_max (dimensionless, gp-17, D9).
+@export var retreat_gone_factor: float = 1.5
 
 
 func validate() -> Array[String]:
@@ -35,4 +41,7 @@ func validate() -> Array[String]:
 	if not (retreat_hull_fraction > 0.0 and retreat_hull_fraction < 1.0):
 		errors.append("retreat_hull_fraction: must be in (0, 1), got %s" % retreat_hull_fraction)
 	DefCheck.in_range_open_low(errors, "fire_cone", fire_cone, 0.0, PI)
+	DefCheck.positive(errors, "retreat_jump_after", retreat_jump_after)
+	if not retreat_gone_factor >= 1.0:
+		errors.append("retreat_gone_factor: must be at least 1, got %s" % retreat_gone_factor)
 	return errors

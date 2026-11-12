@@ -7,8 +7,9 @@ extends GdUnitTestSuite
 const HZ: int = SimWorld.HZ
 
 
-## The fixture's world on a copy of m3_run with only enemy_wave, `encounters` encounters a
-## run and short gaps and arrival timeouts, so a whole fleet run fits in a test.
+## The fixture's world on a copy of m3_run with only enemy_wave (so no finale), `encounters`
+## encounters a run, no strength ramp and short gaps and arrival timeouts, so a whole fleet run
+## fits in a test.
 static func short_run(mode: GameRules.Mode, n: int, encounters: int) -> FleetFixture:
 	var f: FleetFixture = FleetFixture.make(mode, n)
 	var run: RunDef = f.setup.run_def.duplicate()
@@ -16,6 +17,9 @@ static func short_run(mode: GameRules.Mode, n: int, encounters: int) -> FleetFix
 	director.gap = 1.0
 	director.arrival_timeout = 1.0
 	director.spawn_site_every = 0.0
+	# No strength ramp (gp-05): the counts below are the fleet scaling alone.
+	director.ramp_start = 1.0
+	director.ramp_end = 1.0
 	run.director = director
 	run.min_encounters = encounters
 	run.max_encounters = encounters
@@ -132,14 +136,13 @@ func test_race_plays_one_list_at_own_copies() -> void:
 	var again: FleetFixture = FleetFixture.make(GameRules.Mode.RACE, 2).with_director()
 	again.step(1)
 	assert_array(Array(again.director.race_plan())).is_equal(Array(plan))
-	# Easy's budget fits fewer race encounters than a run needs: the plan still has enough.
+	# A budget that fits fewer race encounters than a run needs: the plan still has enough
+	# (the cheapest over the budget, then the finale, gp-06).
 	var run: RunDef = f.setup.run_def
+	var tight: DirectorDef = run.director.duplicate()
+	tight.budget_per_ship = {&"easy": 1}
 	var easy: Director = Director.new(
-		run.director,
-		&"easy",
-		ScenarioCatalogue.load_for(run.scenarios),
-		1,
-		M1Encounter.PLAYER_FACTION
+		tight, &"easy", ScenarioCatalogue.load_for(run.scenarios), 1, M1Encounter.PLAYER_FACTION
 	)
 	var keys: PackedStringArray = PackedStringArray(["vesper_beacon"])
 	var limits: Vector2i = Vector2i(run.min_encounters, run.max_encounters)

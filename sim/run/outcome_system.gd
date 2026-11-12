@@ -4,9 +4,11 @@ extends RefCounted
 ## after damage, and writes only ShipStateTable. In ship id order:
 ## 1. A ship in play whose kin.alive is 0 becomes DESTROYED (DamageSystem already
 ##    emitted &"destroyed").
-## 2. A live AI ship in RETREAT mode that no live ship of a faction hostile to it
-##    detects any more has escaped: RETREATED, and &"retreated" (ship_id the ship).
-##    Retreat means leaving every hostile sensor range (D120).
+## 2. A live AI ship in RETREAT mode is gone (gp-17, D9, amending D120): RETREATED, and
+##    &"retreated" (ship_id the ship), once it has been retreating for its
+##    retreat_jump_after (it jumps out), or once every live ship of a faction hostile to it
+##    is farther than retreat_gone_factor x its engage_range_max. Sensors play no part, so a
+##    blinded crew does not let it go at once (R10-13); neither way counts as a kill.
 ## 3. Each crewed ship (not AI-flown) without an outcome gets one: LOSS when it is
 ##    destroyed or abandoned (per-ship elimination, D30: the other ships carry on);
 ##    WIN when it is in play and every ship of a faction hostile to it is destroyed or
@@ -259,17 +261,21 @@ static func _killer(world: SimWorld, id: int) -> int:
 	return -1
 
 
-## An AI ship in RETREAT that no live ship of a hostile faction detects.
+## An AI ship in RETREAT that has jumped out (retreating retreat_jump_after or longer) or left
+## every live ship of a hostile faction beyond retreat_gone_factor x engage_range_max (gp-17).
 static func _escaped(world: SimWorld, id: int) -> bool:
-	if not world.ai.is_enabled(id) or world.ai.mode[id] != AiTable.Mode.RETREAT:
+	var ai: AiTable = world.ai
+	if not ai.is_enabled(id) or ai.mode[id] != AiTable.Mode.RETREAT:
 		return false
+	if world.tick - ai.retreat_tick[id] >= SimRate.ticks(ai.retreat_jump_after[id]):
+		return true
+	var reach: float = ai.retreat_gone_factor[id] * ai.engage_range_max[id]
 	var faction: int = world.faction_of(id)
 	for o: int in world.ship_count():
-		if not world.kin.is_alive(o):
+		if o == id or not world.kin.is_alive(o):
 			continue
-		var f: int = world.faction_of(o)
-		if world.is_hostile(faction, f):
-			if KnowledgeSystem.is_detected(world, f, id):
+		if world.is_hostile(faction, world.faction_of(o)):
+			if world.kin.relative(id, o).length() <= reach:
 				return false
 	return true
 

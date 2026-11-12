@@ -14,7 +14,8 @@ extends RefCounted
 ## &"toggles" when the session's data-shortcut set changed, &"shares" when a
 ## shortcut was shared or ran out, &"lanes" when the approach lanes changed (F); and from
 ## the multi-ship events (#11) &"fleet", &"scoreboard", &"eliminated", &"relaunch" (votes
-## or a relaunch), &"handover" and &"game_over".
+## or a relaunch), &"handover" and &"game_over"; &"gap" when the quiet gap or its Ready
+## count changed (gp-07).
 signal changed(what: StringName)
 ## A toast to show: translation key and format arguments (I18n strings).
 signal toast(key: String, args: Dictionary)
@@ -123,6 +124,8 @@ var relaunch_votes: Dictionary = {}
 var handover: Dictionary = {}
 ## The `game_over` payload, {} while the session goes on.
 var game_over: Dictionary = {}
+## The fleet's quiet gap (NetSkipGap, gp-07): {faction, ends_at, ready, voters}, {} outside one.
+var gap: Dictionary = {}
 
 var _filter: ShortcutFilter = null
 var _filter_key: String = ""
@@ -528,6 +531,9 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 		NetProtocol.EVENT_GAME_OVER:
 			game_over = p
 			changed.emit(&"game_over")
+		NetProtocol.EVENT_GAP:
+			gap = p if int(p.get("ends_at", 0)) > 0 else {}
+			changed.emit(&"gap")
 		NetProtocol.EVENT_TAKEOVER:
 			_on_takeover(p)
 		NetProtocol.EVENT_REQUEST_REJECTED, NetProtocol.EVENT_COMMAND_REJECTED:
@@ -644,7 +650,24 @@ func reset_run() -> void:
 	abandoned.erase(ship)
 	ship_outcome.erase(ship)
 	debrief.erase(ship)
+	gap = {}
 	changed.emit(&"reset")
+
+
+## Whether this session votes on the quiet gap now (gp-07), and whether it is Ready.
+func votes_on_gap() -> bool:
+	return _lists(gap.get("voters", []), session)
+
+
+func gap_ready() -> bool:
+	return _lists(gap.get("ready", []), session)
+
+
+static func _lists(ids: Variant, id: int) -> bool:
+	for v: Variant in ids:
+		if int(v) == id:
+			return true
+	return false
 
 
 ## The multi-ship events that only update the model (FleetMessages).

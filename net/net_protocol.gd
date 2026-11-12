@@ -171,6 +171,9 @@ const EVENT_ELIMINATED: String = "eliminated"
 const EVENT_RELAUNCH_VOTES: String = "relaunch_votes"
 const EVENT_RELAUNCHED: String = "relaunched"
 const EVENT_GAME_OVER: String = "game_over"
+## The director's quiet gap and who is Ready to skip it (NetSkipGap, gp-07): {faction,
+## ends_at (tick, 0: no gap), ready, voters (session ids)}, to the sessions on the faction's ships.
+const EVENT_GAP: String = "gap"
 ## A ship-computer or NPC line to play (VoiceService).
 const EVENT_VOICE_LINE: String = "voice_line"
 

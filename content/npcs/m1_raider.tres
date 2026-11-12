@@ -12,3 +12,5 @@ engage_range_min = 800.0
 engage_range_max = 3000.0
 retreat_hull_fraction = 0.25
 fire_cone = 0.05
+retreat_jump_after = 45.0
+retreat_gone_factor = 1.5
