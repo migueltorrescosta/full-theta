@@ -202,7 +202,7 @@ func test_help_ready_on_the_net_threads_copy() -> void:
 	ApiFixture.step(w, 2)
 	w.spawn_npc(TestDefs.raider_enemy(), 2, CubePoint.of(ApiFixture.ALPHA + Vector3(0, 0, -3000)))
 	for i: int in SimWorld.HZ:
-		if ProbeSystem.nearest_hostile(w, 0) >= 0:
+		if CallHelp.can_call(w, 0):
 			break
 		w.step()
 	assert_bool(CallHelp.can_call(w, 0)).is_true()
