@@ -424,6 +424,7 @@
     "comms.card.lane_run": {"en": "Fly the lane home", "pt_PT": "Voltar pela rota", "it": "Tornare per la rotta"},
     "director.reason.budget_fits": {"en": "Picked an encounter that fits: {left} danger left", "pt_PT": "Escolheu um encontro que cabe: restam {left} de perigo", "it": "Scelto un incontro adatto: restano {left} di pericolo"},
     "director.reason.low_hull": {"en": "Hull is low, so a calmer encounter ({left} danger left)", "pt_PT": "Casco fraco, por isso um encontro mais calmo (restam {left} de perigo)", "it": "Scafo basso, quindi un incontro più calmo (restano {left} di pericolo)"},
+    "director.reason.crew_pick": {"en": "The crew picked this one: {left} danger left", "pt_PT": "A tripulação escolheu este: restam {left} de perigo", "it": "L'equipaggio ha scelto questo: restano {left} di pericolo"},
     "director.reason.no_fit": {"en": "Nothing fits the danger left", "pt_PT": "Nada cabe no perigo que resta", "it": "Nulla rientra nel pericolo rimasto"},
     "director.reason.site_pool": {"en": "No free site, opened {site}", "pt_PT": "Sem local livre, abriu {site}", "it": "Nessun sito libero, aperto {site}"},
     "director.reason.periodic": {"en": "Opened {site} on schedule", "pt_PT": "Abriu {site} conforme o calendário", "it": "Aperto {site} come da programma"},
