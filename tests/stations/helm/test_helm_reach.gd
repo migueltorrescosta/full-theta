@@ -44,9 +44,6 @@ func before() -> void:
 
 
 func after_test() -> void:
-	SafeArea.simulate([])
-	LayoutMode.forced = -1
-	RotateBanner.dismissed_here = false
 	if FileAccess.file_exists(SETTINGS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
@@ -76,8 +73,8 @@ func _open(size: Vector2i, insets: Array) -> void:
 	ctx.interp.revision += 1
 	await _frames()
 	var sink: Callable = _ui().touch.sink
-	_ui().touch.sink = func(ev: Dictionary) -> void:
-		_fired.append(str(ev["id"]))
+	_ui().touch.sink = func(ev: IntentEvent) -> void:
+		_fired.append(ev.id)
 		sink.call(ev)
 
 

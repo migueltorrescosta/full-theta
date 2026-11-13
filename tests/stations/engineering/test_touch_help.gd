@@ -9,11 +9,6 @@ func before() -> void:
 	I18n.apply("en")
 
 
-func after_test() -> void:
-	LayoutMode.forced = -1
-
-
-# FT: FT-STN-012, FT-STN-005
 func test_pictures_number_every_control() -> void:
 	# A view box may reach into the band (it is drawn there, P28-Band).
 	var safe: Rect2 = Rect2(47.0, 8.0, 750.0, 382.0)

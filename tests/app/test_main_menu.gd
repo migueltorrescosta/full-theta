@@ -12,7 +12,6 @@ func after_test() -> void:
 		if FileAccess.file_exists(p):
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(p))
 	get_tree().root.content_scale_factor = 1.0
-	SafeArea.simulate([])
 
 
 func _menu() -> MainMenu:

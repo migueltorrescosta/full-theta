@@ -161,13 +161,13 @@ func test_escape_opens_the_menu() -> void:
 	var s: ClientShell = await _on_station(false)
 	var menu: SettingsScreen = s.settings_screen
 	assert_bool(menu.visible).is_false()
-	s.screen.dispatch({"id": "menu", "target": "screen", "pressed": true})
+	s.screen.dispatch(IntentEvent.of("menu", true, IntentTable.KBM, "screen"))
 	assert_bool(menu.visible).is_true()
 	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_GAME)
 	assert_bool(s.screen.blocked()).is_true()
 	menu.open(SettingsScreen.TAB_SETTINGS)
 	menu.close()
-	s.screen.dispatch({"id": "menu", "target": "screen", "pressed": true})
+	s.screen.dispatch(IntentEvent.of("menu", true, IntentTable.KBM, "screen"))
 	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_SETTINGS)
 	menu.close()
 	assert_bool(s.screen.blocked()).is_false()
@@ -179,11 +179,11 @@ func test_help_key_opens_the_controls_tab() -> void:
 	var s: ClientShell = await _on_station(false)
 	var menu: SettingsScreen = s.settings_screen
 	menu.open(SettingsScreen.TAB_SETTINGS)
-	s.screen.dispatch({"id": "overlay", "target": "screen", "pressed": true})
+	s.screen.dispatch(IntentEvent.of("overlay", true, IntentTable.KBM, "screen"))
 	assert_bool(menu.visible).is_true()
 	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_CONTROLS)
 	assert_array(menu.controls.rows()).is_not_empty()
-	s.screen.dispatch({"id": "overlay", "target": "screen", "pressed": true})
+	s.screen.dispatch(IntentEvent.of("overlay", true, IntentTable.KBM, "screen"))
 	assert_bool(menu.visible).is_false()
 
 
@@ -216,8 +216,8 @@ func test_the_controls_tab_has_content_however_the_menu_opens() -> void:
 		await _pick(s, seat)
 		# Esc first closes the first seat's card (C7), then opens the menu.
 		if s.screen.first_seat_card() != null:
-			s.screen.dispatch({"id": "menu", "target": "screen", "pressed": true})
-		s.screen.dispatch({"id": "menu", "target": "screen", "pressed": true})
+			s.screen.dispatch(IntentEvent.of("menu", true, IntentTable.KBM, "screen"))
+		s.screen.dispatch(IntentEvent.of("menu", true, IntentTable.KBM, "screen"))
 		assert_bool(menu.visible).is_true()
 		menu.tabs.current_tab = menu.tabs.get_node(SettingsScreen.TAB_CONTROLS).get_index()
 		var sections: Array = menu.controls.rows().map(

@@ -35,8 +35,6 @@ func before() -> void:
 
 
 func after_test() -> void:
-	SafeArea.simulate([])
-	LayoutMode.forced = -1
 	if FileAccess.file_exists(SETTINGS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
@@ -177,7 +175,7 @@ func test_rail_taps_send_the_key_intents() -> void:
 			var keys: StationScreen = await _screen(Vector2i(1280, 720), [])
 			_rare(keys)
 			var target: String = "screen" if id == "claim" else "engineering"
-			keys.dispatch({"id": id, "pressed": true, "device": IntentTable.KBM, "target": target})
+			keys.dispatch(IntentEvent.of(id, true, IntentTable.KBM, target))
 			var by_touch: Array = StationFixture.sent(touch.ctx).sent
 			assert_array(by_touch).override_failure_message("%s: %s" % [id, by_touch]).is_equal(
 				StationFixture.sent(keys.ctx).sent

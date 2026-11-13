@@ -446,7 +446,7 @@ func _partner_intent(intent: String) -> void:
 	if screen.panels.size() != 2 or intent == "":
 		return
 	var other: int = 1 - screen.focus_index
-	var ev: Dictionary = {"id": intent, "pressed": true, "target": screen.stations[other]}
+	var ev: IntentEvent = IntentEvent.of(intent, true, IntentTable.KBM, screen.stations[other])
 	screen.panels[other].handle_intent(ev)
 
 

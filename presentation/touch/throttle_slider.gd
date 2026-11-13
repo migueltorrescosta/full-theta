@@ -65,7 +65,7 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 		if t.pressed and _touch < 0 and not _mouse:
 			_touch = t.index
-			TouchInput.held += 1
+			TouchInput.hold(self)
 			_apply(value_at(t.position.y))
 		elif not t.pressed and t.index == _touch:
 			_release()
@@ -99,8 +99,7 @@ func _exit_tree() -> void:
 
 
 func _release() -> void:
-	if _touch >= 0:
-		TouchInput.held = maxi(TouchInput.held - 1, 0)
+	TouchInput.release(self)
 	_touch = -1
 	_mouse = false
 

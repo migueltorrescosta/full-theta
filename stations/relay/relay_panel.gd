@@ -64,7 +64,7 @@ func _setup() -> void:
 	clip_contents = true
 	in_frame = true
 	selection_extras = [
-		[tr("intent.route"), func() -> void: handle_intent({"id": "route", "pressed": true})],
+		[tr("intent.route"), func() -> void: handle_intent(IntentEvent.of("route"))],
 		[tr("intent.mark_send"), open_send],
 	]
 	map = RelayMap.new()
@@ -240,11 +240,11 @@ func refresh() -> void:
 		phone.update()
 
 
-func handle_intent(ev: Dictionary) -> bool:
-	if not bool(ev.get("pressed", true)):
+func handle_intent(ev: IntentEvent) -> bool:
+	if not ev.pressed:
 		return false
 	var handled: bool = true
-	match str(ev["id"]):
+	match ev.id:
 		"mark_delete":
 			var slot: int = _selected_mark()
 			if slot < 0:
@@ -273,9 +273,9 @@ func handle_intent(ev: Dictionary) -> bool:
 		"mark_send":
 			handled = _send_selected(hud.send_target())
 		"accept", "decline":
-			handled = _answer_oldest(str(ev["id"]) == "accept")
+			handled = _answer_oldest(ev.id == "accept")
 		_:
-			handled = _main_view(str(ev["id"]))
+			handled = _main_view(ev.id)
 	return handled
 
 

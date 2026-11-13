@@ -17,9 +17,6 @@ func before() -> void:
 
 
 func after_test() -> void:
-	SafeArea.simulate([])
-	LayoutMode.forced = -1
-	RotateBanner.dismissed_here = false
 	if FileAccess.file_exists(SETTINGS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
@@ -281,19 +278,17 @@ func test_overlay_keeps_the_touch_rules() -> void:
 # Each rail button sends exactly what its key sends.
 func test_rail_buttons_send_the_key_intents() -> void:
 	var cases: Array = [
-		["hail", {"id": "comms_hail", "target": "comms"}],
-		["accept", {"id": "accept", "target": "screen"}],
-		["decline", {"id": "decline", "target": "screen"}],
-		["claim", {"id": "claim", "target": "screen"}],
-		["hold_fire", {"id": "request", "target": "screen"}],
+		["hail", IntentEvent.of("comms_hail", true, IntentTable.KBM, "comms")],
+		["accept", IntentEvent.of("accept", true, IntentTable.KBM, "screen")],
+		["decline", IntentEvent.of("decline", true, IntentTable.KBM, "screen")],
+		["claim", IntentEvent.of("claim", true, IntentTable.KBM, "screen")],
+		["hold_fire", IntentEvent.of("request", true, IntentTable.KBM, "screen")],
 	]
 	for c: Array in cases:
 		var touch: StationScreen = await _screen(SIDEWAYS, LANDSCAPE)
 		(touch.focused_panel() as CommsPanel)._buttons[c[0]].pressed.emit()
 		var keys: StationScreen = await _screen(SIDEWAYS, LANDSCAPE)
-		var ev: Dictionary = c[1].duplicate()
-		ev.merge({"pressed": true, "device": IntentTable.KBM})
-		keys.dispatch(ev)
+		keys.dispatch(c[1])
 		var by_touch: Array = StationFixture.sent(touch.ctx).sent
 		assert_array(by_touch).override_failure_message("%s: %s" % [c[0], by_touch]).is_not_empty()
 		assert_array(by_touch).is_equal(StationFixture.sent(keys.ctx).sent)
@@ -321,7 +316,7 @@ func test_pages_follow_the_selection_and_badge_a_waiting_hail() -> void:
 	var s: StationScreen = await _screen(SIDEWAYS, LANDSCAPE)
 	var p: CommsPanel = s.focused_panel()
 	assert_bool(p.pages.badge(CommsPanel.Page.HAILS)).is_true()
-	s.dispatch({"id": "comms_next_column", "target": "comms", "pressed": true})
+	s.dispatch(IntentEvent.of("comms_next_column", true, IntentTable.KBM, "comms"))
 	assert_int(p.pages.current).is_equal(CommsPanel.Page.CONTRACTS)
 	assert_int(p.board.column_shown()).is_equal(CommsPanel.Page.CONTRACTS)
 	p.board._swipe(1)

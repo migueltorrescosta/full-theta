@@ -68,16 +68,8 @@ func _sci(s: StationScreen) -> SciencePanel:
 	return s.panels[s.stations.find("science")] as SciencePanel
 
 
-func _ev(id: String, device: String, s: StationScreen) -> Dictionary:
-	return {
-		"id": id,
-		"group": IntentTable.row(id)["group"],
-		"target": IntentTable.target(id, device, s.focused_station(), s.stations),
-		"kind": IntentTable.row(id)["kind"],
-		"pressed": true,
-		"value": 1.0,
-		"device": device,
-	}
+func _ev(id: String, device: String, s: StationScreen) -> IntentEvent:
+	return IntentEvent.routed(id, device, true, s.focused_station(), s.stations)
 
 
 func _cmds(s: StationScreen, kind: String) -> Array:

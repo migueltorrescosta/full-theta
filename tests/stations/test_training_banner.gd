@@ -52,7 +52,9 @@ func test_next_sends_the_command_for_the_focused_station_and_the_key_presses_it(
 	screen.training.refresh()
 	assert_bool(screen.training.visible).is_true()
 	(
-		assert_bool(screen.dispatch({"id": "training_next", "target": "screen", "pressed": true}))
+		assert_bool(
+			screen.dispatch(IntentEvent.of("training_next", true, IntentTable.KBM, "screen"))
+		)
 		. is_true()
 	)
 	assert_array(rec.sent).has_size(1)

@@ -149,9 +149,9 @@ func _mode_changed() -> void:
 	pass
 
 
-## A station intent event (InputMatcher's dictionary) routed to this panel; return true
+## A station intent event (InputMatcher's IntentEvent) routed to this panel; return true
 ## when handled. Axis intents are polled instead: ctx.matcher.axis(id).
-func handle_intent(_event: Dictionary) -> bool:
+func handle_intent(_event: IntentEvent) -> bool:
 	return false
 
 

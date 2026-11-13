@@ -5,11 +5,6 @@ extends GdUnitTestSuite
 # FT: FT-STN-005
 
 
-func after_test() -> void:
-	SafeArea.simulate([])
-	LayoutMode.forced = -1
-
-
 func _host(size: Vector2i) -> Control:
 	var vp: SubViewport = auto_free(SubViewport.new())
 	vp.size = size

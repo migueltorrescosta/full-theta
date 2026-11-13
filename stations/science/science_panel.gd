@@ -706,11 +706,11 @@ func _on_sim_event(kind: StringName, p: Dictionary) -> void:
 # --- Input. ---
 
 
-func handle_intent(ev: Dictionary) -> bool:
-	if not bool(ev.get("pressed", true)):
+func handle_intent(ev: IntentEvent) -> bool:
+	if not ev.pressed:
 		return false
 	var minigame: int = int(block().get("minigame", MINIGAME_NONE))
-	var id: String = str(ev["id"])
+	var id: String = ev.id
 	if minigame == MINIGAME_SCAN and id == "accept":
 		scan_game.submit()
 		return true

@@ -23,8 +23,6 @@ func before() -> void:
 
 
 func after_test() -> void:
-	SafeArea.simulate([])
-	RotateBanner.dismissed_here = false
 	if FileAccess.file_exists(SETTINGS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
@@ -236,7 +234,7 @@ func test_taps_send_what_the_keys_send() -> void:
 		var by_tap: Array = sent.duplicate(true)
 		sent.clear()
 		_given(s, pair[2])
-		p.handle_intent({"id": pair[1], "pressed": true})
+		p.handle_intent(IntentEvent.of(pair[1]))
 		assert_array(sent).override_failure_message(pair[0]).is_equal(by_tap)
 		assert_array(by_tap).override_failure_message(pair[0]).is_not_empty()
 
