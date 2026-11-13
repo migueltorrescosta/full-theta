@@ -159,6 +159,11 @@ func skip_gap(ready: bool) -> void:
 	_call(&"skip_gap", [ready])
 
 
+## Picks the next site from the quiet gap's offers (w-bzx, the Captain or Comms).
+func pick_site(offer: int) -> void:
+	_call(&"site_pick", [offer])
+
+
 ## "Run again" after the outcome (D178); the host's vote resets at once.
 func run_again(ship: int, vote: bool) -> void:
 	_call(&"run_again", [ship, vote])

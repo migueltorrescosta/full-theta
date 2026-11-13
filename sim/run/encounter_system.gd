@@ -22,8 +22,17 @@ extends RefCounted
 ##    anywhere (a dock after the crippling) within limp_home_time of that, it has limped
 ##    home, and a jump on the way there is no flee: its bit joins limped_mask,
 ##    &"limped_home" is emitted and the encounter ends PARTIAL, so its accepted cards pay
-##    RunDef.partial_pay (the scenarios' end()). Later, docking is nothing special.
-## 4. A ship destroyed or abandoned leaves the encounter as a loss. When every ship has
+##    RunDef.partial_pay (the scenarios' end()).
+## 4. In an ACTIVE encounter, a crewed ship in play that is docked anywhere (and did not limp
+##    home in step 3) while a live ship of a hostile faction other than Factions.DEBRIS,
+##    spawned since the encounter opened, is in the fight (within the docked ship's
+##    sensor_range of it or of the encounter's site, so another encounter's hostiles
+##    elsewhere don't count) is out of the fight (w-ckm): it leaves the
+##    encounter as fled (&"fled", other_id the watcher or -1), charged the flee cost only
+##    when a hostile sees it (hostile_seeing, D233). Docking doesn't stop the clock: the rest
+##    of a fleet fights on, and a lone ship's encounter ends FLED (step 5), so a finale sat
+##    out at a dock uses a try. Travel legs, with only debris, are unaffected.
+## 5. A ship destroyed or abandoned leaves the encounter as a loss. When every ship has
 ##    left (lost or fled) the encounter ends LOST, or FLED when none was lost.
 ## A scenario ends an encounter itself with EndEncounterCommand (finish()). The run is won
 ## once the director has closed it for a crewed ship (FinishShipCommand, after at least
@@ -47,6 +56,7 @@ static func step(world: SimWorld) -> void:
 			_check_flee(world, id, jumped)
 			if _check_limp(world, id):
 				continue
+			_check_docked(world, id)
 		_check_losses(world, id)
 
 
@@ -137,13 +147,23 @@ static func _check_flee(world: SimWorld, id: int, jumped: Dictionary[int, bool])
 				_flee(world, id, ship, ships.limp_seen_by[ship])
 
 
-## The ship has fled (D233): marked, out of the encounter, charged.
+## The ship has fled (D233): marked, out of the encounter, charged when a hostile saw it.
 static func _flee(world: SimWorld, id: int, ship: int, seen_by: int) -> void:
 	world.encounters.fled_mask[id] |= 1 << ship
 	world.ships.fled_count[ship] += 1
 	_leave(world, ship)
 	world.emit(&"fled", ship, seen_by, id, Vector3.ZERO, _scenario(world, id))
-	_charge_flee(world, ship, seen_by)
+	if seen_by >= 0:
+		_charge_flee(world, ship, seen_by)
+
+
+## Docked ships out of the fight (step 4, w-ckm).
+static func _check_docked(world: SimWorld, id: int) -> void:
+	for ship: int in _ships(world.encounters.ships_mask[id]):
+		if world.ships.encounter[ship] != id or not world.is_crew_in_play(ship):
+			continue
+		if world.helm.docked_site[ship] >= 0 and hostile_seeing(world, ship, false) >= 0:
+			_flee(world, id, ship, hostile_seeing(world, ship))
 
 
 ## Crippling and limping home (step 3); true when a ship limped home and ended the encounter.
@@ -230,20 +250,36 @@ static func _leave(world: SimWorld, ship: int) -> void:
 	world.ships.encounters_done[ship] += 1
 
 
-## The id of a live ship of a faction hostile to the ship's that detects it, or -1.
-static func hostile_seeing(world: SimWorld, ship: int) -> int:
+## The first live ship spawned since the ship's encounter opened (w-fng: leftovers of older
+## encounters, D326, and the travel legs they sit on don't count) of a faction hostile to the
+## ship's that detects it (D233), or -1. With need_detect false (step 4, w-ckm), instead one
+## of a faction other than Factions.DEBRIS in the fight, seen or not: within the ship's
+## sensor_range of the ship or of its encounter's site.
+static func hostile_seeing(world: SimWorld, ship: int, need_detect: bool = true) -> int:
 	var faction: int = world.faction_of(ship)
-	# Only ships spawned since the ship's encounter opened can see it go (w-fng): leftovers
-	# of older encounters (D326) and the travel legs they sit on don't make a flee.
 	var e: int = world.ships.encounter[ship]
 	var first: int = world.encounters.npc_floor[e] if e >= 0 else 0
+	var reach: float = world.defs[ship].sensor_range
 	for o: int in range(first, world.ship_count()):
 		if o == ship or not world.kin.is_alive(o):
 			continue
 		var f: int = world.faction_of(o)
-		if world.is_hostile(faction, f):
+		if not world.is_hostile(faction, f):
+			continue
+		if need_detect:
 			if KnowledgeSystem.is_detected(world, f, ship):
 				return o
+		elif (
+			f != Factions.DEBRIS
+			and (
+				world.kin.relative(ship, o).length() <= reach
+				or (
+					e >= 0
+					and SiteTable.offset_to(world, o, world.encounters.site[e]).length() <= reach
+				)
+			)
+		):
+			return o
 	return -1
 
 

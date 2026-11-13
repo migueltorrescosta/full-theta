@@ -77,6 +77,9 @@ var _finale_ix: int = -1
 var _finale_tries: Dictionary[int, int] = {}
 ## The tick the current quiet gap was announced (gap_flag set), per unit; absent outside a gap.
 var _gap_from: Dictionary[int, int] = {}
+## The current gap's site offers (E2, w-bzx), in offer order: {index, site, name_key} (the
+## first is the director's own pick); empty outside a gap with offers.
+var _offers: Array[Dictionary] = []
 
 
 class ActiveRun:
@@ -101,6 +104,8 @@ class PendingOpen:
 	var key: StringName = &""
 	var reason: String = ""
 	var index: int = -1
+	## Extra PICK_ENCOUNTER log arguments (the gap's offers and pick).
+	var args: Dictionary = {}
 
 
 func _init(
@@ -135,6 +140,13 @@ static func skip_flag(faction: int) -> StringName:
 	return StringName("director.skip.%d" % faction)
 
 
+## The story flag that holds the crew's site pick of the faction's current gap (E2, w-bzx): the
+## offer's index plus one, 0 for none. The server (NetSkipGap, a logged SetFlagCommand from the
+## Captain's or Comms' SitePick) or a bot crew sets it; the director clears it when it offers.
+static func pick_flag(faction: int) -> StringName:
+	return StringName("director.pick.%d" % faction)
+
+
 ## The difficulty preset a toggles code names: the part before ":", lower case (D92).
 static func preset_of(code: String) -> StringName:
 	return StringName(code.get_slice(":", 0).strip_edges().to_lower())
@@ -167,6 +179,7 @@ func _on_relaunches(api: ScenarioApi) -> void:
 			_ended_logged.erase(_faction)
 			_skip_logged.erase(_faction)
 			_finale_tries.erase(_faction)
+			_offers.clear()
 			_end_gap(api, _faction)
 
 
@@ -419,6 +432,7 @@ func _plan(api: ScenarioApi, now: int, ship: int) -> void:
 	elif not _gap_from.has(ship):
 		_gap_from[ship] = now
 		api.set_flag(gap_flag(_faction), until)
+		_make_offers(api, ship, _regular(limits))
 
 
 ## The quiet gap is over: its flag clears (gp-07).
@@ -435,26 +449,21 @@ func _pick(api: ScenarioApi, now: int, ship: int, regular: Vector2i) -> void:
 		_pick_race(api, now, ship)
 		return
 	var fewest: int = regular.x
-	if _finale_ix >= 0 and (_finale_tries.has(ship) or _done.get(ship, 0) >= regular.y):
+	if _finale_next(ship, regular):
 		_pick_finale(api, now, ship)
 		return
-	var hull: float = 1.0
-	for s: int in _ships(api):
-		hull = minf(hull, api.ship(s).hull_frac)
-	var everything: Array[int] = []
-	for i: int in _catalogue.size():
-		if i != _finale_ix:
-			everything.append(i)
-	var fits: Array[int] = _affordable(
-		everything, _left(ship), _done.get(ship, 0), fewest, _last_pick.get(ship, &"")
-	)
+	# The crew's pick of the gap's offers; with none, the pick below, judged now as before E2.
+	var k: int = api.flag(pick_flag(_faction)) - 1
+	if k >= 0 and k < _offers.size():
+		_pick_offer(api, now, ship, k)
+		return
+	_offers.clear()
+	var fits: Array[int] = _fits(ship, fewest)
 	var reason: String = "budget_fits"
-	if hull < LOW_HULL:
-		var calm: Array[int] = []
-		calm.assign(fits.filter(func(i: int) -> bool: return not _metas[i].tags.has("hostile")))
-		if not calm.is_empty():
-			fits = calm
-			reason = "low_hull"
+	var calm: Array[int] = _calm(api, fits)
+	if not calm.is_empty():
+		fits = calm
+		reason = "low_hull"
 	if fits.is_empty():
 		# Nothing fits the budget: the run ends once the fewest encounters are played. An
 		# empty catalogue has nothing to play, which is logged once.
@@ -466,6 +475,103 @@ func _pick(api: ScenarioApi, now: int, ship: int, regular: Vector2i) -> void:
 			_skip(now, ship)
 		return
 	_place(api, now, ship, fits[_rng.randi() % fits.size()], _free_site(api), reason)
+
+
+## Whether the unit's next encounter is the finale (`regular`: as _pick's).
+func _finale_next(ship: int, regular: Vector2i) -> bool:
+	return _finale_ix >= 0 and (_finale_tries.has(ship) or _done.get(ship, 0) >= regular.y)
+
+
+## The regular scenarios (catalogue indexes) that fit the unit's budget by _affordable's rule.
+func _fits(ship: int, fewest: int) -> Array[int]:
+	var everything: Array[int] = []
+	for i: int in _catalogue.size():
+		if i != _finale_ix:
+			everything.append(i)
+	return _affordable(
+		everything, _left(ship), _done.get(ship, 0), fewest, _last_pick.get(ship, &"")
+	)
+
+
+## The calm (not hostile) ones of `fits` when the fleet's lowest hull is below LOW_HULL; empty
+## otherwise.
+func _calm(api: ScenarioApi, fits: Array[int]) -> Array[int]:
+	var hull: float = 1.0
+	for s: int in _ships(api):
+		hull = minf(hull, api.ship(s).hull_frac)
+	var calm: Array[int] = []
+	if hull < LOW_HULL:
+		calm.assign(fits.filter(func(i: int) -> bool: return not _metas[i].tags.has("hostile")))
+	return calm
+
+
+## E2 (w-bzx): at the start of a quiet gap before a regular encounter, the picks the crew may
+## choose from: the director's own (today's rule on the hull now, at a random free site), then
+## up to DirectorDef.site_offers - 1 other scenarios of the budget fits (no low-hull filter),
+## each at another free site. The pick flag clears. site_offers below 2, a finale, a race or
+## nothing fitting: no offers.
+func _make_offers(api: ScenarioApi, ship: int, regular: Vector2i) -> void:
+	_offers.clear()
+	if _def.site_offers < 2 or not _race.is_empty() or _finale_next(ship, regular):
+		return
+	var fits: Array[int] = _fits(ship, regular.x)
+	if fits.is_empty():
+		return
+	var own: Array[int] = fits
+	var calm: Array[int] = _calm(api, fits)
+	if not calm.is_empty():
+		own = calm
+	var index: int = own[_rng.randi() % own.size()]
+	var site: int = _free_site(api)
+	var used: Array[int] = []
+	while true:
+		_offers.append({"index": index, "site": site, "name_key": _site_name(api, site)})
+		used.append(site)
+		var id: StringName = _metas[index].id
+		fits.assign(fits.filter(func(i: int) -> bool: return _metas[i].id != id))
+		if site < 0 or fits.is_empty() or _offers.size() >= _def.site_offers:
+			break
+		site = _free_site(api, used)
+		if site < 0:
+			break
+		index = fits[_rng.randi() % fits.size()]
+	api.set_flag(pick_flag(_faction), 0)
+
+
+## The gap is over: begins offer `k`, the crew's pick (pick_flag), at its site, or at another
+## free one when it was taken or closed meanwhile.
+func _pick_offer(api: ScenarioApi, now: int, ship: int, k: int) -> void:
+	var offer: Dictionary = _offers[k]
+	var site: int = offer["site"]
+	if site < 0 or _taken.has(site) or _site_name(api, site) == "":
+		site = _free_site(api)
+	var ids: Array[String] = []
+	for o: Dictionary in _offers:
+		ids.append(String(_metas[o["index"]].id))
+	_offers.clear()
+	_place(api, now, ship, offer["index"], site, "crew_pick", {"offers": ids, "pick": k})
+
+
+## The current gap's offers (E2, w-bzx) for this director's own faction, as
+## RunDriver.site_offers.
+func site_offers(faction: int) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if faction != _faction:
+		return out
+	for o: Dictionary in _offers:
+		var meta: ScenarioMeta = _metas[o["index"]]
+		(
+			out
+			. append(
+				{
+					"site": o["site"],
+					"name_key": o["name_key"],
+					"risk": _def.offer_risk.get(meta.id, 2 if meta.tags.has("hostile") else 0),
+					"reward": _def.offer_reward.get(meta.id, 1),
+				}
+			)
+		)
+	return out
 
 
 ## The finale (gp-06), outside the budget, at DirectorDef.finale_site when it is open and
@@ -483,7 +589,15 @@ func _pick_finale(api: ScenarioApi, now: int, ship: int) -> void:
 
 ## Begins the pick at `site`, or, with none free (-1), opens one from the pool and begins
 ## there once it exists.
-func _place(api: ScenarioApi, now: int, ship: int, index: int, site: int, reason: String) -> void:
+func _place(
+	api: ScenarioApi,
+	now: int,
+	ship: int,
+	index: int,
+	site: int,
+	reason: String,
+	args: Dictionary = {}
+) -> void:
 	if site < 0:
 		# No site is open and free: open one from the pool and begin when it exists.
 		var pending: PendingOpen = _open_one(api, now, ship, "site_pool")
@@ -491,9 +605,10 @@ func _place(api: ScenarioApi, now: int, ship: int, index: int, site: int, reason
 			return
 		pending.index = index
 		pending.reason = reason
+		pending.args = args
 		_awaiting[ship] = pending
 		return
-	_begin(api, now, ship, index, site, reason)
+	_begin(api, now, ship, index, site, reason, args)
 
 
 ## RACE: the plan's next encounter at the ship's own copy of its site, or the run's close
@@ -533,7 +648,7 @@ func _begin_when_open(api: ScenarioApi, now: int, ship: int) -> void:
 	_awaiting.erase(ship)
 	if pending.handle.rejected():
 		return
-	_begin(api, now, ship, pending.index, pending.handle.id(), pending.reason)
+	_begin(api, now, ship, pending.index, pending.handle.id(), pending.reason, pending.args)
 
 
 func _busy(ship: int) -> bool:
@@ -586,11 +701,12 @@ func _skip(now: int, ship: int) -> void:
 	)
 
 
-## An open site with no encounter of the session's directors, or -1 when none is free.
-func _free_site(api: ScenarioApi) -> int:
+## An open site with no encounter of the session's directors and not in `skip`, or -1 when
+## none is free.
+func _free_site(api: ScenarioApi, skip: Array[int] = []) -> int:
 	var free: Array[int] = []
 	for s: SiteInfo in api.sites():
-		if s.id != HOME_SITE and not _taken.has(s.id):
+		if s.id != HOME_SITE and not _taken.has(s.id) and not skip.has(s.id):
 			free.append(s.id)
 	return free[_rng.randi() % free.size()] if not free.is_empty() else -1
 
@@ -641,7 +757,15 @@ func _maybe_open_site(api: ScenarioApi, now: int) -> void:
 	_open_one(api, now, -1, "periodic")
 
 
-func _begin(api: ScenarioApi, now: int, ship: int, index: int, site: int, reason: String) -> void:
+func _begin(
+	api: ScenarioApi,
+	now: int,
+	ship: int,
+	index: int,
+	site: int,
+	reason: String,
+	args: Dictionary = {}
+) -> void:
 	var meta: ScenarioMeta = _metas[index]
 	var finale: bool = index == _finale_ix
 	# The finale is outside the budget (gp-06).
@@ -663,6 +787,13 @@ func _begin(api: ScenarioApi, now: int, ship: int, index: int, site: int, reason
 		_announce_site(api, s, site)
 	_spent[ship] = _spent.get(ship, 0) + cost
 	_last_pick[ship] = meta.id
+	var logged: Dictionary = {
+		"cost": cost,
+		"left": _left(ship),
+		"ramp": _ramp_at(api, _done.get(ship, 0), finale),
+		"try": _finale_tries.get(ship, 0) if finale else 0,
+	}
+	logged.merge(args)
 	_log(
 		now,
 		ship,
@@ -674,13 +805,7 @@ func _begin(api: ScenarioApi, now: int, ship: int, index: int, site: int, reason
 			"budget_before": before,
 			"budget_after": _left(ship),
 			"reason": reason,
-			"args":
-			{
-				"cost": cost,
-				"left": _left(ship),
-				"ramp": _ramp_at(api, _done.get(ship, 0), finale),
-				"try": _finale_tries.get(ship, 0) if finale else 0,
-			},
+			"args": logged,
 		}
 	)
 
@@ -690,10 +815,7 @@ func _begin(api: ScenarioApi, now: int, ship: int, index: int, site: int, reason
 ## faction, so Helm can select and jump to it. The card only informs (CardSpec.Kind.INFO)
 ## and lapses when the arrival timeout starts the encounter anyway.
 func _announce_site(api: ScenarioApi, ship: int, site: int) -> void:
-	var name_key: String = ""
-	for s: SiteInfo in api.sites():
-		if s.id == site:
-			name_key = s.name_key
+	var name_key: String = _site_name(api, site)
 	if name_key == "":
 		return
 	var card: CardSpec = CardSpec.new()
@@ -702,6 +824,14 @@ func _announce_site(api: ScenarioApi, ship: int, site: int) -> void:
 	card.detail_key = PENDING_DETAIL
 	card.expiry = _def.arrival_timeout
 	api.offer(ship, card)
+
+
+## The name key of an open site, "" for none (closed, or -1).
+func _site_name(api: ScenarioApi, site: int) -> String:
+	for s: SiteInfo in api.sites():
+		if s.id == site:
+			return s.name_key
+	return ""
 
 
 ## The fleet's crewed ships in play.

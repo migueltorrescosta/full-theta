@@ -72,9 +72,12 @@ enum Type {
 	REROLL_MODIFIER = 49,
 	PRIORITY_TARGET = 50,
 	SKIP_GAP = 51,
+	# Crew-chosen sites (E2, w-bzx, version 13): the Captain, or Comms when no Captain is
+	# seated, picks one of the gap's site offers (index into the `gap` event's offers).
+	SITE_PICK = 52,
 }
 
-const PROTOCOL_VERSION: int = 12
+const PROTOCOL_VERSION: int = 13
 ## Default WebSocket port; the HTTP port for web stations is this minus one (D108).
 const DEFAULT_WS_PORT: int = 47801
 
@@ -310,6 +313,7 @@ const MESSAGES: Dictionary = {
 	Type.REROLL_MODIFIER: [RATED, {}],
 	Type.PRIORITY_TARGET: [RATED, {"contact": TYPE_INT}],
 	Type.SKIP_GAP: [RATED, {"ready": TYPE_BOOL}],
+	Type.SITE_PICK: [RATED, {"offer": TYPE_INT}],
 }
 
 ## Messages a client may send; the server drops any other type from a client.

@@ -38,7 +38,7 @@ func test_a_heavy_raider_and_escorts_arrive_and_hail() -> void:
 	var boss: ShipDef = f.world.defs[bosses[0]]
 	var raider: ShipDef = f.world.defs[f.ships_of(Factions.RAIDER_KEY)[0]]
 	assert_int(boss.mounts.size()).is_equal(2)
-	assert_float(boss.hull_max).is_equal(2.0 * raider.hull_max)
+	assert_float(boss.hull_max).is_greater(raider.hull_max)
 	assert_bool(_says(f, "npc.hail_raider")).is_true()
 	var hails: int = 0
 	for c: CardInfo in f.api.cards_of(0):

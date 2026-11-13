@@ -2,7 +2,8 @@ extends GdUnitTestSuite
 ## Fail-forward (gp-09, #38 D4): a crewed ship crippled in an active encounter (hull under
 ## RunDef.crippled_hull, or RunDef.crippled_subsystems subsystems destroyed) that docks
 ## anywhere within RunDef.limp_home_time has limped home: the encounter ends PARTIAL and its
-## accepted card pays RunDef.partial_pay. After that time docking is nothing special.
+## accepted card pays RunDef.partial_pay. After that time a dock is no limp home (with a hostile
+## about it takes the ship out of the fight, w-ckm: tests/sim/run/test_out_of_fight.gd).
 
 
 ## A rescue at Vesper Beacon with the escort accepted; returns the escort card.

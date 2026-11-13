@@ -85,6 +85,15 @@ func director_for(faction: int) -> Director:
 	return _directors.get(faction)
 
 
+## The faction's Director's current site offers (E2, w-bzx), as RunDriver.site_offers; none
+## without one.
+func site_offers(faction: int) -> Array[Dictionary]:
+	var d: Director = director_for(faction)
+	if d == null:
+		return []
+	return d.site_offers(faction)
+
+
 ## RACE: the seeded scenario ids every ship plays, in order (M4-Q5); empty before the first
 ## tick and in other modes.
 func race_plan() -> PackedStringArray:

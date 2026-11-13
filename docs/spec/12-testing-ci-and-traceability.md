@@ -37,4 +37,4 @@ Every gate script first runs `godot --headless --import`. The gate tiers (`tools
 - **FT-TST-019** L6 shall serve and load each desktop package's bundled web export, and synthesise one line with its bundled Piper from the exported Linux and Windows builds. (plan review TECH-4)
 - **FT-TST-020** Screenshot baselines shall record the Mesa and llvmpipe version, and L5 shall fail with "baseline environment changed" when it differs. (plan review TECH-11)
 - **FT-TST-021** A Playwright smoke check of the web build shall take one screenshot of a touch layout and check it is not blank and shows the expected panel. (plan review TECH-11)
-- **FT-TST-022** A headless batch of at least 200 encounters with scripted bot crews shall report the per-encounter loss rate for tuning. (D31, plan review CLASH-9)
+- **FT-TST-022** A headless batch of at least 200 encounters with scripted bot crews shall report the per-encounter loss rate for tuning. (D31, plan review CLASH-9, D502)

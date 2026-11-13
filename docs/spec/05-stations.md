@@ -75,7 +75,7 @@ Full-screen forward view; HUD with prograde/retrograde markers, target compass, 
 - **FT-HLM-010** A shield-track toggle shall keep shield focus on the selected callsign as both ships move. (D48)
 - **FT-HLM-011** The shield ring shall show focus direction (Helm) and focus tightness and power (Engineering) in one widget. (D16, P1, D184)
 - **FT-HLM-012** Helm shall show the thrust envelope set by Engineering and the propellant remaining, and shall toast, with no tone, "Fuel low" at the first fall under 20 % and "Fuel almost gone" under 10 %, each again only after a refuel lifts the fuel back above its threshold. (P1, D34, D456, D490)
-- **FT-HLM-013** Helm shall offer dock and jump controls; a docked ship takes no collision or weapon damage. (D29, P5, D343)
+- **FT-HLM-013** Helm shall offer dock and jump controls; a docked ship takes no collision or weapon damage, but it is out of any active fight (FT-MIS-025). (D29, P5, D343, D503)
 - **FT-HLM-014** All-stop shall bring the ship's velocity and rotation to zero through real thrust, from one input on every device. (D97, plan review NAV-2)
 - **FT-HLM-015** While hold-to-approach is held, flight assist shall face the selected item, fly to a data-defined stand-off and match its velocity, on every device. (D97, plan review NAV-2)
 - **FT-HLM-016** JUMP shall jump to the selected site or mark once Helm faces it; sites shall be selectable on Helm like marks (§6). (D98, plan review NAV-4)
