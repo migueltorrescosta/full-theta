@@ -32,6 +32,8 @@ var losses_mask: PackedInt64Array = PackedInt64Array()
 var fled_mask: PackedInt64Array = PackedInt64Array()
 ## Ships that limped home (gp-09): docked while crippled, which ended the encounter PARTIAL.
 var limped_mask: PackedInt64Array = PackedInt64Array()
+## Ship count when the encounter opened: ships below it are not its watchers (w-fng).
+var npc_floor: PackedInt32Array = PackedInt32Array()
 
 
 func add_ship(_ship_id: int, _faction: int, _def: ShipDef) -> void:
@@ -40,7 +42,14 @@ func add_ship(_ship_id: int, _faction: int, _def: ShipDef) -> void:
 
 ## Adds a PENDING encounter keyed by its first crewed ship; returns its id.
 func add_encounter(
-	first_ship: int, faction: int, scenario: int, at_site: int, mask: int, threat: int, tick: int
+	first_ship: int,
+	faction: int,
+	scenario: int,
+	at_site: int,
+	mask: int,
+	threat: int,
+	tick: int,
+	floor_ships: int = 0
 ) -> int:
 	var row: int = add_key(first_ship, faction)
 	scenario_ix.append(scenario)
@@ -54,6 +63,7 @@ func add_encounter(
 	losses_mask.append(0)
 	fled_mask.append(0)
 	limped_mask.append(0)
+	npc_floor.append(floor_ships)
 	return row
 
 

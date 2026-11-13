@@ -11,7 +11,11 @@ extends RefCounted
 ##    started (HelmTable.jump_seen_by), has fled (D233): its bit joins fled_mask, it leaves
 ##    the encounter, and the flee cost is charged. Where the jump started doesn't matter,
 ##    as fights happen at 9 to 12 km and the site is 3 to 5 km wide (review 2 M3). A jump
-##    that started unseen, or ends at the site, is not fleeing and the ship stays.
+##    that started unseen, or ends at the site, is not fleeing and the ship stays. Only ships
+##    spawned after the encounter opened count as watchers (EncounterTable.npc_floor): a
+##    leftover raider of an older encounter makes no flee, on a travel leg or anywhere.
+##    A crippled ship's seen jump away within its limp-home window (step 3) is judged when
+##    the window ends: undocked by then, it has fled, as above (ShipStateTable.limp_seen_by).
 ## 3. In an ACTIVE encounter, a crewed ship in play is crippled (gp-09, #38 D4) once its hull
 ##    fraction is under RunDef.crippled_hull or RunDef.crippled_subsystems of its subsystems
 ##    are destroyed: &"crippled" (value RunDef.limp_home_time, other_id the encounter). Docked
@@ -71,7 +75,7 @@ static func finish(world: SimWorld, id: int, result: EncounterTable.Result) -> v
 ## Whether the director has closed the crewed ship's run and the ship is in no encounter.
 static func run_complete(world: SimWorld, ship: int) -> bool:
 	return (
-		world.run_def != null and world.ships.encounter[ship] < 0 and world.ships.closed[ship] == 1
+		world.run_def != null and world.ships.encounter[ship] < 0 and world.ships.closed[ship] != 0
 	)
 
 
@@ -115,22 +119,31 @@ static func _arrived(world: SimWorld, id: int) -> bool:
 static func _check_flee(world: SimWorld, id: int, jumped: Dictionary[int, bool]) -> void:
 	var table: EncounterTable = world.encounters
 	var site: int = table.site[id]
-	if site < 0 or jumped.is_empty():
+	if site < 0:
 		return
+	var ships: ShipStateTable = world.ships
 	for ship: int in _ships(table.ships_mask[id]):
-		if world.ships.encounter[ship] != id or not jumped.has(ship):
-			continue
-		# A crippled ship jumping to a dock in time is limping home, not fleeing (gp-09).
-		if SiteTable.at_site(world, ship) == site or limping(world, ship):
+		if ships.encounter[ship] != id:
 			continue
 		var seen_by: int = world.helm.jump_seen_by[ship]
-		if seen_by < 0:
-			continue
-		table.fled_mask[id] |= 1 << ship
-		world.ships.fled_count[ship] += 1
-		_leave(world, ship)
-		world.emit(&"fled", ship, seen_by, id, Vector3.ZERO, _scenario(world, id))
-		_charge_flee(world, ship, seen_by)
+		if jumped.has(ship) and SiteTable.at_site(world, ship) != site and seen_by >= 0:
+			if not limping(world, ship):
+				_flee(world, id, ship, seen_by)
+				continue
+			# A crippled ship's seen jump away is judged when its window ends (w-4tg).
+			ships.limp_seen_by[ship] = seen_by
+		elif ships.limp_seen_by[ship] >= 0 and ships.crippled_tick[ship] >= 0:
+			if not limping(world, ship) and world.kin.is_alive(ship):
+				_flee(world, id, ship, ships.limp_seen_by[ship])
+
+
+## The ship has fled (D233): marked, out of the encounter, charged.
+static func _flee(world: SimWorld, id: int, ship: int, seen_by: int) -> void:
+	world.encounters.fled_mask[id] |= 1 << ship
+	world.ships.fled_count[ship] += 1
+	_leave(world, ship)
+	world.emit(&"fled", ship, seen_by, id, Vector3.ZERO, _scenario(world, id))
+	_charge_flee(world, ship, seen_by)
 
 
 ## Crippling and limping home (step 3); true when a ship limped home and ended the encounter.
@@ -213,13 +226,18 @@ static func _check_losses(world: SimWorld, id: int) -> void:
 static func _leave(world: SimWorld, ship: int) -> void:
 	world.ships.encounter[ship] = -1
 	world.ships.crippled_tick[ship] = -1
+	world.ships.limp_seen_by[ship] = -1
 	world.ships.encounters_done[ship] += 1
 
 
 ## The id of a live ship of a faction hostile to the ship's that detects it, or -1.
 static func hostile_seeing(world: SimWorld, ship: int) -> int:
 	var faction: int = world.faction_of(ship)
-	for o: int in world.ship_count():
+	# Only ships spawned since the ship's encounter opened can see it go (w-fng): leftovers
+	# of older encounters (D326) and the travel legs they sit on don't make a flee.
+	var e: int = world.ships.encounter[ship]
+	var first: int = world.encounters.npc_floor[e] if e >= 0 else 0
+	for o: int in range(first, world.ship_count()):
 		if o == ship or not world.kin.is_alive(o):
 			continue
 		var f: int = world.faction_of(o)

@@ -5,8 +5,9 @@ extends EnemyWave
 ## branches (won when the whole wave is gone or surrendered, PARTIAL at the time limit). The
 ## director plays it last, outside the budget, at strength preset x ramp_end; winning it closes
 ## the run, a partial or fled one is offered again (DirectorDef.finale_tries). Parameters
-## besides site, ships and strength: "escorts" (count at strength 1) and "time_limit" (s),
-## both from the DirectorDef.
+## besides site, ships and strength: "escorts" (count at strength 1), "escorts_from" (the
+## strength under which the heavy raider comes alone, w-4cm) and "time_limit" (s), all from
+## the DirectorDef.
 
 const ID: StringName = &"finale"
 ## The boss's content key; the escorts fly the raider (Factions.RAIDER_KEY).
@@ -22,7 +23,10 @@ func meta() -> ScenarioMeta:
 
 func start(api: ScenarioApi, params: Dictionary) -> void:
 	super.start(api, params)
-	var escorts: float = float(params.get("escorts", 0.0)) * float(params.get("strength", 1.0))
+	var strength: float = float(params.get("strength", 1.0))
+	var escorts: float = float(params.get("escorts", 0.0)) * strength
+	if strength < float(params.get("escorts_from", 0.0)):
+		escorts = 0.0
 	_count = 1 + (maxi(1, roundi(escorts)) if escorts > 0.0 else 0)
 	_limit = float(params.get("time_limit", _limit))
 

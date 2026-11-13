@@ -100,6 +100,15 @@ func test_the_card_says_why_you_won_or_lost() -> void:
 
 
 # FT: FT-M1-012
+# w-a89: a run closed with the finale out of tries is Survived, neither a win nor a loss.
+func test_the_card_says_the_crew_survived() -> void:
+	var o: OutcomeCard = _card("tactical")
+	_over(o, "survived")
+	assert_str(_text(o, "Title")).is_equal("Survived")
+	assert_str(_text(o, "Why")).is_equal(tr("outcome.why_survived"))
+
+
+# FT: FT-M1-012
 # C14: a captain or viewer gets no button but is told who starts the next run.
 func test_a_viewer_is_told_who_runs_it_again() -> void:
 	var v: OutcomeCard = _card("viewer")

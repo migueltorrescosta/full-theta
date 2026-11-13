@@ -11,7 +11,10 @@
 ##   highlights, or its Details (the full debrief, ux-20);
 ## - "outcome_partial": the end card with encounters that limped home or ran out of time
 ##   (gp-09); "relaunch_paid": a co-op ship's paid relaunch prompt over a friendly ship's main
-##   screen (gp-10); "crippled": Helm with the crippled countdown banner (gp-09);
+##   screen (gp-10); "relaunch_short": the same with a purse short of the price (disabled
+##   button, w-7v6); "outcome_survived": the end card of a run whose finale tries ran out, two
+##   finales out of time (D476); "scoreboard_survived": the scoreboard of that run;
+##   "crippled": Helm with the crippled countdown banner (gp-09);
 ## - "pause": the host's own ship paused under a host pause (`host` false: a crew player's);
 ## - "menu_web": the web main menu;
 ## - "bots": Helm with stand-in and fill bots on the ship, named in the top bar (#40 D1);
@@ -56,7 +59,7 @@ func _ready() -> void:
 	match view:
 		"lobby", "mode":
 			_lobby()
-		"scoreboard", "relaunch":
+		"scoreboard", "relaunch", "scoreboard_survived":
 			_scoreboard()
 		"handover":
 			_fleet("teams", true)
@@ -89,7 +92,7 @@ func _ready() -> void:
 			var o: PauseOverlay = PauseOverlay.new()
 			_centred(o)
 			o.setup(_ctx)
-		"outcome", "debrief", "outcome_partial", "pause", "menu_web":
+		"outcome", "debrief", "outcome_partial", "outcome_survived", "pause", "menu_web":
 			_own_view()
 		"guest_relay":
 			_fleet("teams", true)
@@ -110,6 +113,16 @@ func _ready() -> void:
 			_fleet("coop", true)
 			_event("picked", {"ship": 1, "seat": "viewer"})
 			_event("eliminated", FleetMessages.eliminated(0, "destroyed", 1, 800))
+			_event("handover", FleetMessages.handover(0, 1))
+			_event("relaunch_votes", {"ship": 0, "voters": ["Bo"], "sessions": [], "needed": 2})
+			_station()
+			var p: VotePrompt = VotePrompt.new()
+			add_child(p)
+			p.setup(_ctx, VotePrompt.Kind.RELAUNCH)
+		"relaunch_short":
+			_fleet("coop", true)
+			_event("picked", {"ship": 1, "seat": "viewer"})
+			_event("eliminated", FleetMessages.eliminated(0, "destroyed", 1, 800, 500))
 			_event("handover", FleetMessages.handover(0, 1))
 			_event("relaunch_votes", {"ship": 0, "voters": ["Bo"], "sessions": [], "needed": 2})
 			_station()
@@ -210,6 +223,8 @@ func _scoreboard() -> void:
 		FleetMessages.scoreboard_row(3, "Merlin", 1, "destroyed", 1, 201.0, 0),
 	]
 	_event("scoreboard", FleetMessages.scoreboard(rows))
+	if view == "scoreboard_survived":
+		_event("game_over", FleetMessages.game_over("survived", [], -1, 0.0, 412.0))
 	var s: ScoreboardScreen = ScoreboardScreen.new()
 	s.setup(_ctx)
 	add_child(s)
@@ -259,9 +274,24 @@ func _own_view() -> void:
 			var card: OutcomeCard = OutcomeCard.new()
 			_centred(card)
 			card.setup(_ctx)
-			_event("ship_outcome", {"ship": 0, "outcome": "win", "time": 412.0, "hull": 0.58})
+			_event(
+				"ship_outcome",
+				{
+					"ship": 0,
+					"outcome": "survived" if view == "outcome_survived" else "win",
+					"time": 412.0,
+					"hull": 0.58
+				}
+			)
 			_event("run_votes", {"ship": 0, "voters": ["Bo"], "needed": 2})
 			var record: Dictionary = debrief_record()
+			if view == "outcome_survived":
+				record["result"] = "survived"
+				record["encounters"] = [
+					{"scenario": "enemy_wave", "time": 140.0, "result": "won"},
+					{"scenario": "finale", "time": 300.0, "result": "partial"},
+					{"scenario": "finale", "time": 405.0, "result": "partial"},
+				]
 			if view == "outcome_partial":
 				record["encounters"] = [
 					{"scenario": "enemy_wave", "time": 140.0, "result": "won"},

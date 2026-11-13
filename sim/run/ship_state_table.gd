@@ -11,11 +11,12 @@ extends SimTable
 ## ABANDONED: its crew or the host abandoned it during a pause (AbandonShipCommand).
 enum Status { IN_PLAY, DESTROYED, RETREATED, ABANDONED }
 ## The encounter's outcome for a crewed ship (D30: per-ship elimination); AI ships
-## stay NONE.
-enum ShipOutcome { NONE, WIN, LOSS }
+## stay NONE. SURVIVED: the run closed with the finale out of tries (w-a89): neither a win
+## nor a loss.
+enum ShipOutcome { NONE, WIN, LOSS, SURVIVED }
 
 ## Event tags for each ShipOutcome, in ShipOutcome order.
-const OUTCOME_NAMES: Array[StringName] = [&"none", &"win", &"loss"]
+const OUTCOME_NAMES: Array[StringName] = [&"none", &"win", &"loss", &"survived"]
 
 ## Status of the ship.
 var status: PackedByteArray = PackedByteArray()
@@ -27,8 +28,9 @@ var ship_outcome: PackedByteArray = PackedByteArray()
 var encounters_done: PackedInt32Array = PackedInt32Array()
 var encounter: PackedInt32Array = PackedInt32Array()
 var fled_count: PackedInt32Array = PackedInt32Array()
-## 1 once the director has closed the ship's run (FinishShipCommand); it then wins when it is in
-## no encounter (EncounterSystem.run_complete, Q4).
+## 1 once the director has closed the ship's run (FinishShipCommand), 2 when it closed it with
+## the finale out of tries; it then wins (or survives, 2) when it is in no encounter
+## (EncounterSystem.run_complete, Q4, w-a89).
 var closed: PackedByteArray = PackedByteArray()
 ## Game counters of a multi-ship game (#11, M4-Q2, M4-Q9): times the ship has
 ## relaunched (RelaunchShipCommand) and crewed ships of another side it destroyed (PvP kills,
@@ -41,6 +43,9 @@ var finish_tick: PackedInt32Array = PackedInt32Array()
 ## Tick the ship was crippled in its current encounter (gp-09: RunDef.crippled_hull or
 ## crippled_subsystems), or -1; cleared when it leaves the encounter (EncounterSystem).
 var crippled_tick: PackedInt32Array = PackedInt32Array()
+## The hostile ship that saw this crippled ship jump away in its limp-home window, or -1; the
+## flee cost is charged against it if the window ends undocked (w-4tg).
+var limp_seen_by: PackedInt32Array = PackedInt32Array()
 
 
 func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
@@ -55,6 +60,7 @@ func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	kills.append(0)
 	finish_tick.append(-1)
 	crippled_tick.append(-1)
+	limp_seen_by.append(-1)
 
 
 ## A ship reset (a relaunch or a training reset, FT-MIS-011, FT-MIS-017) restores the ship's

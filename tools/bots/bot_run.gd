@@ -9,7 +9,8 @@ extends RefCounted
 const DEFAULT_CAP_TIME: float = 7200.0
 
 
-## Plays one run of one crewed ship. `outcome` is "win", "loss" or "stalled".
+## Plays one run of one crewed ship. `outcome` is "win", "survived", "loss", "abandoned" or
+## "stalled".
 static func play(
 	defs: DefLibrary,
 	profile_name: String,

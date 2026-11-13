@@ -275,7 +275,10 @@ func scoreboard_rows() -> Array:
 		var state: String = FleetMessages.IN_PLAY
 		if eliminated.has(id) or world.ships.ship_outcome[id] == ShipStateTable.ShipOutcome.LOSS:
 			state = FleetMessages.DESTROYED
-		elif world.ships.ship_outcome[id] == ShipStateTable.ShipOutcome.WIN:
+		elif (
+			world.ships.ship_outcome[id]
+			in [ShipStateTable.ShipOutcome.WIN, ShipStateTable.ShipOutcome.SURVIVED]
+		):
 			state = FleetMessages.FINISHED
 		var k: int = world.ships.kills[id] if rules.is_pvp() else 0
 		var done: int = world.ships.encounters_done[id]
@@ -294,7 +297,7 @@ func after_ticks(events: Array[SimEvent]) -> void:
 		if not game.lobby.is_launched(e.ship_id):
 			continue
 		if e.kind == GameOutcome.EVENT_ELIMINATED and not eliminated.has(e.ship_id):
-			_eliminate(e.ship_id, String(e.tag), int(e.value))
+			_eliminate(e.ship_id, String(e.tag), int(e.value), e.other_id)
 		elif e.kind == GameOutcome.EVENT_RELAUNCHED:
 			_relaunched(e.ship_id, int(e.value))
 	if outcome == null and game.lobby.any_launched():
@@ -416,6 +419,7 @@ func _on_relaunch(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 		or outcome != null
 		or _relaunching.has(ship)
 		or _lives_left(ship) == 0
+		or not RelaunchShipCommand.allowed(game.world, ship)
 	):
 		reason = FleetMessages.NO_RELAUNCH
 	elif not members.has(s.id):
@@ -541,11 +545,11 @@ func _lives_left(ship: int) -> int:
 
 ## A crewed ship left play, with the sim's reason ("destroyed", "abandoned" or "forfeit",
 ## M4-Q10) and lives left: everyone hears why; its sessions are handed over later.
-func _eliminate(ship: int, reason: String, lives: int) -> void:
+func _eliminate(ship: int, reason: String, lives: int, purse: int) -> void:
 	eliminated[ship] = reason
 	_lives[ship] = lives
 	var cost: int = RelaunchShipCommand.cost(game.world)
-	var payload: Dictionary = FleetMessages.eliminated(ship, reason, lives, cost)
+	var payload: Dictionary = FleetMessages.eliminated(ship, reason, lives, cost, purse)
 	game.broadcast(NetProtocol.EVENT_ELIMINATED, payload)
 	var crew: Array = []
 	for s: NetSession in game.by_id.values():

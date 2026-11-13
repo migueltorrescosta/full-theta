@@ -38,7 +38,8 @@ func test_destroyed_ship_leaves_play_and_the_rest_continue() -> void:
 	assert_int(gone.size()).is_equal(1)
 	assert_int(gone[0].ship_id).is_equal(1)
 	assert_str(String(gone[0].tag)).is_equal("destroyed")
-	assert_int(int(gone[0].value)).is_equal(0)
+	# The policy's lives, whatever the purse (w-7v6): the client shows the short purse disabled.
+	assert_int(int(gone[0].value)).is_equal(1)
 	assert_array(Array(f.api.crew_ships())).is_equal([0, 2])
 	assert_int(f.world.ships.encounters_done[0]).is_equal(2)
 	f.step(60)

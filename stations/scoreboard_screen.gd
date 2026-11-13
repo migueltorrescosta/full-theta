@@ -135,6 +135,8 @@ func title_text() -> String:
 			text = tr("score.all_lost")
 		"objective":
 			text = tr("score.objective")
+		"survived":
+			text = tr("score.survived")
 		_:
 			if team >= 0:
 				text = tr("score.team_wins") % TEAM_LETTERS[clampi(team, 0, 1)]

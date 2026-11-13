@@ -14,7 +14,7 @@ extends RefCounted
 ## - flees: below the profile's hull fraction, in an active encounter with a hostile in
 ##   sight, it faces Kestrel Yard and jumps (the sim then counts the encounter as fled);
 ## - travels: to the site of its pending encounter (the yard on a debris leg) by jump or by
-##   impulse, and holds there;
+##   impulse, undocking first, and holds there;
 ## - Comms: accepts cards by the profile, answers a hailing raider and demands its surrender.
 
 const ENGAGE_REACH: float = 12000.0
@@ -69,6 +69,7 @@ func act(world: SimWorld) -> void:
 	else:
 		_clear(&"fight")
 		_stand_down(world)
+		_undock(world)
 		_travel(world)
 	_comms(world)
 	if target >= 0:
@@ -251,6 +252,15 @@ func _limp_home(world: SimWorld, site: int) -> void:
 		var dock: DockCommand = DockCommand.new()
 		dock.site_id = site
 		_submit(world, dock)
+
+
+## Leaves the dock once the crew has an encounter elsewhere to go to (w-a89: a crew that
+## limped home doesn't sit out the rest of the run at the dock, safe under D343).
+func _undock(world: SimWorld) -> void:
+	var docked: int = world.helm.docked_site[ship]
+	var dest: int = _destination(world)
+	if docked >= 0 and dest >= 0 and dest != docked:
+		_submit(world, UndockCommand.new())
 
 
 func _travel(world: SimWorld) -> void:

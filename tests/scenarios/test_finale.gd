@@ -24,7 +24,7 @@ func _says(f: ScenarioFixture, line: String) -> bool:
 
 # FT: FT-MIS-003, FT-MIS-041
 # The boss (2 mounts, twice the raider's hull) arrives first and hails, its hail card posted;
-# escorts x strength raiders, rounded (1.5 x 1.3 is 2, Normal's finale), join from 45 s, one
+# escorts x strength raiders, rounded (1.5 x 1.3 is 2), join from 45 s, one
 # every 15 s.
 func test_a_heavy_raider_and_escorts_arrive_and_hail() -> void:
 	var f: ScenarioFixture = _finale(1.5, 1.3)
@@ -45,6 +45,19 @@ func test_a_heavy_raider_and_escorts_arrive_and_hail() -> void:
 		hails += 1 if c.kind == CardSpec.Kind.HAIL else 0
 	assert_int(hails).is_equal(1)
 	assert_bool(ServerMain.HAIL_CONVERSATIONS.has(Finale.BOSS_KEY)).is_true()
+
+
+# FT: FT-MIS-003
+# w-4cm: under DirectorDef.finale_escorts_from (Easy's finale, strength 0.5 x 1.3) the heavy
+# raider comes alone.
+func test_a_weak_finale_has_no_escorts() -> void:
+	var f: ScenarioFixture = ScenarioFixture.make()
+	f.strength = 0.65
+	f.params = {"escorts": 1.5, "escorts_from": 0.8, "time_limit": 300.0}
+	f.begin(Finale.ID, SITE)
+	f.run(60 * 120)
+	assert_int(f.ships_of(Finale.BOSS_KEY).size()).is_equal(1)
+	assert_int(f.ships_of(Factions.RAIDER_KEY).size()).is_equal(0)
 
 
 # FT: FT-MIS-004

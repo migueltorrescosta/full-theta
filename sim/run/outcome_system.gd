@@ -12,8 +12,10 @@ extends RefCounted
 ## 3. Each crewed ship (not AI-flown) without an outcome gets one: LOSS when it is
 ##    destroyed or abandoned (per-ship elimination, D30: the other ships carry on);
 ##    WIN when it is in play and every ship of a faction hostile to it is destroyed or
-##    retreated, with at least one such ship. &"outcome" is emitted once per ship,
-##    keyed to it, with value the ShipStateTable.ShipOutcome and tag &"win" or &"loss".
+##    retreated, with at least one such ship; in a director run, WIN once its run is
+##    complete, or SURVIVED when the director closed it with the finale out of tries
+##    (w-a89). &"outcome" is emitted once per ship, keyed to it, with value the
+##    ShipStateTable.ShipOutcome and tag &"win", &"loss" or &"survived".
 ## Statuses and outcomes are final for the run; SimWorld.reset_ship (FT-MIS-017)
 ## restores a ship's row to IN_PLAY / NONE like every other table.
 ## Multi-ship games (#11): a crewed ship destroyed by a crewed ship of another side counts
@@ -61,9 +63,19 @@ static func step(world: SimWorld) -> void:
 		if st == ShipStateTable.Status.DESTROYED or st == ShipStateTable.Status.ABANDONED:
 			_set_outcome(world, id, ShipStateTable.ShipOutcome.LOSS)
 		elif st == ShipStateTable.Status.IN_PLAY and world.run_def != null:
-			# a run wins by finishing its encounters, not by a clear sky.
+			# a run wins by finishing its encounters, not by a clear sky; with the finale out of
+			# tries it survives (w-a89).
 			if EncounterSystem.run_complete(world, id):
-				_set_outcome(world, id, ShipStateTable.ShipOutcome.WIN)
+				var survived: bool = world.ships.closed[id] == 2
+				_set_outcome(
+					world,
+					id,
+					(
+						ShipStateTable.ShipOutcome.SURVIVED
+						if survived
+						else ShipStateTable.ShipOutcome.WIN
+					)
+				)
 		elif st == ShipStateTable.Status.IN_PLAY and _enemies_gone(world, id):
 			_set_outcome(world, id, ShipStateTable.ShipOutcome.WIN)
 	if directed and not was_over:
@@ -84,19 +96,22 @@ static func step(world: SimWorld) -> void:
 ## finish), its ships the winners (FT-MIS-034, M4-Q6). HOLDOUT: HOLDOUT_OVER once the finite
 ## side has no ship standing, held_ticks the tick its last ship left play (M4-Q2), no winner
 ## named; or, when the time cap runs out first, the finite side wins (A11). Every mode:
-## ALL_LOST once no crewed ship stands and none won.
+## SURVIVED once no crewed ship plays on, none won and one survived (w-a89); ALL_LOST once no
+## crewed ship stands and none won.
 static func game_outcome(world: SimWorld) -> GameOutcome:
 	var out: GameOutcome = GameOutcome.new()
 	var crew: PackedInt32Array = PackedInt32Array()
 	var standing: PackedInt32Array = PackedInt32Array()
 	var playing: bool = false
 	var won: bool = false
+	var survived: bool = false
 	for id: int in world.ship_count():
 		if world.ai.is_enabled(id):
 			continue
 		crew.append(id)
 		var o: int = world.ships.ship_outcome[id]
 		won = won or o == ShipStateTable.ShipOutcome.WIN
+		survived = survived or o == ShipStateTable.ShipOutcome.SURVIVED
 		# in play counts, not "no loss": a ship that won and was then destroyed does not stand.
 		if (
 			world.ships.status[id] == ShipStateTable.Status.IN_PLAY
@@ -129,6 +144,8 @@ static func game_outcome(world: SimWorld) -> GameOutcome:
 				for id: int in crew:
 					if world.ships.ship_outcome[id] == ShipStateTable.ShipOutcome.WIN:
 						out.winners.append(id)
+	if not out.over() and not playing and survived:
+		out.reason = GameOutcome.Reason.SURVIVED
 	if not out.over() and standing.is_empty():
 		out.reason = GameOutcome.Reason.ALL_LOST
 	return out
@@ -337,9 +354,10 @@ static func _emit_eliminated(world: SimWorld, id: int) -> void:
 	var tag: StringName = &"destroyed"
 	if world.ships.status[id] == ShipStateTable.Status.ABANDONED:
 		tag = &"forfeit" if world.rules.is_pvp() else &"abandoned"
-	# A relaunch the purse can't pay for is none left (gp-10): the crew is not offered the vote.
+	# value: the relaunches the policy allows; other: the purse, so a short one (gp-10) is shown
+	# disabled with its price, not hidden. RelaunchShipCommand refuses the vote.
 	var policy: RelaunchPolicy = world.rules.relaunch_for(world.faction_of(id))
 	var left: int = policy.left(world.ships.relaunches[id])
-	if not RelaunchShipCommand.allowed(world, id):
-		left = 0
-	world.emit(GameOutcome.EVENT_ELIMINATED, id, -1, left, Vector3.ZERO, tag)
+	world.emit(
+		GameOutcome.EVENT_ELIMINATED, id, Economy.credits(world, id), left, Vector3.ZERO, tag
+	)

@@ -496,11 +496,12 @@ func end_encounter(id: int, result: int) -> void:
 	_world.submit(cmd)
 
 
-## Closes the crewed ship's run (Q4): it wins once it is in no encounter. Rejected below
-## RunDef.min_encounters.
-func finish_ship(ship_id: int) -> void:
+## Closes the crewed ship's run (Q4): it wins once it is in no encounter, or survives with
+## `survived` (the finale out of tries, w-a89). Rejected below RunDef.min_encounters.
+func finish_ship(ship_id: int, survived: bool = false) -> void:
 	var cmd: FinishShipCommand = FinishShipCommand.new()
 	cmd.ship = ship_id
+	cmd.survived = survived
 	_world.submit(cmd)
 
 

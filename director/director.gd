@@ -31,9 +31,9 @@ extends RunDriver
 ## fewest and most encounters less one, and the finale comes last, outside the budget, at
 ## ramp_end, at DirectorDef.finale_site when free; winning it closes the run, and a fled or
 ## timed-out one is offered again after the gap up to finale_tries times, after which the run
-## closes anyway. Each quiet gap is announced through a story flag (gap_flag: the tick it
-## ends); the server ends it early through skip_flag once every human crew player of the
-## fleet is Ready (NetSkipGap), so replays hold.
+## closes with the fleet surviving rather than winning (w-a89). Each quiet gap is announced
+## through a story flag (gap_flag: the tick it ends); the server ends it early through
+## skip_flag once every human crew player of the fleet is Ready (NetSkipGap), so replays hold.
 
 const LOW_HULL: float = 0.5
 ## Site 0 is the home station (Kestrel Yard, D205): no encounter is placed there.
@@ -354,6 +354,7 @@ func _step_runs(api: ScenarioApi, now: int) -> void:
 								ev.ships.size()
 							),
 							"escorts": _def.finale_escorts,
+							"escorts_from": _def.finale_escorts_from,
 							"time_limit": _def.finale_time_limit,
 						},
 					)
@@ -471,7 +472,7 @@ func _pick(api: ScenarioApi, now: int, ship: int, regular: Vector2i) -> void:
 ## free; after finale_tries attempts the run closes instead.
 func _pick_finale(api: ScenarioApi, now: int, ship: int) -> void:
 	if _finale_tries.get(ship, 0) >= _def.finale_tries:
-		_finish_ship(api, now, ship, "finale_out")
+		_finish_ship(api, now, ship, "finale_out", true)
 		return
 	var site: int = -1
 	for s: SiteInfo in api.sites():
@@ -502,7 +503,7 @@ func _pick_race(api: ScenarioApi, now: int, unit: int) -> void:
 	if at >= _race.size() and _finale_tries.has(unit):
 		# A fled or timed-out finale is played again (gp-06).
 		if _finale_tries[unit] >= _def.finale_tries:
-			_finish_ship(api, now, unit, "finale_out")
+			_finish_ship(api, now, unit, "finale_out", true)
 			return
 		at = _race.size() - 1
 	if at >= _race.size():
@@ -543,10 +544,12 @@ func _busy(ship: int) -> bool:
 
 
 ## Closes the ship's run once (FinishShipCommand), for every ship of a fleet, and logs why.
-func _finish_ship(api: ScenarioApi, now: int, ship: int, reason: String) -> void:
+func _finish_ship(
+	api: ScenarioApi, now: int, ship: int, reason: String, survived: bool = false
+) -> void:
 	_ended_logged[ship] = true
 	for s: int in _ships(api):
-		api.finish_ship(s)
+		api.finish_ship(s, survived)
 	_log(
 		now,
 		ship,
