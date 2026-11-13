@@ -29,8 +29,8 @@ func apply(world: SimWorld) -> bool:
 	if module.slot_type != world.modules.slot_type[row]:
 		return Trade.refuse(world, ship_id, card, &"wrong_slot")
 	var old: ModuleDef = ModuleSystem.fitted(world, ship_id, slot)
-	var trade_in: int = Trade.sale_price(m, old.price) if old != null else 0
-	if not Economy.add_credits(world, ship_id, trade_in - module.price):
+	var trade_in: int = Trade.sale_price(m, Trade.module_price(world, old)) if old != null else 0
+	if not Economy.add_credits(world, ship_id, trade_in - Trade.module_price(world, module)):
 		return Trade.refuse(world, ship_id, card, &"no_credits")
 	ModuleSystem.fit(world, ship_id, slot, module)
 	if old != null:

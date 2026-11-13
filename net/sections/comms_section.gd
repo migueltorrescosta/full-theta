@@ -233,9 +233,10 @@ static func _offer_rows(world: SimWorld, ship: int, card: int, out: Dictionary) 
 						"module": key,
 						"name": module.name_key,
 						"slot": slot,
-						"price": module.price,
+						"price": Trade.module_price(world, module),
 						"old": old.id if old != null else &"",
-						"trade_in": Trade.sale_price(m, old.price) if old != null else 0,
+						"trade_in":
+						Trade.sale_price(m, Trade.module_price(world, old)) if old != null else 0,
 					}
 				)
 			)

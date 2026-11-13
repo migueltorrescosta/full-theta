@@ -308,7 +308,7 @@ Active ids per area: FT-GEN 14, FT-ARC 23, FT-NET 51, FT-SIM 37, FT-STN 17, FT-H
 | FT-MIS-012 | tests | `tests/sim/run/test_game_modes.gd`, `tests/sim/run/test_relaunch.gd` |
 | FT-MIS-013 | tests | `tests/director/test_fleet_director.gd`, `tests/net/test_net_fleet_teams.gd`, `tests/sim/run/test_game_modes.gd` |
 | FT-MIS-014 | tests | `tests/net/test_fleet_lobby_l3.gd`, `tests/sim/run/test_game_modes.gd`, `tests/sim/run/test_game_ties.gd`, `tests/sim/run/test_relaunch.gd`, `tests/stations/test_fleet_screens.gd` |
-| FT-MIS-015 | tests | `tests/sim/run/test_flee_abandon.gd` |
+| FT-MIS-015 | tests | `tests/scenarios/test_limp_home.gd`, `tests/sim/run/test_flee_abandon.gd` |
 | FT-MIS-016 | tests | `tests/net/test_run_abandon_l3.gd`, `tests/sim/run/test_flee_abandon.gd`, `tests/stations/m4_phone/test_m4_phone_screens.gd`, `tests/stations/test_fleet_screens.gd`, `tests/stations/test_settings_menu.gd` |
 | FT-MIS-017 | tests | `tests/sim/core/test_sim_world.gd`, `tests/sim/economy/test_modules.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/sim/run/test_outcome.gd`, `tests/sim/run/test_run_reset.gd` |
 | FT-MIS-018 | tests | `tests/sim/economy/test_economy.gd`, `tests/sim/economy/test_reputation.gd` |

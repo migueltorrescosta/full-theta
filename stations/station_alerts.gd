@@ -35,8 +35,9 @@ const ROUTES: Dictionary = {
 const CRITICAL: Array[StringName] = [
 	&"hull_critical", &"missile_lock", &"shield_low", &"fault", &"crippled"
 ]
-## Events that end a crippled ship's countdown (gp-09): it limped home, or the encounter ended.
-const COUNTDOWN_ENDS: Array[StringName] = [&"limped_home", &"encounter_end"]
+## The own ship's events that end its crippled countdown (gp-09): it limped home, fled or was
+## destroyed, or its encounter ended (encounter_end names the encounter's first ship).
+const COUNTDOWN_ENDS: Array[StringName] = [&"limped_home", &"fled", &"destroyed", &"encounter_end"]
 ## Fault tag (the subsystem id, content/ships/) -> stations that depend on it and see
 ## its fault (FT-SIM-032). PROVISIONAL.
 const DEPENDS: Dictionary = {
@@ -88,9 +89,11 @@ func setup(
 ## A sim event (docs/protocol.md "Events": payload {ship, faction, other, value, vector,
 ## tag}); only the own ship's count.
 func on_sim_event(kind: StringName, p: Dictionary) -> void:
+	if int(p.get("ship", -1)) != ctx.crew.ship:
+		return
 	if kind in COUNTDOWN_ENDS:
 		banner.stop_countdown()
-	if not ROUTES.has(kind) or int(p.get("ship", -1)) != ctx.crew.ship:
+	if not ROUTES.has(kind):
 		return
 	var route: Array = ROUTES[kind]
 	var audible: bool = _covers(route[0])

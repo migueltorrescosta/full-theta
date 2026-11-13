@@ -19,7 +19,7 @@ func apply(world: SimWorld) -> bool:
 	var old: ModuleDef = ModuleSystem.fitted(world, ship_id, slot)
 	if old == null:
 		return Trade.refuse(world, ship_id, card, &"bad_item")
-	var pay: int = Trade.sale_price(m, old.price)
+	var pay: int = Trade.sale_price(m, Trade.module_price(world, old))
 	ModuleSystem.fit(world, ship_id, slot, null)
 	Economy.add_credits(world, ship_id, pay)
 	world.emit(&"module_sold", ship_id, card, pay, Vector3.ZERO, old.id)
