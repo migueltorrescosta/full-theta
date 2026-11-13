@@ -11,9 +11,7 @@ extends RefCounted
 ## longer chord wins (View+X suppresses X, LB+LS_X suppresses LS_X); identical
 ## bindings on two active intents both fire, in table order.
 ##
-## Intent event (Dictionary): {"id", "group", "target" (IntentTable.target), "kind",
-## "pressed" (press: true; hold: the new held state, toggle-aware), "value" (1.0 or
-## 0.0), "device"}. Axes are polled with axis(); feed() emits no axis events.
+## Intent events are IntentEvents. Axes are polled with axis(); feed() emits no axis events.
 ##
 ## Gestures (PROVISIONAL timings):
 ## - a button that is also a modifier or has a "long" binding in the active set fires
@@ -109,7 +107,7 @@ var _touch_axes: Dictionary = {}
 ## Physical key that produced the "?" currently down.
 var _question_key: String = ""
 ## Events waiting for the next feed() or update() (released by set_context).
-var _queue: Array[Dictionary] = []
+var _queue: Array[IntentEvent] = []
 ## restrict(): the only active intents, or [] for all.
 var _only: Array = []
 ## Held and toggled ids -> their bindings and mode when they started (_sig), so a
@@ -154,8 +152,8 @@ func cancel(id: String) -> void:
 
 
 ## Feeds one input event at `now_ms`; returns the intent events it completes.
-func feed(event: InputEvent, now_ms: int) -> Array[Dictionary]:
-	var out: Array[Dictionary] = _take_queue()
+func feed(event: InputEvent, now_ms: int) -> Array[IntentEvent]:
+	var out: Array[IntentEvent] = _take_queue()
 	_tick(now_ms, out)
 	if event.is_echo():
 		return out
@@ -184,8 +182,8 @@ func feed(event: InputEvent, now_ms: int) -> Array[Dictionary]:
 
 ## Advances timers (long presses, sequence timeouts, the mouse stick's re-centring);
 ## returns the intent events they complete. Call every frame.
-func update(now_ms: int, delta: float) -> Array[Dictionary]:
-	var out: Array[Dictionary] = _take_queue()
+func update(now_ms: int, delta: float) -> Array[IntentEvent]:
+	var out: Array[IntentEvent] = _take_queue()
 	_tick(now_ms, out)
 	mouse_stick.decay(delta)
 	return out
@@ -225,8 +223,8 @@ func touch_axis(id: String, value: float) -> void:
 ## A tap on a touch control for `id`: a press intent fires once, a hold pulses (pressed then
 ## released), or flips when the player made it a toggle (FT-STN-014). [] when the intent
 ## isn't active.
-func touch_press(id: String) -> Array[Dictionary]:
-	var out: Array[Dictionary] = _take_queue()
+func touch_press(id: String) -> Array[IntentEvent]:
+	var out: Array[IntentEvent] = _take_queue()
 	if _touch_active(id):
 		_tap({"id": id, "kind": IntentTable.row(id)["kind"]}, IntentTable.TOUCH, out)
 	return out
@@ -234,8 +232,8 @@ func touch_press(id: String) -> Array[Dictionary]:
 
 ## A touch control for the hold intent `id` went down or up: held while down, or a flip on
 ## the press when it is a toggle (FT-STN-014). A press intent fires on the way down.
-func touch_hold(id: String, down: bool) -> Array[Dictionary]:
-	var out: Array[Dictionary] = _take_queue()
+func touch_hold(id: String, down: bool) -> Array[IntentEvent]:
+	var out: Array[IntentEvent] = _take_queue()
 	var input: String = "t:" + id
 	if not down:
 		if _holding.has(id) and input in _holding[id]["inputs"]:
@@ -272,8 +270,8 @@ func is_held(id: String) -> bool:
 
 ## Releases every held and toggled intent and forgets pressed buttons and pending
 ## gestures (focus loss, screen change).
-func release_all() -> Array[Dictionary]:
-	var out: Array[Dictionary] = _take_queue()
+func release_all() -> Array[IntentEvent]:
+	var out: Array[IntentEvent] = _take_queue()
 	for id: String in _holding:
 		out.append(_event(id, _holding[id]["dev"], false))
 	for id: String in _toggled:
@@ -331,9 +329,9 @@ func _sig(id: String) -> String:
 	)
 
 
-func _take_queue() -> Array[Dictionary]:
+func _take_queue() -> Array[IntentEvent]:
 	_refresh()
-	var out: Array[Dictionary] = _queue
+	var out: Array[IntentEvent] = _queue
 	_queue = []
 	return out
 
@@ -427,7 +425,7 @@ func _sources(name: String) -> Array[String]:
 
 ## Keys match on the physical key (layout-independent positions, named after the US
 ## layout); "?" matches any key press typing "?".
-func _key(k: InputEventKey, now_ms: int, out: Array[Dictionary]) -> void:
+func _key(k: InputEventKey, now_ms: int, out: Array[IntentEvent]) -> void:
 	_flags(k)
 	var code: Key = k.physical_keycode if k.physical_keycode != KEY_NONE else k.keycode
 	var name: String = "k:%d" % code
@@ -456,7 +454,9 @@ func _all_held(names: Array) -> bool:
 	return names.all(func(n: String) -> bool: return _held(n))
 
 
-func _button(name: String, pressed: bool, dev: String, now_ms: int, out: Array[Dictionary]) -> void:
+func _button(
+	name: String, pressed: bool, dev: String, now_ms: int, out: Array[IntentEvent]
+) -> void:
 	device = dev
 	if pressed and not _down.has(name):
 		_press(name, dev, now_ms, out)
@@ -464,7 +464,7 @@ func _button(name: String, pressed: bool, dev: String, now_ms: int, out: Array[D
 		_release(name, now_ms, out)
 
 
-func _press(name: String, dev: String, now_ms: int, out: Array[Dictionary]) -> void:
+func _press(name: String, dev: String, now_ms: int, out: Array[IntentEvent]) -> void:
 	_down[name] = now_ms
 	_spent.erase(name)
 	if not _seq.is_empty():
@@ -501,7 +501,7 @@ func _press(name: String, dev: String, now_ms: int, out: Array[Dictionary]) -> v
 			_fire(e, dev, out)
 
 
-func _release(name: String, now_ms: int, out: Array[Dictionary]) -> void:
+func _release(name: String, now_ms: int, out: Array[IntentEvent]) -> void:
 	_down.erase(name)
 	if _deferred.has(name):
 		var d: Dictionary = _deferred[name]
@@ -518,7 +518,7 @@ func _release(name: String, now_ms: int, out: Array[Dictionary]) -> void:
 
 
 ## Long presses that came due and sequences that timed out.
-func _tick(now_ms: int, out: Array[Dictionary]) -> void:
+func _tick(now_ms: int, out: Array[IntentEvent]) -> void:
 	for name: String in _deferred:
 		var d: Dictionary = _deferred[name]
 		if _spent.has(name) or now_ms - int(d["t"]) < LONG_MS:
@@ -533,7 +533,7 @@ func _tick(now_ms: int, out: Array[Dictionary]) -> void:
 
 
 ## The waiting first button of a sequence fires its own plain bindings.
-func _flush_seq(out: Array[Dictionary]) -> void:
+func _flush_seq(out: Array[IntentEvent]) -> void:
 	var name: String = _seq["name"]
 	var dev: String = _seq["dev"]
 	_seq = {}
@@ -567,7 +567,7 @@ func _is_modifier(name: String, dev: String) -> bool:
 
 ## A press or hold starts: press fires once; hold is held until one of the binding's
 ## inputs is released, or flips when it is a toggle (FT-STN-014).
-func _fire(e: Dictionary, dev: String, out: Array[Dictionary]) -> void:
+func _fire(e: Dictionary, dev: String, out: Array[IntentEvent]) -> void:
 	var id: String = e["id"]
 	if e["kind"] == IntentTable.PRESS:
 		out.append(_event(id, dev, true))
@@ -582,7 +582,7 @@ func _fire(e: Dictionary, dev: String, out: Array[Dictionary]) -> void:
 
 
 ## A press or hold that fires after its button is already up: a hold pulses.
-func _tap(e: Dictionary, dev: String, out: Array[Dictionary]) -> void:
+func _tap(e: Dictionary, dev: String, out: Array[IntentEvent]) -> void:
 	var id: String = e["id"]
 	if e["kind"] == IntentTable.PRESS:
 		out.append(_event(id, dev, true))
@@ -593,7 +593,7 @@ func _tap(e: Dictionary, dev: String, out: Array[Dictionary]) -> void:
 		out.append(_event(id, dev, false))
 
 
-func _flip(id: String, dev: String, out: Array[Dictionary]) -> void:
+func _flip(id: String, dev: String, out: Array[IntentEvent]) -> void:
 	if _toggled.has(id):
 		_toggled.erase(id)
 		out.append(_event(id, dev, false))
@@ -603,23 +603,14 @@ func _flip(id: String, dev: String, out: Array[Dictionary]) -> void:
 		out.append(_event(id, dev, true))
 
 
-func _event(id: String, dev: String, pressed: bool) -> Dictionary:
-	var r: Dictionary = IntentTable.row(id)
-	return {
-		"id": id,
-		"group": r["group"],
-		"target": IntentTable.target(id, dev, _focused, _stations),
-		"kind": r["kind"],
-		"pressed": pressed,
-		"value": 1.0 if pressed else 0.0,
-		"device": dev,
-	}
+func _event(id: String, dev: String, pressed: bool) -> IntentEvent:
+	return IntentEvent.routed(id, dev, pressed, _focused, _stations)
 
 
 # --- Analog -----------------------------------------------------------------------
 
 
-func _motion(m: InputEventJoypadMotion, now_ms: int, out: Array[Dictionary]) -> void:
+func _motion(m: InputEventJoypadMotion, now_ms: int, out: Array[IntentEvent]) -> void:
 	var axis_name: Variant = PAD_AXES.find_key(m.axis)
 	if axis_name == null:
 		return

@@ -79,11 +79,6 @@ func before() -> void:
 
 
 func after_test() -> void:
-	SafeArea.simulate([])
-	LayoutMode.forced = -1
-	FullscreenButton.forced = -1
-	FullscreenToggle.forced_on = -1
-	RotateBanner.dismissed_here = false
 	I18n.apply("en")
 	if FileAccess.file_exists(SETTINGS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))

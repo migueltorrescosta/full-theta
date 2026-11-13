@@ -189,7 +189,7 @@ func _form() -> LayoutMode.Form:
 
 
 ## Touch intent events go through the screen like a device's (StationScreen.dispatch).
-func _dispatch(ev: Dictionary) -> void:
+func _dispatch(ev: IntentEvent) -> void:
 	var screen: StationScreen = self.screen()
 	if screen != null:
 		screen.dispatch(ev)
@@ -304,9 +304,9 @@ func radar_inset_rect() -> Rect2:
 # --- Intents. ---
 
 
-func handle_intent(ev: Dictionary) -> bool:
-	var id: String = ev["id"]
-	var pressed: bool = bool(ev.get("pressed", true))
+func handle_intent(ev: IntentEvent) -> bool:
+	var id: String = ev.id
+	var pressed: bool = ev.pressed
 	match id:
 		"face", "approach", "helm_pointer":
 			# Polled (is_held) and latched into helm_input.

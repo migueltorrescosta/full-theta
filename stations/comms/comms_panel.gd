@@ -611,10 +611,10 @@ func _on_sim_event(kind: StringName, p: Dictionary) -> void:
 # --- Input. ---
 
 
-func handle_intent(ev: Dictionary) -> bool:
-	if not bool(ev.get("pressed", true)):
+func handle_intent(ev: IntentEvent) -> bool:
+	if not ev.pressed:
 		return false
-	var id: String = str(ev["id"])
+	var id: String = ev.id
 	var handled: bool = true
 	if id.begins_with("comms_reply_"):
 		handled = _reply_key(id.trim_prefix("comms_reply_").to_int())

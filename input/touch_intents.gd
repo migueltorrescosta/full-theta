@@ -16,7 +16,7 @@ extends RefCounted
 ## the matcher (focus loss, the menu) lets go of them too.
 
 var matcher: InputMatcher
-## Called with each intent event (Dictionary) a control completes.
+## Called with each IntentEvent a control completes.
 var sink: Callable
 
 
@@ -66,6 +66,6 @@ func axis(id: String, value: float) -> void:
 	matcher.touch_axis(id, value)
 
 
-func _send(events: Array[Dictionary]) -> void:
-	for ev: Dictionary in events:
+func _send(events: Array[IntentEvent]) -> void:
+	for ev: IntentEvent in events:
 		sink.call(ev)

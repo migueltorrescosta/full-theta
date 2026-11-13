@@ -10,11 +10,10 @@ const H2: int = StationFixture.H2
 
 func before() -> void:
 	I18n.apply("en")
+
+
+func before_test() -> void:
 	LayoutMode.forced = LayoutMode.Kind.DESKTOP
-
-
-func after() -> void:
-	LayoutMode.forced = -1
 
 
 func after_test() -> void:

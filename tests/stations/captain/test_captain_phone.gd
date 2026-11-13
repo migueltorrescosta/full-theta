@@ -15,8 +15,6 @@ func before() -> void:
 
 
 func after_test() -> void:
-	SafeArea.simulate([])
-	LayoutMode.forced = -1
 	if FileAccess.file_exists(SETTINGS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
@@ -164,9 +162,9 @@ func test_rail_taps_send_the_key_intents() -> void:
 		var by_touch: Array = _sent(touch).sent.duplicate()
 		_drop(touch)
 		var keys: StationScreen = await _screen(Vector2i(844, 390), LANDSCAPE)
-		var ev: Dictionary = {
-			"id": "captain_view_%d" % (i + 1), "target": "captain", "pressed": true
-		}
+		var ev: IntentEvent = IntentEvent.of(
+			"captain_view_%d" % (i + 1), true, IntentTable.KBM, "captain"
+		)
 		assert_bool(keys.dispatch(ev)).is_true()
 		assert_array(by_touch).override_failure_message(str(i)).is_equal(_sent(keys).sent)
 		_drop(keys)
@@ -176,9 +174,7 @@ func test_rail_taps_send_the_key_intents() -> void:
 		var by_touch: Array = _sent(touch).sent.duplicate()
 		_drop(touch)
 		var keys: StationScreen = await _screen(Vector2i(844, 390), LANDSCAPE)
-		var ev: Dictionary = {
-			"id": id, "target": "screen", "pressed": true, "device": IntentTable.PAD
-		}
+		var ev: IntentEvent = IntentEvent.of(id, true, IntentTable.PAD, "screen")
 		# The pad's "under the reticle" is the mirror's centre: nothing there, so the selection.
 		keys.dispatch(ev)
 		assert_array(by_touch).override_failure_message(id).is_not_empty()

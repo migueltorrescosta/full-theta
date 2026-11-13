@@ -50,7 +50,7 @@ func _init(panel: WeaponsPanel, is_portrait: bool) -> void:
 	radar_box = RadarInset.new(panel.ctx)
 	radar_box.visible = false
 	add_child(radar_box)
-	touch = TouchIntents.new(panel.ctx.matcher, func(_ev: Dictionary) -> void: pass)
+	touch = TouchIntents.new(panel.ctx.matcher, func(_ev: IntentEvent) -> void: pass)
 	dock = TabletDock.new(portrait)
 	_build_left()
 	_build_right()

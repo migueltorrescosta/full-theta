@@ -171,17 +171,9 @@ func _settings_path(seat: String) -> String:
 
 
 ## The controller's common actions act under the reticle or the selection.
-func _ev(id: String, s: StationScreen) -> Dictionary:
+func _ev(id: String, s: StationScreen) -> IntentEvent:
 	var dev: String = IntentTable.PAD
-	return {
-		"id": id,
-		"group": IntentTable.row(id)["group"],
-		"target": IntentTable.target(id, dev, s.focused_station(), s.stations),
-		"kind": IntentTable.row(id)["kind"],
-		"pressed": true,
-		"value": 1.0,
-		"device": dev,
-	}
+	return IntentEvent.routed(id, dev, true, s.focused_station(), s.stations)
 
 
 func _drag(p: RelayPanel, from: Vector2, to: Vector2) -> void:

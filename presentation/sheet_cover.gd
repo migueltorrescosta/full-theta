@@ -8,6 +8,11 @@ extends RefCounted
 static var _boxes: Array[Control] = []
 
 
+## Forgets every box (tests, via UiOverrides.reset).
+static func reset() -> void:
+	_boxes.clear()
+
+
 static func register(box: Control) -> void:
 	if not _boxes.has(box):
 		_boxes.append(box)

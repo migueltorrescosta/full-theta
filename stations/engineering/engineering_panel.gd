@@ -333,7 +333,7 @@ static func touch_help() -> Array:
 func press_touch(id: String) -> bool:
 	if id == "claim":
 		return claim_crew()
-	return handle_intent({"id": id, "pressed": true, "device": "touch"})
+	return handle_intent(IntentEvent.of(id, true, IntentTable.TOUCH))
 
 
 ## Takes or releases the claim on the picked crew, as the common claim does on this panel.
@@ -380,11 +380,11 @@ func _input(event: InputEvent) -> void:
 			model.select(i)
 
 
-func handle_intent(ev: Dictionary) -> bool:
-	if not bool(ev.get("pressed", true)) or ship_def == null:
+func handle_intent(ev: IntentEvent) -> bool:
+	if not ev.pressed or ship_def == null:
 		return false
-	var id: String = ev["id"]
-	var kbm: bool = str(ev.get("device", IntentTable.KBM)) == IntentTable.KBM
+	var id: String = ev.id
+	var kbm: bool = ev.device == IntentTable.KBM
 	if id.begins_with("subsystem_") and id.trim_prefix("subsystem_").is_valid_int():
 		return model.select(id.trim_prefix("subsystem_").to_int() - 1)
 	match id:

@@ -52,7 +52,7 @@ func _gui_input(event: InputEvent) -> void:
 			_touch = t.index
 			_from = t.position
 			_moved = false
-			TouchInput.held += 1
+			TouchInput.hold(self)
 			if long_press != null and now_ms.is_valid():
 				var g: InputEventScreenTouch = t.duplicate()
 				g.position = get_global_transform_with_canvas() * t.position
@@ -89,6 +89,5 @@ func _on_armed(_at: Vector2) -> void:
 
 
 func _release() -> void:
-	if _touch >= 0:
-		TouchInput.held = maxi(TouchInput.held - 1, 0)
+	TouchInput.release(self)
 	_touch = -1

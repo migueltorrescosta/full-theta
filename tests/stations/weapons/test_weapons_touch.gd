@@ -19,8 +19,6 @@ func before() -> void:
 
 
 func after_test() -> void:
-	SafeArea.simulate([])
-	RotateBanner.dismissed_here = false
 	if FileAccess.file_exists(SETTINGS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
@@ -307,7 +305,7 @@ func test_rail_buttons_send_the_key_intents() -> void:
 	_tap(t.guided_button)
 	var by_touch: Array = toasts.duplicate()
 	toasts.clear()
-	p.handle_intent({"id": "fire_guided", "pressed": true, "device": IntentTable.KBM})
+	p.handle_intent(IntentEvent.of("fire_guided", true, IntentTable.KBM))
 	assert_array(by_touch).is_not_empty()
 	assert_array(by_touch).is_equal(toasts)
 	assert_array(_commands(s, "fire_guided")).is_empty()
@@ -326,7 +324,7 @@ func test_rail_buttons_send_the_key_intents() -> void:
 	# The keyboard's fire hold sends the same command.
 	var k: StationScreen = await _screen(Vector2i(844, 390), LANDSCAPE)
 	_panel(k).set_aim_dir(0, k.ctx.interp.own_rotation() * Vector3.FORWARD)
-	_panel(k).handle_intent({"id": "fire", "pressed": true, "device": IntentTable.KBM})
+	_panel(k).handle_intent(IntentEvent.of("fire", true, IntentTable.KBM))
 	_panel(k).step(0.016)
 	assert_array(_commands(k, "fire")).is_equal(fired)
 
@@ -440,7 +438,7 @@ func test_long_press_on_the_view_pings_and_marks() -> void:
 	assert_int(marks.size()).is_equal(1)
 	assert_int(int(marks[0][1][2])).is_equal(StationFixture.U3)
 	assert_float(p.aim_dir(0).angle_to(aim)).is_less(1e-4)
-	assert_int(TouchInput.held).is_equal(0)
+	assert_int(TouchInput.held_count()).is_equal(0)
 	# A quick tap selects and neither pings nor marks.
 	_touch(u3, true)
 	clock.ms += 100

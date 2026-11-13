@@ -9,12 +9,11 @@ const SETTINGS: String = "user://test_main_screen_views.cfg"
 
 func before() -> void:
 	I18n.apply("en")
+
+
+func before_test() -> void:
 	# gdUnit's 64 x 64 window is a phone on its side; these check the desktop layout (#28).
 	LayoutMode.forced = LayoutMode.Kind.DESKTOP
-
-
-func after() -> void:
-	LayoutMode.forced = -1
 
 
 func after_test() -> void:
@@ -144,10 +143,10 @@ func test_who_may_switch_on_the_client() -> void:
 	var sent: StationFixture.RecordingClient = StationFixture.sent(relay)
 	var panel: RelayPanel = RelayPanel.new()
 	panel.setup(relay, "relay")
-	assert_bool(panel.handle_intent({"id": "main_view_3", "pressed": true})).is_true()
+	assert_bool(panel.handle_intent(IntentEvent.of("main_view_3"))).is_true()
 	assert_int(sent.of("set_main_view").size()).is_equal(0)
 	relay.crew.lobby[0]["captain"] = ""
-	assert_bool(panel.handle_intent({"id": "main_view_3", "pressed": true})).is_true()
+	assert_bool(panel.handle_intent(IntentEvent.of("main_view_3"))).is_true()
 	assert_array(sent.of("set_main_view")[0][1]).is_equal([MainScreen.View.TACTICAL])
 	panel.free()
 

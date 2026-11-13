@@ -274,10 +274,10 @@ func _tab_hotkey(event: InputEvent) -> bool:
 	return true
 
 
-## Routes one intent event (InputMatcher's dictionary); true when something handled
+## Routes one intent event (InputMatcher's IntentEvent); true when something handled
 ## it. Public so tests can drive the screen without devices.
-func dispatch(ev: Dictionary) -> bool:
-	var target: String = str(ev.get("target", ""))
+func dispatch(ev: IntentEvent) -> bool:
+	var target: String = ev.target
 	if target == "screen":
 		return common.run(ev)
 	var i: int = stations.find(target)
@@ -293,7 +293,7 @@ func feed(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseMotion and not focused_panel().mouse_steers():
 		return
-	var batch: Array[Dictionary] = ctx.matcher.feed(event, ctx.now_ms())
+	var batch: Array[IntentEvent] = ctx.matcher.feed(event, ctx.now_ms())
 	_dispatch_batch(batch)
 
 
@@ -455,14 +455,14 @@ func _update_block() -> void:
 	ctx.matcher.restrict(UNBLOCKED if _blocked else [])
 
 
-func _dispatch_batch(batch: Array[Dictionary]) -> void:
+func _dispatch_batch(batch: Array[IntentEvent]) -> void:
 	var consumed: bool = false
-	for ev: Dictionary in batch:
-		if consumed and ev.get("target", "") != "screen":
+	for ev: IntentEvent in batch:
+		if consumed and ev.target != "screen":
 			# The press never reached its panel: undo its hold or toggle flip.
-			ctx.matcher.cancel(ev["id"])
+			ctx.matcher.cancel(ev.id)
 			continue
-		if dispatch(ev) and ev["id"] == "select":
+		if dispatch(ev) and ev.id == "select":
 			consumed = true
 
 

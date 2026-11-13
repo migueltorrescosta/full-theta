@@ -31,16 +31,8 @@ func _screen() -> StationScreen:
 	return s
 
 
-func _ev(id: String, device: String = "kbm") -> Dictionary:
-	return {
-		"id": id,
-		"group": "comms",
-		"target": "comms",
-		"kind": IntentTable.row(id)["kind"],
-		"pressed": true,
-		"value": 1.0,
-		"device": device,
-	}
+func _ev(id: String, device: String = "kbm") -> IntentEvent:
+	return IntentEvent.of(id, true, device, "comms")
 
 
 func _commands(s: StationScreen, kind: String) -> Array:
@@ -181,22 +173,7 @@ func test_tap_and_pad_do_the_lines() -> void:
 		panel.overlay._gui_input(e)
 	assert_str(_commands(s, "comms_trade")[0]["item"]).is_equal("parts")
 	panel.overlay.focus = _row(panel, "module", "module", "hx2_afterburner")
-	(
-		assert_bool(
-			s.dispatch(
-				{
-					"id": "select",
-					"group": "common",
-					"target": "screen",
-					"kind": "press",
-					"pressed": true,
-					"value": 1.0,
-					"device": "pad"
-				}
-			)
-		)
-		. is_true()
-	)
+	assert_bool(s.dispatch(IntentEvent.of("select", true, "pad", "screen"))).is_true()
 	assert_array(_commands(s, "comms_buy_module")).has_size(1)
 	s.dispatch(_ev("comms_buy", "pad"))
 	assert_array(_commands(s, "comms_buy_module")).has_size(2)

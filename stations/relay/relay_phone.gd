@@ -367,7 +367,7 @@ func _route_empty() -> bool:
 
 
 func _intent(id: String) -> void:
-	panel.handle_intent({"id": id, "pressed": true})
+	panel.handle_intent(IntentEvent.of(id))
 
 
 ## A tap on Launch probe launches (to the selection, else arms the map), unless the press

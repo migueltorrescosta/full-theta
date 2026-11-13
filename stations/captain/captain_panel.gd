@@ -311,9 +311,9 @@ func set_view(view: int) -> void:
 
 
 ## Keys 1 to 5 pick a view, Tab or the d-pad step through them.
-func handle_intent(event: Dictionary) -> bool:
-	var id: String = str(event.get("id", ""))
-	if not bool(event.get("pressed", true)):
+func handle_intent(event: IntentEvent) -> bool:
+	var id: String = event.id
+	if not event.pressed:
 		return false
 	if id.begins_with("captain_view_") and id.trim_prefix("captain_view_").is_valid_int():
 		set_view(id.trim_prefix("captain_view_").to_int() - 1)

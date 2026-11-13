@@ -94,7 +94,7 @@ func _gui_input(event: InputEvent) -> void:
 	if t.pressed and _touch < 0:
 		_touch = t.index
 		_explained = false
-		TouchInput.held += 1
+		TouchInput.hold(self)
 		_show_down(true)
 		_hold(true)
 		if not hold and is_inside_tree():
@@ -133,7 +133,7 @@ func _explain(index: int) -> void:
 
 func _release() -> void:
 	_touch = -1
-	TouchInput.held = maxi(TouchInput.held - 1, 0)
+	TouchInput.release(self)
 	_show_down(false)
 	_hold(false)
 

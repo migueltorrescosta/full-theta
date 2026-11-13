@@ -13,7 +13,6 @@ func before() -> void:
 
 
 func before_test() -> void:
-	TouchInput.held = 0
 	_vp = auto_free(SubViewport.new())
 	_vp.size = Vector2i(844, 390)
 	_vp.gui_disable_input = false
@@ -23,12 +22,6 @@ func before_test() -> void:
 	holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	holder.name = "Holder"
 	_vp.add_child(holder)
-
-
-func after_test() -> void:
-	SafeArea.simulate([])
-	FullscreenButton.forced = -1
-	RotateBanner.dismissed_here = false
 
 
 func _holder() -> Control:
@@ -86,10 +79,10 @@ func test_second_finger_presses_a_rail_button_while_a_stick_is_held() -> void:
 	_drag(0, Vector2(130, 260))
 	assert_float(stick.value.x).is_greater(0.9)
 	assert_float(absf(stick.value.y)).is_less(0.01)
-	assert_int(TouchInput.held).is_equal(1)
+	assert_int(TouchInput.held_count()).is_equal(1)
 	_touch(1, Vector2(760, 300), true)
 	assert_array(events).is_equal([true])
-	assert_int(TouchInput.held).is_equal(2)
+	assert_int(TouchInput.held_count()).is_equal(2)
 	_touch(1, Vector2(760, 300), false)
 	assert_array(events).is_equal([true, false, "pressed"])
 	# The stick still follows finger 0 and springs back on release.
@@ -98,7 +91,7 @@ func test_second_finger_presses_a_rail_button_while_a_stick_is_held() -> void:
 	_touch(0, Vector2(70, 200), false)
 	assert_vector(stick.value).is_equal(Vector2.ZERO)
 	assert_vector(moves.back()).is_equal(Vector2.ZERO)
-	assert_int(TouchInput.held).is_equal(0)
+	assert_int(TouchInput.held_count()).is_equal(0)
 
 
 func test_stick_dead_zone_and_scale() -> void:

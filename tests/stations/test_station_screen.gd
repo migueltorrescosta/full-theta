@@ -12,8 +12,8 @@ class RecordingPanel:
 	var requests: int = 0
 
 	## Ids, releases suffixed "/up".
-	func handle_intent(ev: Dictionary) -> bool:
-		got.append(ev["id"] if ev.get("pressed", true) else ev["id"] + "/up")
+	func handle_intent(ev: IntentEvent) -> bool:
+		got.append(ev.id if ev.pressed else ev.id + "/up")
 		return true
 
 	func item_at(_pos: Vector2) -> Dictionary:
@@ -38,16 +38,8 @@ func _screen(seat: String) -> StationScreen:
 	return s
 
 
-func _ev(id: String, device: String, s: StationScreen) -> Dictionary:
-	return {
-		"id": id,
-		"group": IntentTable.row(id)["group"],
-		"target": IntentTable.target(id, device, s.focused_station(), s.stations),
-		"kind": IntentTable.row(id)["kind"],
-		"pressed": true,
-		"value": 1.0,
-		"device": device,
-	}
+func _ev(id: String, device: String, s: StationScreen) -> IntentEvent:
+	return IntentEvent.routed(id, device, true, s.focused_station(), s.stations)
 
 
 func _sent(s: StationScreen, method: String) -> Array:

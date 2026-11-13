@@ -6,11 +6,10 @@ extends GdUnitTestSuite
 
 func before() -> void:
 	I18n.apply("en")
+
+
+func before_test() -> void:
 	LayoutMode.forced = LayoutMode.Kind.DESKTOP
-
-
-func after() -> void:
-	LayoutMode.forced = -1
 
 
 func _cutaway() -> EngineeringCutaway:
