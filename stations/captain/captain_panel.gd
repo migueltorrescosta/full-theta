@@ -15,7 +15,7 @@ const SIDE_WIDTH: float = 330.0
 const BUTTON_HEIGHT: float = 44.0
 ## Under this width (a phone or a tablet upright, D195) the mirror and the right column
 ## stack and scroll.
-const NARROW_W: float = 760.0
+const NARROW_WIDTH: float = 760.0
 const STACK_MIRROR_H: float = 320.0
 const STACK_SIDE_H: float = 520.0
 
@@ -157,7 +157,7 @@ func _stack() -> void:
 	_arrange_phone()
 	if phone != null:
 		return
-	var narrow: bool = size.x < NARROW_W
+	var narrow: bool = size.x < NARROW_WIDTH
 	_cols.vertical = narrow
 	mirror.custom_minimum_size.y = STACK_MIRROR_H if narrow else 0.0
 	_side.custom_minimum_size = Vector2(0, STACK_SIDE_H) if narrow else Vector2(SIDE_WIDTH, 0)
@@ -169,7 +169,7 @@ static func touch_help() -> Array:
 	# The rail: x 47-215, rows from y 72 (the top bar's 56 px, the frame's 8 px gap and the
 	# rail's own 8 px).
 	var x0: float = 47.0
-	var half: float = (CaptainPhone.RAIL_W - UiTheme.TOUCH_GAP) / 2.0
+	var half: float = (CaptainPhone.RAIL_WIDTH - UiTheme.TOUCH_GAP) / 2.0
 	var rows: Array = [
 		["view_0", "view_1", "forward", "Forward", "chase", "Chase"],
 		["view_2", "view_3", "tactical", "Tactical", "close_up", "Close-up"],

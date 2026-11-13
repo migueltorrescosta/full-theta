@@ -8,7 +8,7 @@ extends Scenario
 
 ## Faction of the drone (hostile to the crew by the default relation).
 ## Where the drone appears from the ship (m), at the bow, a little high.
-const DRONE_RANGE_M: float = 1500.0
+const DRONE_REACH: float = 1500.0
 const DRONE_CLOCK: int = 12
 const DRONE_HEIGHT: int = 1
 ## The NPC key of the drone (content/npcs/drone.tres).
@@ -54,7 +54,7 @@ func _ask(api: ScenarioApi) -> void:
 	if _ship < 0:
 		return
 	_drone = api.spawn_at_range(
-		DRONE_KEY, Factions.RAIDER, _ship, DRONE_RANGE_M, DRONE_CLOCK, DRONE_HEIGHT
+		DRONE_KEY, Factions.RAIDER, _ship, DRONE_REACH, DRONE_CLOCK, DRONE_HEIGHT
 	)
 	_anchor = api.ship(_ship).nearest_site
 	_asked = api.tick()

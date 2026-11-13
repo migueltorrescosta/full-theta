@@ -11,7 +11,7 @@ extends Button
 ##     ControlsHint.show_radar_legend(self, ctx.settings)
 
 const RADAR_KEY: String = "radar_legend"
-const RADAR_S: float = 12.0
+const RADAR_TIME: float = 12.0
 ## The legend's widest (px), and narrower than the view on a phone; its text wraps.
 const WIDE: float = 420.0
 ## Below the top bar.
@@ -22,7 +22,7 @@ const STACK: StringName = &"first_visit_stack"
 const RANK: StringName = &"stack_rank"
 
 ## Seconds left on screen.
-var left_s: float = RADAR_S
+var time_left: float = RADAR_TIME
 
 
 ## Adds the radar legend (R26-6, C11) the first time `parent` shows on this client; null when
@@ -70,8 +70,8 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_place()
-	left_s -= delta
-	if left_s <= 0.0:
+	time_left -= delta
+	if time_left <= 0.0:
 		set_process(false)
 		queue_free()
 

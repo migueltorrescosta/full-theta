@@ -3,7 +3,7 @@ extends PanelContainer
 ## The viewer handover notice (#11; FT-MIS-030, D79, D91): when this session's ship is out
 ## and the server moved it to a surviving friendly ship's main screen, a short notice says
 ## which ship is out, why, and which ship the player now watches. It hides by itself after
-## SHOW_S and lets every click through, so it never covers the HUD for long (R24-18); the
+## SHOW_TIME and lets every click through, so it never covers the HUD for long (R24-18); the
 ## top bar names the watched ship. A later handover or a relaunch replaces it. A handover
 ## to the scoreboard shows the scoreboard instead (ScoreboardScreen).
 ##
@@ -15,7 +15,7 @@ extends PanelContainer
 
 const KINDS: Array[StringName] = [&"handover", &"eliminated", &"relaunch", &"picked"]
 ## How long the notice shows (s).
-const SHOW_S: float = 6.0
+const SHOW_TIME: float = 6.0
 
 ## The handovers already shown, as seen_key strings, for this run of the game.
 static var seen: Dictionary = {}
@@ -92,7 +92,7 @@ func refresh() -> void:
 		return
 	seen[seen_key()] = true
 	_text.text = notice_text()
-	_left = SHOW_S
+	_left = SHOW_TIME
 	visible = true
 	_place.call_deferred()
 

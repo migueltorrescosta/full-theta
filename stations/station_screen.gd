@@ -57,13 +57,13 @@ const PHONE_SIDE_WIDTH: float = 180.0
 ## Least height of a docked panel: top bar, radar and one docked panel fit 720p at
 ## 150 % UI scale (480 px), so the screen never grows past the window.
 const DOCK_MIN_HEIGHT: float = 120.0
-const SCROLL_BAR_W: float = 14.0
+const SCROLL_BAR_WIDTH: float = 14.0
 ## More panels than this (the dev seat's six) get a tab strip; Shift + 1..9 picks a panel
 ## (the bare digits and Alt + digit belong to the stations' own keys).
 const TABS_FROM: int = 3
 const TAB_HINT_KEY: String = "dev_tabs"
 ## The share opener at the bottom of the view on a phone on its side.
-const OPENER_W: float = 160.0
+const OPENER_WIDTH: float = 160.0
 
 var ctx: StationContext
 ## Station ids of the panels, in order (F1, F2, ...).
@@ -406,7 +406,7 @@ func _push_notes(now: int, left: Dictionary) -> void:
 	var open: Array = []
 	for c: Dictionary in ChipsReader.incoming(ctx.snap, stations):
 		open.append(
-			{"id": c["id"], "text": ChipStrip.asker(c), "left": ChipsReader.left_s(ctx.snap, c)}
+			{"id": c["id"], "text": ChipStrip.asker(c), "left": ChipsReader.time_left(ctx.snap, c)}
 		)
 	for note: String in _lapse.update(open):
 		toasts.push(note, "note", now)

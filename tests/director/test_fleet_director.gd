@@ -167,7 +167,7 @@ func test_last_standing_raider_waves() -> void:
 		for id: int in f.world.ship_count():
 			if f.world.ai.is_enabled(id):
 				near = minf(near, f.api.distance(ship, id))
-		assert_float(near).is_less_equal(Factions.RAIDER_RANGE_M + 100.0)
+		assert_float(near).is_less_equal(Factions.RAIDER_REACH + 100.0)
 	f.step(every)
 	assert_int(_raiders(f.world)).is_equal(2 + 4)
 	var waves: Array[DirectorDecision] = f.director.decisions().filter(

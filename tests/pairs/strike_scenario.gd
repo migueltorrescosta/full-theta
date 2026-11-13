@@ -108,7 +108,7 @@ static func measure(w: SimWorld) -> Dictionary:
 	var weak: int = SimFixture.of_kind(w.events, &"weak_point_hit").size()
 	return {
 		"time": w.tick * SimWorld.DT,
-		"first_hit_s": first,
+		"first_hit_time": first,
 		"hits": float(hits.size()),
 		"weak_point_hits": float(weak),
 	}

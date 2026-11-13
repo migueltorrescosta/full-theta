@@ -19,7 +19,7 @@ signal closed
 const FONT_SIZE: int = 15
 const ROW_H: float = 40.0
 const PAD: float = 14.0
-const MAX_W: float = 760.0
+const MAX_WIDTH: float = 760.0
 ## A swipe down of this many pixels closes the overlay (touch).
 const SWIPE_PX: float = 60.0
 ## Replies are numbered 1 to MAX_REPLIES.
@@ -27,16 +27,16 @@ const MAX_REPLIES: int = 4
 ## A phone's rows (#28): touch-sized with 8 px gaps, in two columns when the box is this wide
 ## (a phone on its side), and no keyboard hint under them.
 const PHONE_ROW_H: float = 48.0
-const PHONE_TWO_COLS_W: float = 520.0
+const PHONE_TWO_COLS_WIDTH: float = 520.0
 ## The Close button's width on a phone.
-const CLOSE_W: float = 112.0
+const CLOSE_WIDTH: float = 112.0
 ## The Buy and Sell buttons, drawn while the card trades (R23-9): size, and the room a
 ## desktop box keeps for them above its hint line.
-const TRADE_W: float = 96.0
+const TRADE_WIDTH: float = 96.0
 const TRADE_H: float = 40.0
 const TRADE_FOOT: float = 48.0
 ## The page counter's width ("1/2") beside the ‹ › buttons.
-const COUNTER_W: float = 44.0
+const COUNTER_WIDTH: float = 44.0
 
 ## The COMMS block, the open card, and the focused row (index into `rows()`).
 var data: Dictionary = {}
@@ -378,11 +378,11 @@ func _layout() -> void:
 		return
 	var font: Font = get_theme_default_font()
 	var phone: bool = is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self))
-	var w: float = size.x if fill else minf(size.x - 24.0, MAX_W)
-	var cols: int = 2 if phone and w >= PHONE_TWO_COLS_W else 1
+	var w: float = size.x if fill else minf(size.x - 24.0, MAX_WIDTH)
+	var cols: int = 2 if phone and w >= PHONE_TWO_COLS_WIDTH else 1
 	var gap: float = float(UiTheme.TOUCH_GAP) if phone else 4.0
 	var row_min: float = PHONE_ROW_H if phone else ROW_H
-	var row_w: float = (w - 2.0 * PAD - (cols - 1) * gap) / cols
+	var row_width: float = (w - 2.0 * PAD - (cols - 1) * gap) / cols
 	var body: Vector2 = font.get_multiline_string_size(
 		_body(), HORIZONTAL_ALIGNMENT_LEFT, w - 2.0 * PAD, FONT_SIZE
 	)
@@ -393,7 +393,7 @@ func _layout() -> void:
 		var text_h: float = (
 			font
 			. get_multiline_string_size(
-				row_text(row), HORIZONTAL_ALIGNMENT_LEFT, row_w - 16.0, FONT_SIZE
+				row_text(row), HORIZONTAL_ALIGNMENT_LEFT, row_width - 16.0, FONT_SIZE
 			)
 			. y
 		)
@@ -408,7 +408,7 @@ func _layout() -> void:
 		rows_h += lh + gap
 	var trade: bool = trades()
 	# A phone too narrow for one foot row puts Buy and Sell on a row of their own.
-	_stacked = phone and trade and w < PHONE_TWO_COLS_W
+	_stacked = phone and trade and w < PHONE_TWO_COLS_WIDTH
 	var foot: float = 70.0 + (TRADE_FOOT if trade else 0.0)
 	if phone:
 		foot = PAD + UiTheme.TOUCH_PRIMARY + gap
@@ -438,8 +438,8 @@ func _layout() -> void:
 		if line < first_line or line >= first_line + _lines_shown:
 			_rects.append(Rect2())
 			continue
-		var x: float = _box.position.x + PAD + (i % cols) * (row_w + gap)
-		_rects.append(Rect2(x, y, row_w, lines[line]))
+		var x: float = _box.position.x + PAD + (i % cols) * (row_width + gap)
+		_rects.append(Rect2(x, y, row_width, lines[line]))
 		if i % cols == cols - 1 or i == _rows.size() - 1:
 			y += lines[line] + gap
 	_place_buttons(phone)
@@ -462,17 +462,17 @@ func _place_trade_buttons(phone: bool, foot_y: float, side: float) -> void:
 		h = TRADE_H
 		at = Vector2(_box.position.x + PAD, _box.end.y - 70.0 - TRADE_H - 4.0)
 	buy_button.position = at
-	sell_button.position = at + Vector2(TRADE_W + UiTheme.TOUCH_GAP, 0.0)
+	sell_button.position = at + Vector2(TRADE_WIDTH + UiTheme.TOUCH_GAP, 0.0)
 	for b: RailButton in [buy_button, sell_button]:
-		b.size = Vector2(TRADE_W, h)
-		b.custom_minimum_size = Vector2(TRADE_W, h)
+		b.size = Vector2(TRADE_WIDTH, h)
+		b.custom_minimum_size = Vector2(TRADE_WIDTH, h)
 
 
 ## Where a phone's foot row continues after the ‹ › buttons and the page counter.
 func _foot_text_x() -> float:
 	var x: float = _box.position.x + PAD
 	if _paged():
-		x += 2.0 * (UiTheme.TOUCH_PRIMARY + UiTheme.TOUCH_GAP) + COUNTER_W
+		x += 2.0 * (UiTheme.TOUCH_PRIMARY + UiTheme.TOUCH_GAP) + COUNTER_WIDTH
 	return x
 
 
@@ -495,8 +495,8 @@ func _place_buttons(phone: bool) -> void:
 		b.size = Vector2(side, side)
 		x += side + UiTheme.TOUCH_GAP
 	_place_trade_buttons(phone, y, side)
-	close_button.position = Vector2(_box.end.x - PAD - CLOSE_W, y)
-	close_button.size = Vector2(CLOSE_W, side)
+	close_button.position = Vector2(_box.end.x - PAD - CLOSE_WIDTH, y)
+	close_button.size = Vector2(CLOSE_WIDTH, side)
 	while _hits.size() < _rects.size():
 		var hit: Control = Control.new()
 		hit.name = "Row%d" % _hits.size()
@@ -597,7 +597,7 @@ func _draw() -> void:
 		_draw_row(font, i)
 	var foot_y: float = _box.end.y - PAD
 	var hint: String = TranslationServer.translate("comms.overlay_hint")
-	var hint_w: float = _box.size.x - 2.0 * PAD
+	var hint_width: float = _box.size.x - 2.0 * PAD
 	# A phone has no keys to hint at (#28): its foot row holds the buttons, and the status
 	# between them.
 	if close_button.visible:
@@ -611,14 +611,14 @@ func _draw() -> void:
 				Vector2(left, foot_y),
 				page_text(),
 				0,
-				COUNTER_W,
+				COUNTER_WIDTH,
 				FONT_SIZE,
 				Palette.color("text")
 			)
-			left += COUNTER_W
+			left += COUNTER_WIDTH
 		if buy_button.visible and not _stacked:
-			left = sell_button.position.x + TRADE_W + UiTheme.TOUCH_GAP
-		hint_w = close_button.position.x - UiTheme.TOUCH_GAP - left
+			left = sell_button.position.x + TRADE_WIDTH + UiTheme.TOUCH_GAP
+		hint_width = close_button.position.x - UiTheme.TOUCH_GAP - left
 		x = left
 	elif page_text() != "":
 		hint = "%s   %s" % [page_text(), hint]
@@ -629,7 +629,7 @@ func _draw() -> void:
 		Vector2(x, foot_y),
 		hint,
 		0,
-		hint_w,
+		hint_width,
 		FONT_SIZE - 1,
 		Palette.color("warn") if status != "" else Palette.color("text_dim")
 	)

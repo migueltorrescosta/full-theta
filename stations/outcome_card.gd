@@ -16,7 +16,7 @@ extends PanelContainer
 ## The crew changes the card depends on.
 const KINDS: Array[StringName] = [&"ship_outcome", &"reset", &"picked", &"catalogue", &"debrief"]
 ## The least width of Run again and Vote on a phone, px.
-const PHONE_BUTTON_W: float = 160.0
+const PHONE_BUTTON_WIDTH: float = 160.0
 
 var ctx: StationContext
 
@@ -279,7 +279,7 @@ func _button(node_name: String, text: String) -> Button:
 	b.text = text
 	if _phone:
 		# The row spans the card's content, from edge to edge, on a phone.
-		b.custom_minimum_size = Vector2(PHONE_BUTTON_W, UiTheme.TOUCH_PRIMARY)
+		b.custom_minimum_size = Vector2(PHONE_BUTTON_WIDTH, UiTheme.TOUCH_PRIMARY)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_buttons.add_child(b)
 	return b

@@ -66,10 +66,10 @@ static func kind_text(card: Dictionary) -> String:
 
 
 ## "9:30" for a time left in seconds; "" for none (a negative time).
-static func clock(time_s: float) -> String:
-	if time_s < 0.0:
+static func clock(time_left: float) -> String:
+	if time_left < 0.0:
 		return ""
-	var s: int = ceili(time_s)
+	var s: int = ceili(time_left)
 	return "%d:%02d" % [s / 60, s % 60]
 
 

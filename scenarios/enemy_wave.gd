@@ -18,17 +18,17 @@ const NPC: StringName = &"Marauder Kass"
 const COUNT: int = 2
 ## The second raider joins this long after the first (s), from behind the first's side, and
 ## each further one this long after the one before.
-const SECOND_AFTER_S: float = 45.0
-const NEXT_EVERY_S: float = 15.0
-const TAUNT_AFTER_S: float = 25.0
-const MAX_S: float = 240.0
+const SECOND_AFTER: float = 45.0
+const NEXT_EVERY: float = 15.0
+const TAUNT_AFTER: float = 25.0
+const MAX_TIME: float = 240.0
 
 var _ships: PackedInt32Array = PackedInt32Array()
 var _faction: int = -1
 var _raiders: Array[ApiHandle] = []
 var _count: int = COUNT
 ## The time limit (s); a subclass (Finale) sets its own.
-var _limit: float = MAX_S
+var _limit: float = MAX_TIME
 var _hail_offered: bool = false
 var _hail: ApiHandle
 var _started: int = 0
@@ -59,15 +59,12 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 func step(api: ScenarioApi) -> void:
 	if _result != Result.ACTIVE:
 		return
-	var elapsed_s: float = Scenario.seconds_since(api, _started)
+	var elapsed: float = Scenario.seconds_since(api, _started)
 	_offer_hail(api)
-	if not _taunted and elapsed_s >= TAUNT_AFTER_S:
+	if not _taunted and elapsed >= TAUNT_AFTER:
 		_taunted = true
 		_say(api, "npc.taunt_raider", {})
-	if (
-		_raiders.size() < _count
-		and elapsed_s >= SECOND_AFTER_S + NEXT_EVERY_S * (_raiders.size() - 1)
-	):
+	if _raiders.size() < _count and elapsed >= SECOND_AFTER + NEXT_EVERY * (_raiders.size() - 1):
 		_raiders.append(_spawn(api))
 	for e: ApiEvent in api.events():
 		if e.kind == &"surrender_roll" and _ships.has(e.ship_id) and not _surrendered:
@@ -79,7 +76,7 @@ func step(api: ScenarioApi) -> void:
 				_say(api, "npc.surrender_refused", {})
 	if _surrendered or (_raiders.size() == _count and api.all_gone(_raiders)):
 		_result = Result.WON
-	elif elapsed_s >= _limit:
+	elif elapsed >= _limit:
 		# The raiders are left as they are: hostile, in the run, still after the ship.
 		_result = Result.PARTIAL
 
@@ -98,7 +95,7 @@ func end(api: ScenarioApi, _result_value: int) -> void:
 func _spawn(api: ScenarioApi) -> ApiHandle:
 	var lead: int = Scenario.fleet(api, _ships)[0]
 	return api.spawn_at_range(
-		Factions.RAIDER_KEY, Factions.RAIDER, lead, Factions.RAIDER_RANGE_M, _clock(api), 0
+		Factions.RAIDER_KEY, Factions.RAIDER, lead, Factions.RAIDER_REACH, _clock(api), 0
 	)
 
 

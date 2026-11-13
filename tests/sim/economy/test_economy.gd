@@ -31,19 +31,22 @@ func _why(w: SimWorld) -> String:
 
 
 # FT: FT-MIS-018
-# The one read helper lists credits, propellant, parts, probes, ammunition by weapon (the
+# The economy tracks credits, propellant, parts, probes, ammunition by weapon (the
 # unlimited beam is no stock) and reputation per faction.
-func test_of_ship_reads_every_resource() -> void:
+func test_the_economy_tracks_every_resource() -> void:
 	var w: SimWorld = _docked()[0]
 	Reputation.apply(w, StoryFixture.BLUE, StoryFixture.RED, 12.5)
-	var e: Dictionary = Economy.of_ship(w, 0)
-	assert_int(e["credits"]).is_equal(5000)
-	assert_float(e["propellant"]).is_equal(w.defs[0].propellant_capacity)
-	assert_int(e["parts"]).is_equal(20)
-	assert_int(e["probes"]).is_equal(3)
+	assert_int(Economy.credits(w, 0)).is_equal(5000)
+	assert_float(w.kin.propellant[0]).is_equal(w.defs[0].propellant_capacity)
+	assert_int(Economy.held(w, 0, Economy.PARTS)).is_equal(20)
+	assert_int(Economy.held(w, 0, Economy.PROBES)).is_equal(3)
 	# Three mounts (gp-12), each with its own store.
-	assert_dict(e["ammo"]).is_equal({&"m1_cannon": 1200, &"m2_missile": 24, &"m2_torpedo": 9})
-	assert_dict(e["reputation"]).is_equal({StoryFixture.RED: 12.5})
+	var ammo: Dictionary = {}
+	for weapon: StringName in Economy.ammo_types(w, 0):
+		ammo[weapon] = Economy.held(w, 0, StringName(Economy.AMMO_PREFIX + weapon))
+	assert_dict(ammo).is_equal({&"m1_cannon": 1200, &"m2_missile": 24, &"m2_torpedo": 9})
+	assert_array(Array(w.reputation.others_of(StoryFixture.BLUE))).is_equal([StoryFixture.RED])
+	assert_float(w.reputation.value_of(StoryFixture.BLUE, StoryFixture.RED)).is_equal(12.5)
 
 
 # FT: FT-MIS-021, FT-MIS-018

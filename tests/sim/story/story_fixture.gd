@@ -38,12 +38,12 @@ static func wire(w: SimWorld) -> SimWorld:
 	return w
 
 
-## BLUE's corvette at the origin and RED's raider `range_m` ahead, after a step so they
+## BLUE's corvette at the origin and RED's raider `reach` ahead, after a step so they
 ## detect each other.
-static func duel(world_seed: int = 1, range_m: float = 5000.0) -> SimWorld:
+static func duel(world_seed: int = 1, reach: float = 5000.0) -> SimWorld:
 	var w: SimWorld = world(world_seed)
 	spawn(w, TestDefs.corvette(), BLUE)
-	spawn(w, TestDefs.raider(), RED, Vector3(0.0, 0.0, -range_m))
+	spawn(w, TestDefs.raider(), RED, Vector3(0.0, 0.0, -reach))
 	w.step()
 	return w
 

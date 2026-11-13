@@ -7,9 +7,9 @@ const ME: int = 0
 const FOE: int = 1
 
 
-## [world]: the M1 corvette with a missile mount, the raider `range_m` ahead and `side_m` to
+## [world]: the M1 corvette with a missile mount, the raider `reach` ahead and `side_offset` to
 ## the right, after a step so the corvette has detected it. Sensors 20 km.
-func _world(range_m: float, side_m: float = 0.0, science: bool = true) -> SimWorld:
+func _world(reach: float, side_offset: float = 0.0, science: bool = true) -> SimWorld:
 	var ship: ShipDef = TestDefs.corvette().duplicate()
 	var mount: MountDef = ship.mounts[0].duplicate()
 	mount.weapon = load(MISSILE) as WeaponDef
@@ -19,7 +19,7 @@ func _world(range_m: float, side_m: float = 0.0, science: bool = true) -> SimWor
 	if science:
 		w.science_def = ScienceFixture.science()
 	w.spawn_ship(ship, 1)
-	w.spawn_ship(TestDefs.raider(), 2, CubePoint.make(side_m, 0.0, -range_m))
+	w.spawn_ship(TestDefs.raider(), 2, CubePoint.make(side_offset, 0.0, -reach))
 	w.step()
 	w.drain_events()
 	return w

@@ -15,10 +15,10 @@ extends VoiceSink
 ## Limit: a line that needs another stream on the same bus (a local line after a streamed
 ## one, the reverse, or a streamed line at another sample rate) replaces the player's
 ## stream, dropping whatever of the previous line was still buffered: the few milliseconds
-## the generator lags the bus clock, at most BUFFER_S.
+## the generator lags the bus clock, at most BUFFER_DURATION.
 
 ## PROVISIONAL: generator buffer; covers frame hitches.
-const BUFFER_S: float = 0.25
+const BUFFER_DURATION: float = 0.25
 ## A generator playback holds its generator under this metadata key: Godot 4.7's playback
 ## keeps only a raw pointer to it (godotengine/godot#124816, fixed in 4.8) and is mixed once
 ## more after a stop, so a generator freed first hangs the audio thread (w-kuo).
@@ -107,7 +107,7 @@ func push(clip: int, pcm: PackedByteArray, rate: int, from_sample: int) -> void:
 		ch.player.stop()
 		gen = AudioStreamGenerator.new()
 		gen.mix_rate = rate
-		gen.buffer_length = BUFFER_S
+		gen.buffer_length = BUFFER_DURATION
 		ch.player.stream = gen
 		ch.chunks.clear()  # another line's tail at another rate (see the limit above)
 		ch.frames_pushed = 0
@@ -162,14 +162,14 @@ func played(clip: int) -> int:
 	var ch: _Channel = _channel(clip)
 	if ch == null or not ch.player.playing:
 		return -1
-	var latency_s: float = AudioServer.get_output_latency()
+	var output_latency: float = AudioServer.get_output_latency()
 	var gen: AudioStreamGenerator = ch.generator()
 	if gen == null:
-		var at_ms: int = floori((ch.player.get_playback_position() - latency_s) * 1000.0)
+		var at_ms: int = floori((ch.player.get_playback_position() - output_latency) * 1000.0)
 		return maxi(at_ms - ch.from_ms, 0)
 	if ch.capacity < 0:
 		return -1
-	var latency: int = floori(latency_s * gen.mix_rate)
+	var latency: int = floori(output_latency * gen.mix_rate)
 	return maxi(ch.consumed() - ch.clip_start_frame - latency, 0)
 
 

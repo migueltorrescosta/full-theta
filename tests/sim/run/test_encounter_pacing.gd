@@ -3,11 +3,11 @@ extends GdUnitTestSuite
 ## ship arrives at its site or the arrival timeout passes, then ACTIVE; one encounter is
 ## open per ship; the director closes the run after RunDef.min_encounters of them, and it is won.
 
-const TIMEOUT_S: float = 2.0
+const TIMEOUT: float = 2.0
 
 
 func _world(crew: int = 1) -> SimWorld:
-	return ApiFixture.world(crew, ApiFixture.run_def(PackedStringArray(["s_a", "s_b"]), TIMEOUT_S))
+	return ApiFixture.world(crew, ApiFixture.run_def(PackedStringArray(["s_a", "s_b"]), TIMEOUT))
 
 
 func _begin(
@@ -66,7 +66,7 @@ func test_the_arrival_timeout_starts_it_anyway() -> void:
 	var w: SimWorld = _world()
 	_begin(w, 1)
 	var opened: int = w.encounters.open_tick[0]
-	var timeout_ticks: int = ceili(TIMEOUT_S * SimWorld.HZ)
+	var timeout_ticks: int = ceili(TIMEOUT * SimWorld.HZ)
 	while w.tick < opened + timeout_ticks:
 		assert_int(_result(w, 0)).is_equal(EncounterTable.Result.PENDING)
 		w.step()
@@ -158,7 +158,7 @@ func test_a_destroyed_ship_loses_its_encounter() -> void:
 # Q4, owner 2026-10-26: the run is won when the director closes it (FinishShipCommand), which
 # the sim accepts only after RunDef.min_encounters and which wins once the ship is in none.
 func test_the_run_is_won_when_the_director_closes_it_after_the_fewest_encounters() -> void:
-	var run: RunDef = ApiFixture.run_def(PackedStringArray(["s_a", "s_b"]), TIMEOUT_S, 1.0, 2, 3)
+	var run: RunDef = ApiFixture.run_def(PackedStringArray(["s_a", "s_b"]), TIMEOUT, 1.0, 2, 3)
 	var w: SimWorld = ApiFixture.world(1, run)
 	for n: int in 2:
 		assert_int(w.ships.ship_outcome[0]).is_equal(ShipStateTable.ShipOutcome.NONE)

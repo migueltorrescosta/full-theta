@@ -14,7 +14,7 @@ extends Control
 ##     screen.set_tablet_dock(dock)
 
 ## A side rail's width (landscape), px: 176 px with its padding, as the owner's mockups.
-const RAIL_W: float = 176.0
+const RAIL_WIDTH: float = 176.0
 ## The bottom bar's height (upright), px.
 const BAR_H: float = 300.0
 ## A stick's side at a rail's lower corner, px.
@@ -42,7 +42,7 @@ func _init(is_portrait: bool = false, bar: float = 0.0) -> void:
 	left.name = "RailL"
 	right.name = "RailR"
 	for r: TouchRail in [left, right]:
-		r.custom_minimum_size.x = 0.0 if bar_h > 0.0 else RAIL_W
+		r.custom_minimum_size.x = 0.0 if bar_h > 0.0 else RAIL_WIDTH
 		add_child(r)
 		# (a wrapped label is tall until it gets its width: once it shrinks, the rail goes back
 		# to its place, or it stays taller and runs into the gesture band)
@@ -52,7 +52,7 @@ func _init(is_portrait: bool = false, bar: float = 0.0) -> void:
 ## A side rail's width inside its padding (px; the DockedRail panel's 4 px each side): what a
 ## control filling the rail gets.
 static func inner_width() -> float:
-	return RAIL_W - 8.0
+	return RAIL_WIDTH - 8.0
 
 
 ## True when a window of `dp` device-independent px is big enough for a dock.
@@ -63,7 +63,7 @@ static func fits(dp: Vector2) -> bool:
 ## The room the screen gives the dock: a column at each side (landscape, x each), or a bar
 ## along the bottom (upright or compact, y).
 func reserve() -> Vector2:
-	return Vector2(0.0, bar_h) if bar_h > 0.0 else Vector2(RAIL_W, 0.0)
+	return Vector2(0.0, bar_h) if bar_h > 0.0 else Vector2(RAIL_WIDTH, 0.0)
 
 
 ## Puts the rails in `area` (the screen's tap area, in the screen's coordinates).
@@ -74,8 +74,8 @@ func place(area: Rect2) -> void:
 		_put(left, Rect2(area.position.x, y, half, bar_h))
 		_put(right, Rect2(area.position.x + half, y, area.size.x - half, bar_h))
 	else:
-		_put(left, Rect2(area.position.x, area.position.y, RAIL_W, area.size.y))
-		_put(right, Rect2(area.end.x - RAIL_W, area.position.y, RAIL_W, area.size.y))
+		_put(left, Rect2(area.position.x, area.position.y, RAIL_WIDTH, area.size.y))
+		_put(right, Rect2(area.end.x - RAIL_WIDTH, area.position.y, RAIL_WIDTH, area.size.y))
 
 
 func _put(r: TouchRail, rect: Rect2) -> void:

@@ -68,9 +68,9 @@ func test_an_effect_frees_itself() -> void:
 		var e: VfxEffect = VfxEffect.make(kind as VfxEffect.Kind, false)
 		add_child(e)
 		assert_bool(e.finished()).is_false()
-		e.advance(e.duration_s * 0.5)
+		e.advance(e.duration * 0.5)
 		assert_bool(e.is_queued_for_deletion()).is_false()
-		e.advance(e.duration_s)
+		e.advance(e.duration)
 		assert_bool(e.is_queued_for_deletion()).is_true()
 
 
@@ -81,7 +81,7 @@ func test_a_frozen_effect_holds_its_age() -> void:
 	e.frozen = true
 	add_child(e)
 	e._process(10.0)
-	assert_float(e.age_s).is_equal(0.0)
+	assert_float(e.age).is_equal(0.0)
 
 
 # FT: FT-AUD-025, FT-STN-017

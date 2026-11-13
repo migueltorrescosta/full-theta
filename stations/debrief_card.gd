@@ -10,7 +10,7 @@ const MIN_SIZE: Vector2 = Vector2(720.0, 420.0)
 ## Director decisions shown at most; the server log holds all of them.
 const MAX_DECISIONS: int = 24
 ## The sim's ticks per second (SimRate, G8).
-const TICKS_PER_S: float = SimRate.HZ * 1.0
+const TICK_RATE: float = SimRate.HZ * 1.0
 
 var ctx: StationContext
 
@@ -135,7 +135,7 @@ static func _decision_line(d: Dictionary) -> String:
 	var what: String = _t("debrief.kind.%s" % d.get("kind", "SKIP"))
 	if str(d.get("scenario_id", "")) != "":
 		what += " " + _t("debrief.scenario.%s" % d["scenario_id"])
-	return "%s  %s: %s" % [clock(float(d.get("tick", 0)) / TICKS_PER_S), what, reason]
+	return "%s  %s: %s" % [clock(float(d.get("tick", 0)) / TICK_RATE), what, reason]
 
 
 static func _first_use_line(station: String, actions: Dictionary) -> String:

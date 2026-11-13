@@ -357,8 +357,6 @@ func _process(delta: float) -> void:
 			_next_idle_post_us = now_us + SNAPSHOT_TICKS * 1_000_000 / SimRate.HZ
 	else:
 		_idle_state_posted = false
-		if not host.holds(world):  # a test swapped the world
-			host = ScenarioHost.new(world)
 		if driver == null and driver_factory.is_valid():
 			driver = driver_factory.call(StringName(game.lobby.toggles.preset))
 		ticks = host.advance(delta, _before_tick)

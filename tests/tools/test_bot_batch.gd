@@ -5,7 +5,7 @@ extends GdUnitTestSuite
 
 ## Sim seconds per smoke run: the average crews finish their fourth encounter and the
 ## batch plays 11 (the test needs 8) in half the time of a full run (#27).
-const CAP_S: float = 900.0
+const CAP_TIME: float = 900.0
 
 
 func _batch() -> Array[Dictionary]:
@@ -13,7 +13,7 @@ func _batch() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for profile: String in BotProfiles.NAMES:
 		for n: int in 2:
-			out.append(BotRun.play(defs, profile, "easy", 1 + n, CAP_S))
+			out.append(BotRun.play(defs, profile, "easy", 1 + n, CAP_TIME))
 	return out
 
 
@@ -42,7 +42,9 @@ func test_a_smoke_batch_gives_a_deterministic_report() -> void:
 		self,
 		JSON.stringify(first),
 		func() -> String:
-			return JSON.stringify(BotRun.play(DefLibrary.new(), first["profile"], "easy", 1, CAP_S)),
+			return JSON.stringify(
+				BotRun.play(DefLibrary.new(), first["profile"], "easy", 1, CAP_TIME)
+			),
 		"report"
 	)
 	assert_str(BotReport.markdown(results)).is_equal(report)

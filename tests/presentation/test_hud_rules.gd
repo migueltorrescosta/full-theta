@@ -157,7 +157,7 @@ func _check_chips(radar: DiscRadar, where: String) -> void:
 	var view: Rect2 = radar._view()
 	var font: Font = radar.get_theme_default_font()
 	var c: Vector2 = radar.disc_centre()
-	var numerals: Array = radar._numerals(font, c, DiscRadar.RANGES_M[radar.range_index]).values()
+	var numerals: Array = radar._numerals(font, c, DiscRadar.RANGES[radar.range_index]).values()
 	for e: Dictionary in entries:
 		if e["callout"] == "":
 			continue

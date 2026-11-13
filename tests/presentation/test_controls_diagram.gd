@@ -207,7 +207,7 @@ func test_labels_are_translated_and_follow_the_language() -> void:
 
 # The dev seat's six stations and every station (the All stations filter, P28-Help) too.
 func test_callouts_neither_overlap_nor_leave_the_drawing() -> void:
-	var bounds: Rect2 = Rect2(0.0, 0.0, ControlsDiagram.DESIGN_W, 0.0)
+	var bounds: Rect2 = Rect2(0.0, 0.0, ControlsDiagram.DESIGN_WIDTH, 0.0)
 	var every: Array = IntentTable.GROUPS.filter(
 		func(g: String) -> bool: return g not in [IntentTable.COMMON, IntentTable.LIVE]
 	)

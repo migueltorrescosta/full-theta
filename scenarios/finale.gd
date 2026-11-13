@@ -34,4 +34,4 @@ func _spawn(api: ScenarioApi) -> ApiHandle:
 	if not _raiders.is_empty():
 		return super._spawn(api)
 	var lead: int = Scenario.fleet(api, _ships)[0]
-	return api.spawn_at_range(BOSS_KEY, Factions.RAIDER, lead, Factions.RAIDER_RANGE_M, 12, 0)
+	return api.spawn_at_range(BOSS_KEY, Factions.RAIDER, lead, Factions.RAIDER_REACH, 12, 0)

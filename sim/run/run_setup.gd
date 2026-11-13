@@ -75,10 +75,7 @@ func validate() -> Array[String]:
 		errors.append_array(run_def.map.errors(ships))  # period and the D229 site spacing
 	else:
 		errors.append_array(SimWorld.period_errors(map_period, ships))
-	if hazards.size() > HazardSystem.MAX_HAZARDS:
-		errors.append(
-			"%d hazards, at most %d are supported" % [hazards.size(), HazardSystem.MAX_HAZARDS]
-		)
+	errors.append_array(_hazard_errors())
 	return errors
 
 
@@ -86,9 +83,7 @@ func validate() -> Array[String]:
 func build() -> SimWorld:
 	if not validate().is_empty():
 		return null
-	var world: SimWorld = SimWorld.new(world_seed, build_id, map_period)
-	world.science_def = science
-	world.hazards = hazards.duplicate()
+	var world: SimWorld = _new_world()
 	world.catalog = catalog
 	world.scenario_ids = run_def.scenarios + extra_scenarios
 	world.run_def = run_def

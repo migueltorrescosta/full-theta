@@ -8,7 +8,7 @@ extends RefCounted
 ## - Helm faces the nearest hostile at cruise speed; with none near it faces the site of the
 ##   ship's encounter and jumps there; at the site it holds station;
 ## - Weapons aims at the nearest armed hostile with an error, and fires at the cadence once
-##   the target stood reaction_s, skipping a share of the shots;
+##   the target stood reaction_time, skipping a share of the shots;
 ## - Engineering, Science, Relay and Comms look as the lesson bots do (TrainingCrew.look).
 ## The server keeps one per ship and makes them again with every new world (NetServer).
 
@@ -41,10 +41,10 @@ func _init(def: StandInDef, ship: int, seed_value: int) -> void:
 	_ship = ship
 	_rng.seed = seed_value + ship
 	_lesson = TrainingCrew.new(seed_value + ship)
-	_look_ticks = maxi(1, SimRate.ticks(def.look_s))
-	_aim_ticks = maxi(1, SimRate.ticks(def.aim_every_s))
-	_fire_ticks = maxi(1, SimRate.ticks(def.fire_every_s))
-	_react_ticks = SimRate.ticks(def.reaction_s)
+	_look_ticks = maxi(1, SimRate.ticks(def.look_every))
+	_aim_ticks = maxi(1, SimRate.ticks(def.aim_every))
+	_fire_ticks = maxi(1, SimRate.ticks(def.fire_every))
+	_react_ticks = SimRate.ticks(def.reaction_time)
 	for station: StringName in TrainingCrew.STATIONS:
 		_phase[station] = _rng.randi_range(0, _look_ticks - 1)
 
@@ -68,7 +68,7 @@ func act(api: ScenarioApi, stations: Array) -> void:
 
 
 func _weapons(hands: ApiCrew, t: int) -> void:
-	var target: int = hands.nearest_hostile(_ship, _def.sight_m, true)
+	var target: int = hands.nearest_hostile(_ship, _def.sight_reach, true)
 	if target != _target:
 		_target = target
 		_seen_at = t
@@ -79,7 +79,7 @@ func _weapons(hands: ApiCrew, t: int) -> void:
 	hands.aim_at(_ship, target, _def.aim_error, _rng, mount)
 	if t - _seen_at < _react_ticks or t < _next_fire:
 		return
-	if hands.range_to(_ship, target) > _def.shoot_m:
+	if hands.range_to(_ship, target) > _def.shoot_reach:
 		return
 	_next_fire = t + _fire_ticks
 	if _rng.randf() >= _def.fire_skip:
@@ -87,7 +87,7 @@ func _weapons(hands: ApiCrew, t: int) -> void:
 
 
 func _helm(hands: ApiCrew) -> void:
-	var hostile: int = hands.nearest_hostile(_ship, _def.sight_m)
+	var hostile: int = hands.nearest_hostile(_ship, _def.sight_reach)
 	if hostile >= 0:
 		var throttle: float = 1.0 if hands.speed(_ship) < _def.cruise_ms else 0.0
 		if hostile != _helm_on or throttle != _throttle:

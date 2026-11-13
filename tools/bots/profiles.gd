@@ -12,7 +12,7 @@ class Profile:
 	extends RefCounted
 	var name: String = ""
 	## Seconds a new situation (a hostile in range, a card) must have stood before the crew acts.
-	var reaction_s: float = 3.0
+	var reaction_time: float = 3.0
 	## Ticks between two looks at the world (60 Hz).
 	var think_ticks: int = 3
 	## Ticks between two aim updates and two shots.
@@ -38,7 +38,7 @@ class Profile:
 	var shoots_debris: bool = true
 	## Seconds before Comms acts on a card, and which cards: "escort" takes the escort and the
 	## lane run, "random" takes each card with probability accept_chance, "none" takes none.
-	var comms_s: float = 6.0
+	var comms_time: float = 6.0
 	var accept: String = "escort"
 	var accept_chance: float = 0.5
 	## Whether Comms demands the surrender of a hailing raider.
@@ -66,7 +66,7 @@ static func average() -> Profile:
 static func novice() -> Profile:
 	var p: Profile = Profile.new()
 	p.name = "novice"
-	p.reaction_s = 8.0
+	p.reaction_time = 8.0
 	p.aim_every = 12
 	p.fire_every = 36
 	p.aim_error = 0.001
@@ -76,7 +76,7 @@ static func novice() -> Profile:
 	p.jump_share = 0.5
 	p.repair_every = 180
 	p.shoots_debris = false
-	p.comms_s = 25.0
+	p.comms_time = 25.0
 	p.accept = "random"
 	p.demands_surrender = false
 	p.decoy_hull = 0.0

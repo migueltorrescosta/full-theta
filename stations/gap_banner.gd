@@ -46,7 +46,7 @@ func refresh() -> void:
 	if not visible:
 		return
 	_place(1 if LayoutMode.is_phone(LayoutMode.form_of(self)) else 0)
-	var left: int = maxi(0, ceili((int(gap["ends_at"]) - ctx.snap.tick) / CrewState.TICK_HZ))
+	var left: int = maxi(0, ceili((int(gap["ends_at"]) - ctx.snap.tick) / CrewState.TICK_RATE))
 	_text.text = (
 		tr("gap.text")
 		. format(

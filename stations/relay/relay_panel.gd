@@ -23,7 +23,7 @@ extends StationPanel
 ## map instead (RelayPhone, #28) and joins the phone frame.
 
 ## Under this width (a phone, D195) the HUD stacks around the map.
-const NARROW_W: float = 560.0
+const NARROW_WIDTH: float = 560.0
 ## The map's view starts this far (px) under the hint over it.
 const HINT_GAP: float = 8.0
 ## Under this height the HUD's bottom box is one row (a phone on its side).
@@ -35,7 +35,7 @@ const PAD_CURSOR_PX_S: float = 420.0
 const PAD_DEPTH_SPANS_S: float = 0.5
 const PAD_TURN_PX_S: float = 160.0
 ## A new hazard zone's radius (m). PROVISIONAL.
-const HAZARD_RADIUS_M: float = 2000.0
+const HAZARD_RADIUS: float = 2000.0
 
 var map: RelayMap
 var hud: RelayHud
@@ -87,8 +87,8 @@ func _setup() -> void:
 	hud.setup(ctx)
 	resized.connect(
 		func() -> void:
-			hud.set_narrow(size.x < NARROW_W)
-			hud.set_short(size.x >= NARROW_W and size.y < SHORT_H)
+			hud.set_narrow(size.x < NARROW_WIDTH)
+			hud.set_short(size.x >= NARROW_WIDTH and size.y < SHORT_H)
 			_arrange()
 	)
 	hud.launch_pressed.connect(func() -> void: _arm("probe"))
@@ -187,7 +187,7 @@ func toggle_probe_claim() -> void:
 ## only shows while a probe or hazard is armed. A phone shows it only then too: its
 ## mouse-and-keyboard text means nothing on a touch screen (#28).
 func _update_hint() -> void:
-	var wide: bool = size.x >= NARROW_W and phone == null
+	var wide: bool = size.x >= NARROW_WIDTH and phone == null
 	_hint.visible = not docked and (armed != "" or wide)
 
 
@@ -229,7 +229,7 @@ func refresh() -> void:
 	map.lanes_on = bool(blk.get("lanes", false))
 	map.routes = ctx.crew.routes
 	# Narrow, the log and inbox box covers the map's bottom edge: the span caption sits above it.
-	map.caption_bottom = hud.bottom_top() if hud.visible and size.x < NARROW_W else -1.0
+	map.caption_bottom = hud.bottom_top() if hud.visible and size.x < NARROW_WIDTH else -1.0
 	_hint.text = tr("relay.armed_" + armed) if armed != "" else tr("relay.hint")
 	_update_hint()
 	if phone == null:
@@ -358,7 +358,7 @@ func _place(what: String, at: Vector3) -> void:
 			return
 		ctx.intents.command({"kind": "launch_probe", "x": at.x, "y": at.y, "z": at.z})
 	else:
-		ctx.intents.hazard_add(HAZARD_RADIUS_M, at)
+		ctx.intents.hazard_add(HAZARD_RADIUS, at)
 
 
 ## G: the selection becomes the next waypoint of route 1 (FT-RLY-005).
@@ -661,7 +661,7 @@ func _poll_pad(delta: float) -> void:
 	var move: Vector2 = Vector2(m.axis("relay_cursor_x"), m.axis("relay_cursor_y"))
 	if move != Vector2.ZERO:
 		_cursor = (cursor_pos() + move * PAD_CURSOR_PX_S * delta).clamp(Vector2.ZERO, size)
-	_cursor_depth -= m.axis("relay_depth") * PAD_DEPTH_SPANS_S * map.span_m * delta
+	_cursor_depth -= m.axis("relay_depth") * PAD_DEPTH_SPANS_S * map.map_span * delta
 	var spin: Vector2 = Vector2(m.axis("relay_rotate_x"), m.axis("relay_rotate_y"))
 	if spin != Vector2.ZERO:
 		map.rotate_by(spin * PAD_TURN_PX_S * delta)

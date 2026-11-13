@@ -162,7 +162,7 @@ func _maybe_wave(api: ScenarioApi) -> void:
 			var clock: int = Scenario.clock_slot(floori(api.rand(&"raider_wave") * 12.0) + k * 4)
 			handles.append(
 				api.spawn_at_range(
-					Factions.RAIDER_KEY, Factions.RAIDER, ship, Factions.RAIDER_RANGE_M, clock, 0
+					Factions.RAIDER_KEY, Factions.RAIDER, ship, Factions.RAIDER_REACH, clock, 0
 				)
 			)
 		_sent[ship] = handles

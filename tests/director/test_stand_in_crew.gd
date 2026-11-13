@@ -46,8 +46,8 @@ func test_weapons_stand_in_fires_after_its_reaction() -> void:
 	assert_array(_ticks_of(host, &"aim_mount")).is_not_empty()
 	var shots: Array = _ticks_of(host, &"fire")
 	assert_array(shots).is_not_empty()
-	assert_int(int(shots[0]) - start).is_greater_equal(SimRate.ticks(def.reaction_s))
-	assert_int(int(shots[0]) - start).is_less(SimRate.ticks(def.reaction_s + 2.0))
+	assert_int(int(shots[0]) - start).is_greater_equal(SimRate.ticks(def.reaction_time))
+	assert_int(int(shots[0]) - start).is_less(SimRate.ticks(def.reaction_time + 2.0))
 	for row: Array in host.api().crew().sent:
 		assert_str(StationCatalogue.station_of_command(row[1])).is_equal("weapons")
 
@@ -59,7 +59,7 @@ func test_helm_stand_in_faces_the_hostile() -> void:
 	var def: StandInDef = StandInDef.new()
 	var world: SimWorld = _world()
 	var host: ScenarioHost = _run(
-		world, StandInCrew.new(def, SHIP, 7), ["helm"], SimRate.ticks(def.look_s) + 2
+		world, StandInCrew.new(def, SHIP, 7), ["helm"], SimRate.ticks(def.look_every) + 2
 	)
 	assert_int(world.helm.face_held[SHIP]).is_equal(1)
 	assert_array(_ticks_of(host, &"helm_select")).is_not_empty()

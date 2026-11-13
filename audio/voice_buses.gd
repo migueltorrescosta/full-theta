@@ -14,8 +14,8 @@ const COMPUTER: String = "VoiceComputer"
 ## PROVISIONAL filter settings (S7: comb 6 ms at gain 0.45, band 300-3,400 Hz, 6-bit crush).
 const COMB_DELAY_MS: float = 6.0
 const COMB_LEVEL_DB: float = -6.9
-const BAND_LOW_HZ: float = 300.0
-const BAND_HIGH_HZ: float = 3400.0
+const BAND_LOW_FREQUENCY: float = 300.0
+const BAND_HIGH_FREQUENCY: float = 3400.0
 const CRUSH_DRIVE: float = 0.3
 
 
@@ -44,9 +44,9 @@ static func computer_effects() -> Array[AudioEffect]:
 	comb.tap2_active = false
 	comb.feedback_active = false
 	var high_pass: AudioEffectHighPassFilter = AudioEffectHighPassFilter.new()
-	high_pass.cutoff_hz = BAND_LOW_HZ
+	high_pass.cutoff_hz = BAND_LOW_FREQUENCY
 	var low_pass: AudioEffectLowPassFilter = AudioEffectLowPassFilter.new()
-	low_pass.cutoff_hz = BAND_HIGH_HZ
+	low_pass.cutoff_hz = BAND_HIGH_FREQUENCY
 	var crush: AudioEffectDistortion = AudioEffectDistortion.new()
 	crush.mode = AudioEffectDistortion.MODE_LOFI
 	crush.drive = CRUSH_DRIVE

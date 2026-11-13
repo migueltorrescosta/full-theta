@@ -5,7 +5,7 @@ extends GdUnitTestSuite
 ## relaunch; GameMode carries the two host options; the host rerolls the run modifier.
 
 const SECRET: String = "c0ffee"
-const GRACE_S: float = 0.6
+const GRACE: float = 0.6
 
 var h: NetHarness
 
@@ -60,7 +60,7 @@ func _fleet(c: NetClient, from: int, pred: Callable) -> Dictionary:
 # refused Helm and the Captain seat, and Relay once taken; a guest never counts for coverage.
 # The ship relaunches by its crew's vote and the guests go home to their stations.
 func test_guests_take_free_light_stations_and_go_home_on_relaunch() -> void:
-	var server: NetServer = h.fleet_server(GameRules.Mode.COOP, 2, [], true, GRACE_S)
+	var server: NetServer = h.fleet_server(GameRules.Mode.COOP, 2, [], true, GRACE)
 	server.game.lobby.fill_bots = true
 	var ana: NetClient = await h.joined(server, "ana", StationCatalogue.ALL, 0)
 	var bo: NetClient = await h.joined(server, "bo", "viewer", 0)
@@ -108,7 +108,7 @@ func test_guests_take_free_light_stations_and_go_home_on_relaunch() -> void:
 # guest of its own ship, and stays off the host ship's crew list: the host ship's relaunch
 # seats only its own crew, the guest's own ship's relaunch takes the guest home.
 func test_guests_of_an_eliminated_ship_stay_guests_of_their_own() -> void:
-	var server: NetServer = h.fleet_server(GameRules.Mode.COOP, 3, [], true, GRACE_S)
+	var server: NetServer = h.fleet_server(GameRules.Mode.COOP, 3, [], true, GRACE)
 	server.game.lobby.fill_bots = true
 	var ana: NetClient = await h.joined(server, "ana", StationCatalogue.ALL, 0)
 	var cy: NetClient = await h.joined(server, "cy", "tactical", 1)
@@ -140,7 +140,7 @@ func test_guests_of_an_eliminated_ship_stay_guests_of_their_own() -> void:
 # FT: FT-NET-050
 # Race sends eliminated crews to the scoreboard: nobody is a guest there.
 func test_no_guests_in_race() -> void:
-	var server: NetServer = h.fleet_server(GameRules.Mode.RACE, 2, [], true, GRACE_S)
+	var server: NetServer = h.fleet_server(GameRules.Mode.RACE, 2, [], true, GRACE)
 	var ana: NetClient = await h.joined(server, "ana", StationCatalogue.ALL, 0)
 	await h.joined(server, "bo", StationCatalogue.ALL, 1)
 	h.all_ready(server)

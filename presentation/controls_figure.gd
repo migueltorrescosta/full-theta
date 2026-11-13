@@ -12,7 +12,7 @@ extends RefCounted
 ## the callout anchor. `body` is the outline drawn behind the parts.
 
 ## The hardware zone's width and the keyboard's key pitch.
-const ZONE_W: float = 700.0
+const ZONE_WIDTH: float = 700.0
 const U: float = 30.0
 const KEY: float = 28.0
 ## A caption that is meant to be empty (an empty one falls back to the id).
@@ -131,13 +131,13 @@ static func _kbm(dy: float) -> Dictionary:
 	parts.append(_key("Kp Subtract", pad + 3, 1.5, 1, "-"))
 	parts.append(_tall("Kp Add", pad + 3, 2.5, "+"))
 	parts.append(_tall("Kp Enter", pad + 3, 4.5, "Ent"))
-	var kb_w: float = 22.6 * U
+	var kb_width: float = 22.6 * U
 	var kb_h: float = 6.0 * U + 2.0
 	var body: Array[Dictionary] = [
-		{"shape": "round", "rect": Rect2(-10, -10, kb_w + 8, kb_h + 18)},
+		{"shape": "round", "rect": Rect2(-10, -10, kb_width + 8, kb_h + 18)},
 	]
 	# The mouse, below the keyboard, centred on the zone.
-	var mx: float = kb_w * 0.5 - 55.0
+	var mx: float = kb_width * 0.5 - 55.0
 	var my: float = kb_h + 30.0 + dy
 	body.append({"shape": "round", "rect": Rect2(mx, my, 110, 170), "radius": 48.0})
 	parts.append(_part("LMB", Rect2(mx + 4, my + 4, 46, 76), "L", "round"))
@@ -146,7 +146,7 @@ static func _kbm(dy: float) -> Dictionary:
 	parts.append(_part("MMB", Rect2(mx + 50, my + 28, 10, 20), BLANK, "round"))
 	parts.append(_part("WheelDown", Rect2(mx + 50, my + 50, 10, 16), BLANK, "round"))
 	parts.append(_part("Mouse", Rect2(mx + 16, my + 92, 78, 66), BLANK, "round"))
-	return {"parts": parts, "body": body, "size": Vector2(kb_w, my + 180.0)}
+	return {"parts": parts, "body": body, "size": Vector2(kb_width, my + 180.0)}
 
 
 static func _letters(parts: Array[Dictionary], letters: String, c0: float, row: float) -> void:
@@ -155,7 +155,7 @@ static func _letters(parts: Array[Dictionary], letters: String, c0: float, row: 
 
 
 static func _pad() -> Dictionary:
-	var cx: float = ZONE_W * 0.5 - 14.0
+	var cx: float = ZONE_WIDTH * 0.5 - 14.0
 	var parts: Array[Dictionary] = []
 	var body: Array[Dictionary] = [
 		{"shape": "round", "rect": Rect2(cx - 215, 66, 430, 170), "radius": 70.0},
@@ -180,7 +180,7 @@ static func _pad() -> Dictionary:
 	parts.append(_part("B", _disc(fb + Vector2(32, 0), 15), "B", "circle"))
 	parts.append(_part("View", _disc(Vector2(cx - 28, 112), 10), BLANK, "circle"))
 	parts.append(_part("Menu", _disc(Vector2(cx + 28, 112), 10), BLANK, "circle"))
-	return {"parts": parts, "body": body, "size": Vector2(ZONE_W, 310.0)}
+	return {"parts": parts, "body": body, "size": Vector2(ZONE_WIDTH, 310.0)}
 
 
 static func _disc(c: Vector2, r: float) -> Rect2:

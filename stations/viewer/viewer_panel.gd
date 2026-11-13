@@ -30,8 +30,8 @@ const CHASE_ROLL_DEG_S: float = 45.0
 const FORWARD_ROLL_DEG_S: float = 30.0
 const FORWARD_AFTER_MS: int = 1500
 ## Chase camera behind and above the ship (m, the procedural ship is about 5 m long).
-const CHASE_BACK_M: float = 14.0
-const CHASE_UP_M: float = 3.5
+const CHASE_BACK_DISTANCE: float = 14.0
+const CHASE_UP_DISTANCE: float = 3.5
 ## The chase camera's roll eases back to the deck this fast once the roll is calm (1/s).
 const CHASE_LEVEL_RATE: float = 0.6
 ## Vertical field of view (degrees), before comfort narrows it.
@@ -48,7 +48,7 @@ const SIDE_RADAR_ASPECT: float = 1.6
 const FONT_SIZE: int = 15
 ## The close-up view's camera stands this far from its contact, towards the own ship (m),
 ## or at half the range when closer.
-const CLOSE_UP_STANDOFF_M: float = 150.0
+const CLOSE_UP_STANDOFF: float = 150.0
 ## Contact models in the close-up view are drawn at the ships' real size (Helm's scale), so
 ## the contact fills a good part of the view; elsewhere the main screen draws them small.
 const CLOSE_UP_SCALE: float = 9.0
@@ -58,7 +58,7 @@ const RIM_ENERGY: float = 0.9
 const RIM_ROTATION: Vector3 = Vector3(30.0, 210.0, 0.0)
 const CLOSE_UP_RIM_ENERGY: float = 2.0
 ## The baked ship's half length (m) at scale 1.
-const HULL_HALF_M: float = 2.7
+const HULL_HALF_LENGTH: float = 2.7
 ## The pinged card's share of the screen width, and its font size.
 const CARD_SHARE: float = 0.38
 const CARD_FONT: int = 20
@@ -249,7 +249,7 @@ func _place_radar() -> void:
 	)
 
 
-## The close-up view's camera (world axes centred on the own ship): CLOSE_UP_STANDOFF_M from
+## The close-up view's camera (world axes centred on the own ship): CLOSE_UP_STANDOFF from
 ## the contact towards the ship, looking at it. The contact is the selected one, else
 ## the nearest one; false when there is none (the forward camera is used).
 func _place_close_up_camera() -> bool:
@@ -261,7 +261,7 @@ func _place_close_up_camera() -> bool:
 	var at: Vector3 = focus["world"]
 	var dist: float = at.length()
 	var back: Vector3 = -at.normalized() if dist > 0.001 else Vector3.BACK
-	var stand: float = minf(CLOSE_UP_STANDOFF_M, dist * 0.5)
+	var stand: float = minf(CLOSE_UP_STANDOFF, dist * 0.5)
 	var eye: Vector3 = at + back * stand
 	var up: Vector3 = Vector3.UP if absf(back.dot(Vector3.UP)) < 0.95 else Vector3.RIGHT
 	var look: Basis = Basis.looking_at((at - eye).normalized(), up)
@@ -346,7 +346,9 @@ func _place_camera(ship: Basis, delta: float) -> void:
 		var level: float = clampf(delta * CHASE_LEVEL_RATE, 0.0, 1.0) if calm else 0.0
 		var b: Basis = ComfortCamera.look(fwd, _chase_up.lerp(ship.y, level), ship.y)
 		_chase_up = b.y
-		_space.place_camera(Transform3D(b, b.z * CHASE_BACK_M + b.y * CHASE_UP_M), fov)
+		_space.place_camera(
+			Transform3D(b, b.z * CHASE_BACK_DISTANCE + b.y * CHASE_UP_DISTANCE), fov
+		)
 	else:
 		_chase_up = ship.y
 		var rot: Quaternion = ship.get_rotation_quaternion()
@@ -415,7 +417,7 @@ func _draw_card() -> void:
 ## The close-up contact's half length on screen (px): CLOSE_UP_SCALE times the model's.
 func _hull_px(focus: Dictionary) -> float:
 	var at: Vector3 = focus.get("world", Vector3.ZERO)
-	var side: Vector3 = camera.global_basis.x * (HULL_HALF_M * CLOSE_UP_SCALE)
+	var side: Vector3 = camera.global_basis.x * (HULL_HALF_LENGTH * CLOSE_UP_SCALE)
 	return absf(camera.unproject_position(at + side).x - camera.unproject_position(at).x)
 
 
@@ -429,10 +431,10 @@ func rail_items() -> Array[Dictionary]:
 	return _picture.contacts_by_range()
 
 
-## True when an item `w` px wide starting at `x` fits a rail `rail_w` px wide: the contacts
+## True when an item `w` px wide starting at `x` fits a rail `rail_width` px wide: the contacts
 ## first, then the viewer's caption in what they leave.
-static func rail_fits(x: float, w: float, rail_w: float) -> bool:
-	return x + w <= rail_w - 12.0
+static func rail_fits(x: float, w: float, rail_width: float) -> bool:
+	return x + w <= rail_width - 12.0
 
 
 ## The callsign rail: "H2 · 4 high · mid" per contact, pinged and selected ones lit.
@@ -464,13 +466,13 @@ func _draw_rail() -> void:
 	# view, where the contacts leave room for it (R23-14); the contacts come first (w5).
 	if not interactive:
 		var caption: String = tr("viewer.caption")
-		var caption_w: float = (
+		var caption_width: float = (
 			font.get_string_size(caption, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE - 2).x
 		)
-		if rail_fits(x, caption_w, _rail.size.x):
+		if rail_fits(x, caption_width, _rail.size.x):
 			_rail.draw_string(
 				font,
-				Vector2(_rail.size.x - caption_w - 12.0, y + font.get_ascent(FONT_SIZE)),
+				Vector2(_rail.size.x - caption_width - 12.0, y + font.get_ascent(FONT_SIZE)),
 				caption,
 				HORIZONTAL_ALIGNMENT_LEFT,
 				-1,

@@ -26,7 +26,7 @@ var first: int = 0
 var count: int = 8
 var ships: int = 6
 var log_path: String = ""
-var max_s: float = 300.0
+var max_time: float = 300.0
 var commands: bool = true
 var full_probe: bool = false
 
@@ -94,7 +94,7 @@ func _process(_delta: float) -> bool:
 			open += 1
 	if open == 0:
 		_finish("closed by server")
-	elif now - _start_us > int(max_s * 1e6):
+	elif now - _start_us > int(max_time * 1e6):
 		_finish("ran longer than --max-s")
 	return _done
 
@@ -223,7 +223,7 @@ func _parse(args: PackedStringArray) -> bool:
 				"--log":
 					log_path = v
 				"--max-s":
-					max_s = v.to_float()
+					max_time = v.to_float()
 				_:
 					return false
 		else:

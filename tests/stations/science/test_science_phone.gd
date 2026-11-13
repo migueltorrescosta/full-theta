@@ -267,11 +267,11 @@ func test_every_page_keeps_the_touch_rules_both_ways_up() -> void:
 					assert_bool(free.has_point(p.radar.disc_centre())).is_true()
 			if c[0] == SIDEWAYS and kind == "cards":
 				var w: float = p.phone.layout.left.size.x
-				assert_float(w).is_equal(SciencePhone.LEFT_W)
+				assert_float(w).is_equal(SciencePhone.LEFT_WIDTH)
 				p.pages.current = SciencePhone.PAGE_CARD
 				await _frames(3)
-				assert_float(p.phone.layout.left.size.x).is_equal(SciencePhone.CARD_W)
-				assert_bool(p.radar.view_rect.position.x > SciencePhone.CARD_W).is_true()
+				assert_float(p.phone.layout.left.size.x).is_equal(SciencePhone.CARD_WIDTH)
+				assert_bool(p.radar.view_rect.position.x > SciencePhone.CARD_WIDTH).is_true()
 			_vp.queue_free()
 			await _frames(1)
 

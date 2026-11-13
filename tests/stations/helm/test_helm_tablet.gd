@@ -164,7 +164,7 @@ func test_rails_dock_and_leave_the_screen_unobstructed() -> void:
 		)
 		# A view about 672 px wide on a 1024 px tablet (C14).
 		assert_float(view.size.x).is_equal_approx(
-			size.x - 2.0 * TabletDock.RAIL_W if size.x > size.y else size.x, 1.0
+			size.x - 2.0 * TabletDock.RAIL_WIDTH if size.x > size.y else size.x, 1.0
 		)
 		assert_bool(_panel.ring.is_visible_in_tree()).is_true()
 		assert_object(_panel.ring.get_parent()).is_same(_panel)
@@ -284,7 +284,7 @@ func test_stick_drags_send_the_pad_axes() -> void:
 
 # FT: FT-STN-005, FT-SIM-004
 # The throttle asks for speed as W does (helm_surge) until the setpoint gets there.
-func test_throttle_ramps_the_setpoint_like_w() -> void:
+func test_throttle_ramps_the_setpoint_like_the_w_key() -> void:
 	await _open(SIZES[0])
 	var th: ThrottleSlider = _ui().throttle
 	_touch(th, Vector2(th.size.x / 2.0, th.track().position.y), true)

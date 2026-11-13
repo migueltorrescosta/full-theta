@@ -126,6 +126,7 @@ SAMPLES = {
     "enemy ship": "en:That's an enemy ship.",
     "enemy AI": "# the enemy AI attacks",
     "key columns": "table.ship_ids[row]",
+    "unit suffix": "const FAR_M: float = 10000.0",
 }
 
 
@@ -157,3 +158,26 @@ def test_run_accepts_replacement_rules(tmp_path: Path) -> None:
     (tmp_path / "demo.gd").write_text("var table: RunTable\n")
     rules = [("RunTable", "name", r"RunTable", "ShipStateTable", "D394")]
     assert lint_words.run(tmp_path, rules=rules, allow=[]) == ["demo.gd:1: RunTable: retired (D394); use ShipStateTable"]
+
+
+@pytest.mark.parametrize("line", [
+    "var range_m: float", "const HULL_J = 1.0", "var mass_kg", "SHAKE_RAD", "const RAIL_W := 3.0", "var _quiet_s", "func now_S():",
+])
+def test_unit_suffix_flags_si_suffixes_in_any_case(tmp_path: Path, line: str) -> None:
+    (tmp_path / "x.gd").write_text(line + "\n")
+    assert len(lint_words.run(tmp_path, allow=[])) == 1, line
+
+
+@pytest.mark.parametrize("line", [
+    "var roll_deg_s := 1.0", "const PAD_TURN_PX_S := 1.0", "deg_to_rad(x)", "var ids", "var items", "var range_ms", "var grace_ticks",
+    "var reach", "const FAR_DISTANCE", "var width := 3", "var rail_width",
+])
+def test_unit_suffix_passes_non_si_and_plain_names(tmp_path: Path, line: str) -> None:
+    (tmp_path / "x.gd").write_text(line + "\n")
+    assert lint_words.run(tmp_path, allow=[]) == [], line
+
+
+def test_unit_suffix_is_for_code_only(tmp_path: Path) -> None:
+    (tmp_path / "docs/spec").mkdir(parents=True)
+    (tmp_path / "docs/spec/01-a.md").write_text("`range_m` was renamed.\n")
+    assert lint_words.run(tmp_path, allow=[]) == []

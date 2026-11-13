@@ -123,13 +123,13 @@ func test_hack_window_applies_and_ends() -> void:
 	_start(w, &"weapons")
 	var events: Array[SimEvent] = _walk(w)
 	var done: SimEvent = SimFixture.of_kind(events, &"hack_done")[0]
-	var window_s: float = done.value
-	assert_float(window_s).is_greater_equal(8.0)
+	var window: float = done.value
+	assert_float(window).is_greater_equal(8.0)
 	assert_float(DamageSystem.effectiveness(w, FOE, &"weapons")).is_equal(0.0)
 	assert_float(DamageSystem.effectiveness(w, FOE, &"engines")).is_equal(1.0)
 	assert_float(DamageSystem.effectiveness(w, ME, &"weapons")).is_equal(1.0)
-	assert_float((w.hacks.until_tick[0] - w.tick) * SimWorld.DT).is_greater(window_s - 0.1)
-	var ticks: int = ceili(window_s * 60.0)
+	assert_float((w.hacks.until_tick[0] - w.tick) * SimWorld.DT).is_greater(window - 0.1)
+	var ticks: int = ceili(window * 60.0)
 	SimFixture.run(w, ticks - 2)
 	assert_float(DamageSystem.effectiveness(w, FOE, &"weapons")).is_equal(0.0)
 	SimFixture.run(w, 4)
@@ -139,7 +139,7 @@ func test_hack_window_applies_and_ends() -> void:
 
 # FT: FT-PAIR-023
 # Every hack effect in the data keeps its window at or above the 8 s minimum.
-func test_every_effect_window_is_at_least_8_s() -> void:
+func test_every_effect_window_is_at_least_8_seconds() -> void:
 	var def: ScienceDef = ScienceFixture.science()
 	assert_array(def.validate()).is_empty()
 	assert_int(def.effects.size()).is_equal(6)

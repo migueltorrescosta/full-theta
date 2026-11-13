@@ -20,12 +20,12 @@ extends Control
 ## up axis; at yaw 0 the bow points up the screen and starboard right.
 
 ## Range steps (m) (FT-SPA-024).
-const RANGES_M: Array[float] = [2000.0, 10000.0, 50000.0]
+const RANGES: Array[float] = [2000.0, 10000.0, 50000.0]
 const TILT_MIN: float = 10.0
 const TILT_MAX: float = 90.0
 const FONT_SIZE: int = 13
 ## Width of the elevation side strip (px).
-const STRIP_W: float = 44.0
+const STRIP_WIDTH: float = 44.0
 ## Room around the disc for the clock numbers (px).
 const PAD: float = 24.0
 const BLIP_R: float = 6.0
@@ -44,7 +44,7 @@ const SMALL_R: float = 80.0
 const BURST_MS: int = 900
 const MAX_BURSTS: int = 6
 ## Under this width the range box drops its "Range" word.
-const SMALL_RADAR_W: float = 360.0
+const SMALL_RADAR_WIDTH: float = 360.0
 
 ## The items to draw (ContactPicture). "point" items (point pings) draw only their
 ## pulse and are never picked.
@@ -153,7 +153,7 @@ func _draw_bursts() -> void:
 
 ## One range step in (-1) or out (+1).
 func zoom(step: int) -> void:
-	range_index = clampi(range_index + step, 0, RANGES_M.size() - 1)
+	range_index = clampi(range_index + step, 0, RANGES.size() - 1)
 	queue_redraw()
 
 
@@ -206,7 +206,7 @@ func is_above(local: Vector3) -> bool:
 
 ## True when an item at `local` is beyond the range step (an arrow on the rim).
 func is_beyond(local: Vector3) -> bool:
-	return _rel(local).length() > RANGES_M[range_index]
+	return _rel(local).length() > RANGES[range_index]
 
 
 ## The disc centre (px).
@@ -242,7 +242,7 @@ func _gui_input(event: InputEvent) -> void:
 			and mb.button_index == MOUSE_BUTTON_LEFT
 			and _range_rect().has_point(mb.position)
 		):
-			range_index = (range_index + 1) % RANGES_M.size()
+			range_index = (range_index + 1) % RANGES.size()
 			queue_redraw()
 		elif mb.button_index == MOUSE_BUTTON_RIGHT and orbitable:
 			_orbiting = mb.pressed
@@ -286,7 +286,7 @@ func _touch(event: InputEvent) -> bool:
 func _draw() -> void:
 	var font: Font = get_theme_default_font()
 	var c: Vector2 = disc_centre()
-	var r: float = RANGES_M[range_index]
+	var r: float = RANGES[range_index]
 	_draw_disc(font, c, r)
 	var layout: Array[Dictionary] = _layout()
 	var covers: Array[Rect2] = SheetCover.over(self)
@@ -366,7 +366,7 @@ func _draw_own() -> void:
 	var col: Color = Palette.color("own")
 	if off != Vector3.ZERO:
 		draw_line(_screen(Vector3(off.x, 0.0, off.z)), p, col * Color(1, 1, 1, 0.6), 1.0, true)
-	var bow: Vector2 = _screen(off + Vector3(0.0, 0.0, -RANGES_M[range_index] * 0.1)) - p
+	var bow: Vector2 = _screen(off + Vector3(0.0, 0.0, -RANGES[range_index] * 0.1)) - p
 	var d: Vector2 = bow.normalized() if bow.length() > 0.01 else Vector2.UP
 	var n: Vector2 = Vector2(-d.y, d.x)
 	draw_colored_polygon(
@@ -421,11 +421,11 @@ func _draw_pulse(pos: Vector2, pulse: float, copies: Array = []) -> void:
 
 ## FT-SPA-009: elevation -90..+90 of every item from the own ship, one tick each.
 func _draw_strip(font: Font) -> void:
-	var x0: float = _view().end.x - STRIP_W
+	var x0: float = _view().end.x - STRIP_WIDTH
 	var top: float = PAD
 	var bottom: float = size.y - PAD
-	draw_rect(Rect2(x0, 0.0, STRIP_W, size.y), Palette.color("panel"))
-	var mid: float = x0 + STRIP_W * 0.6
+	draw_rect(Rect2(x0, 0.0, STRIP_WIDTH, size.y), Palette.color("panel"))
+	var mid: float = x0 + STRIP_WIDTH * 0.6
 	var y_of: Callable = func(el: float) -> float: return remap(el, 90.0, -90.0, top, bottom)
 	var band: Rect2 = Rect2(mid - 8.0, y_of.call(15.0), 16.0, y_of.call(-15.0) - y_of.call(15.0))
 	draw_rect(band, Palette.color("panel_focus"))
@@ -458,7 +458,7 @@ func _layout() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var font: Font = get_theme_default_font()
 	var c: Vector2 = disc_centre()
-	var r: float = RANGES_M[range_index]
+	var r: float = RANGES[range_index]
 	for it: Dictionary in picture.items:
 		if it["kind"] == "point":
 			continue
@@ -535,9 +535,9 @@ func selection_rings(layout: Array[Dictionary]) -> Array[Rect2]:
 		if e["selected"]:
 			var rel: Vector3 = e["rel"]
 			var px: float = (
-				minf(Vector2(rel.x, rel.z).length(), RANGES_M[range_index])
+				minf(Vector2(rel.x, rel.z).length(), RANGES[range_index])
 				* disc_radius()
-				/ RANGES_M[range_index]
+				/ RANGES[range_index]
 			)
 			var h: Vector2 = Vector2(px, px * sin(deg_to_rad(tilt_deg)))
 			out.append(Rect2(disc_centre() - h, h * 2.0))
@@ -574,7 +574,7 @@ func _place_small(entries: Array[Dictionary], font: Font) -> void:
 		return
 	var c: Vector2 = disc_centre()
 	var fixed: Array[Rect2] = []
-	fixed.assign(_numerals(font, c, RANGES_M[range_index]).values())
+	fixed.assign(_numerals(font, c, RANGES[range_index]).values())
 	fixed.append_array([_range_rect(), _site_rect(), _own_box()])
 	var half: Vector2 = Vector2(blip_r(), blip_r()) + Vector2(3, 3)
 	var blips: Array[Rect2] = []
@@ -666,7 +666,7 @@ func _chip_rect(font: Font, chip: String, pos: Vector2, left: bool) -> Rect2:
 func _screen(rel: Vector3) -> Vector2:
 	var yaw: float = deg_to_rad(yaw_deg)
 	var t: float = deg_to_rad(tilt_deg)
-	var s: float = disc_radius() / RANGES_M[range_index]
+	var s: float = disc_radius() / RANGES[range_index]
 	var fwd: float = -rel.z
 	var right: float = rel.x * cos(yaw) - fwd * sin(yaw)
 	var ahead: float = rel.x * sin(yaw) + fwd * cos(yaw)
@@ -700,7 +700,7 @@ func _view() -> Rect2:
 
 func _area() -> Rect2:
 	var v: Rect2 = _view()
-	return Rect2(v.position, v.size - Vector2(STRIP_W if side_strip else 0.0, 0.0))
+	return Rect2(v.position, v.size - Vector2(STRIP_WIDTH if side_strip else 0.0, 0.0))
 
 
 ## The range label's box, for text beside it to keep clear of (a phone's Science status).
@@ -749,13 +749,13 @@ func _sync_taps() -> void:
 
 ## True when the radar has room for the words in its two boxes ("Range", "Zone:").
 func _roomy() -> bool:
-	return _view().size.x >= SMALL_RADAR_W
+	return _view().size.x >= SMALL_RADAR_WIDTH
 
 
 func _range_text() -> String:
 	# A small radar (a phone's 180 px column) keeps the short "10 km" so its chips have room.
 	var key: String = "radar.range_km" if _roomy() else "radar.km"
-	return tr(key) % str(int(RANGES_M[range_index] / 1000.0))
+	return tr(key) % str(int(RANGES[range_index] / 1000.0))
 
 
 func _hits(e: Dictionary, p: Vector2) -> bool:

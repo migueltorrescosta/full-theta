@@ -2,7 +2,7 @@ class_name VfxEffect
 extends MeshInstance3D
 ## One short effect on the 3D views (#12, E14): a hit spark, a shield hit, an explosion, the
 ## jump drive spooling or arriving. A shader-driven quad or sphere (VfxShaders), no particles.
-## It follows `age_s` and frees itself at `duration_s`. With `frozen` it holds its age, for the
+## It follows `age` and frees itself at `duration`. With `frozen` it holds its age, for the
 ## L5 shots. Comfort (FT-STN-017) takes the flash out: `flash` is 0, only the soft ring or
 ## the shell's rim stays, dimmer.
 
@@ -60,8 +60,8 @@ static var _burst_shader: Shader
 static var _shield_shader: Shader
 
 var kind: Kind = Kind.HIT
-var duration_s: float = 0.5
-var age_s: float = 0.0
+var duration: float = 0.5
+var age: float = 0.0
 ## The core and spoke gain (0 with comfort on).
 var flash: float = 1.0
 var frozen: bool = false
@@ -76,7 +76,7 @@ static func make(
 	var e: VfxEffect = VfxEffect.new()
 	var spec: Dictionary = SPEC[p_kind]
 	e.kind = p_kind
-	e.duration_s = float(spec["s"])
+	e.duration = float(spec["s"])
 	e.flash = 0.0 if comfort else 1.0
 	e.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var soft: float = COMFORT_SOFT if comfort else 1.0
@@ -125,17 +125,17 @@ func _process(delta: float) -> void:
 
 ## Moves the effect `dt` seconds on; frees it past its duration.
 func advance(dt: float) -> void:
-	set_age(age_s + dt)
-	if age_s >= duration_s:
+	set_age(age + dt)
+	if age >= duration:
 		queue_free()
 
 
 ## Sets the age (s) and the shader to match.
 func set_age(t: float) -> void:
-	age_s = t
-	_material.set_shader_parameter("age", clampf(t / duration_s, 0.0, 1.0))
+	age = t
+	_material.set_shader_parameter("age", clampf(t / duration, 0.0, 1.0))
 
 
 ## Whether the effect is over.
 func finished() -> bool:
-	return age_s >= duration_s
+	return age >= duration

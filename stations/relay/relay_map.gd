@@ -26,8 +26,8 @@ const BLIP_R: float = 6.0
 ## item_at picks the nearest item within this distance (px).
 const HIT_PX: float = 12.0
 ## Half the map's smaller side in metres: zoom limits and step.
-const SPAN_MIN_M: float = 500.0
-const SPAN_DEFAULT_M: float = 10000.0
+const SPAN_MIN: float = 500.0
+const SPAN_DEFAULT: float = 10000.0
 const ZOOM_STEP: float = 1.25
 const ROTATE_RAD_PER_PX: float = 0.01
 ## The camera starts 35° above the deck plane behind the ship (a start, not an up).
@@ -51,7 +51,7 @@ var centre: Dictionary = {}
 ## Camera orientation in the ship frame: it looks along -view.z, screen right is
 ## view.x and screen up view.y.
 var view: Basis = Basis.from_euler(Vector3(deg_to_rad(-START_TILT_DEG), 0.0, 0.0))
-var span_m: float = SPAN_DEFAULT_M
+var map_span: float = SPAN_DEFAULT
 ## Chips next to items (off in the docked view).
 var chips: bool = true
 ## The point being placed or moved: {"rel" (ship frame from the centre), "plane" (the
@@ -87,7 +87,7 @@ func _init() -> void:
 ## Pixels per metre.
 func ppm() -> float:
 	var v: Vector2 = _view().size
-	return minf(v.x, v.y) / 2.0 / span_m
+	return minf(v.x, v.y) / 2.0 / map_span
 
 
 func _view() -> Rect2:
@@ -96,15 +96,15 @@ func _view() -> Rect2:
 
 ## Zoom in (-1) or out (+1) one step.
 func zoom(step: int) -> void:
-	var top: float = period_m() if period_m() > 0.0 else 1.0e6
-	span_m = clampf(span_m * pow(ZOOM_STEP, step), SPAN_MIN_M, top)
+	var top: float = period() if period() > 0.0 else 1.0e6
+	map_span = clampf(map_span * pow(ZOOM_STEP, step), SPAN_MIN, top)
 	queue_redraw()
 
 
 ## Zooms by `factor` (a pinch: under 1 zooms in), within the same limits as `zoom`.
 func zoom_by(factor: float) -> void:
-	var top: float = period_m() if period_m() > 0.0 else 1.0e6
-	span_m = clampf(span_m * factor, SPAN_MIN_M, top)
+	var top: float = period() if period() > 0.0 else 1.0e6
+	map_span = clampf(map_span * factor, SPAN_MIN, top)
 	queue_redraw()
 
 
@@ -117,7 +117,7 @@ func rotate_by(delta_px: Vector2) -> void:
 
 
 ## Map period (m), 0 when unknown.
-func period_m() -> float:
+func period() -> float:
 	return float(picture.interp.p_units) / NetCodec.POS_Q
 
 
@@ -239,7 +239,7 @@ func _draw() -> void:
 		var col: Color = Palette.color("accent")
 		draw_line(cursor - Vector2(10, 0), cursor + Vector2(10, 0), col, 1.5)
 		draw_line(cursor - Vector2(0, 10), cursor + Vector2(0, 10), col, 1.5)
-	var scale_text: String = tr("relay.span") % _km(span_m)
+	var scale_text: String = tr("relay.span") % _km(map_span)
 	var base: float = _view().end.y - 8.0 if caption_bottom < 0.0 else caption_bottom - 4.0
 	var x: float = _view().position.x + 8.0
 	var caption: Rect2 = Rect2(
@@ -349,9 +349,9 @@ func _draw_lanes(layout: Array[Dictionary], font: Font) -> void:
 ## The wrapping cube: one period on a side, world-axis aligned, around the own ship;
 ## `c` is the centre item's world-axes offset.
 func _draw_cube(c: Vector3) -> void:
-	if period_m() <= 0.0:
+	if period() <= 0.0:
 		return
-	var h: float = period_m() / 2.0
+	var h: float = period() / 2.0
 	var corner: Callable = func(i: int) -> Vector2:
 		var w: Vector3 = Vector3(h if i & 1 else -h, h if i & 2 else -h, h if i & 4 else -h)
 		return project(picture.interp.local(w - c))
@@ -365,7 +365,7 @@ func _draw_cube(c: Vector3) -> void:
 ## A faint ring in the deck plane through the centre (ship axes) with a bow tick, so
 ## stems have something to land on; not a grid. A cross marks the centre off the ship.
 func _draw_deck(centred: bool) -> void:
-	var r: float = span_m * 0.6
+	var r: float = map_span * 0.6
 	var pts: PackedVector2Array = PackedVector2Array()
 	for i: int in 65:
 		var a: float = TAU * float(i % 64) / 64.0
@@ -382,7 +382,7 @@ func _draw_own(rel: Vector3) -> void:
 	var col: Color = Palette.color("own")
 	var p: Vector2 = project(rel)
 	draw_line(project(Vector3(rel.x, 0.0, rel.z)), p, col * Color(1, 1, 1, 0.6), 1.0, true)
-	var bow: Vector2 = project(rel + Vector3(0.0, 0.0, -span_m * 0.08)) - p
+	var bow: Vector2 = project(rel + Vector3(0.0, 0.0, -map_span * 0.08)) - p
 	var d: Vector2 = bow.normalized() if bow.length() > 1.0 else Vector2.UP
 	var n: Vector2 = Vector2(-d.y, d.x)
 	draw_colored_polygon(
@@ -427,7 +427,7 @@ func _draw_preview(font: Font) -> void:
 func say_point(label: String, rel: Vector3) -> String:
 	var interp: SnapshotInterpolator = picture.interp
 	var local: Vector3 = from_own(rel)
-	if local.length() <= Callout.FAR_M:
+	if local.length() <= Callout.FAR_DISTANCE:
 		return CalloutText.callout(label, local)
 	var at: Vector3 = centre_world() + interp.own_rotation() * rel
 	var refs: Array[Dictionary] = []
@@ -495,7 +495,7 @@ func _layout() -> Array[Dictionary]:
 	# own ship and the span caption, inside the map's view (D319, as the disc radar).
 	var own: Vector2 = project(picture.rel(Vector3.ZERO, centre))
 	var caption: Vector2 = font.get_string_size(
-		tr("relay.span") % _km(span_m), HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE
+		tr("relay.span") % _km(map_span), HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE
 	)
 	var v: Rect2 = _view()
 	var base: float = v.end.y - 8.0 if caption_bottom < 0.0 else caption_bottom - 4.0

@@ -18,9 +18,9 @@ extends Control
 ## key does. On the map: drag places or moves a mark, a second finger slides its depth,
 ## pinch zooms and two fingers turn the map (RelayPanel).
 
-const RAIL_W: float = 168.0
+const RAIL_WIDTH: float = 168.0
 ## The Log page's left panel (the log's lines need the width).
-const LOG_W: float = 300.0
+const LOG_WIDTH: float = 300.0
 ## The probe and inbox line over the map (landscape), and the armed hint below it.
 const LINE_H: float = 28.0
 ## Upright: the page zone's height (four rows of buttons).
@@ -183,9 +183,9 @@ func _build_landscape(page_parts: Array, titles: Array[String]) -> void:
 	add_child(layout)
 	layout.set_content(panel.map)
 	var left: TouchRail = layout.rail(SIDE_LEFT)
-	left.custom_minimum_size.x = RAIL_W
+	left.custom_minimum_size.x = RAIL_WIDTH
 	var right: TouchRail = layout.rail(SIDE_RIGHT)
-	right.custom_minimum_size.x = RAIL_W
+	right.custom_minimum_size.x = RAIL_WIDTH
 	for i: int in page_parts.size():
 		var parts: Array = []
 		for side: int in 2:
@@ -255,7 +255,7 @@ func release() -> void:
 func _on_page(index: int) -> void:
 	if form != LayoutMode.Form.PHONE_LANDSCAPE:
 		return
-	layout.left.custom_minimum_size.x = LOG_W if index == PAGE_LOG else RAIL_W
+	layout.left.custom_minimum_size.x = LOG_WIDTH if index == PAGE_LOG else RAIL_WIDTH
 	layout.right.visible = index != PAGE_CREW
 	layout.queue_sort()
 
@@ -274,7 +274,7 @@ func view_in_map() -> Rect2:
 func _place_view(_rect: Rect2 = Rect2()) -> void:
 	_reserve = panel.top_reserve
 	var r: Rect2 = view_in_map()
-	if r.size.x < 2.0 * RAIL_W / 3.0 or r.size.y < LINE_H * 3.0:
+	if r.size.x < 2.0 * RAIL_WIDTH / 3.0 or r.size.y < LINE_H * 3.0:
 		r = Rect2(Vector2.ZERO, panel.map.size)
 	panel.map.view_rect = r
 	panel._hint.offset_left = r.position.x + 8.0
@@ -287,16 +287,16 @@ func _place_view(_rect: Rect2 = Rect2()) -> void:
 		var full: float = maxf(r.size.x - 16.0, 1.0)
 		var h: float = probes.get_combined_minimum_size().y
 		probes.position = Vector2(r.position.x + 8.0, y)
-		if _text_w(probes) + _text_w(mail) + 24.0 > r.size.x:
+		if _text_width(probes) + _text_width(mail) + 24.0 > r.size.x:
 			probes.size = Vector2(full, h)
 			mail.position = Vector2(r.position.x + 8.0, y + h)
 			mail.size = Vector2(full, mail.get_combined_minimum_size().y)
 			y += h
 		else:
-			var left_w: float = maxf((r.size.x - 24.0) * _probe_share(), 1.0)
-			probes.size = Vector2(left_w, h)
-			mail.position = Vector2(r.position.x + 16.0 + left_w, y)
-			mail.size = Vector2(full - 8.0 - left_w, mail.get_combined_minimum_size().y)
+			var left_width: float = maxf((r.size.x - 24.0) * _probe_share(), 1.0)
+			probes.size = Vector2(left_width, h)
+			mail.position = Vector2(r.position.x + 16.0 + left_width, y)
+			mail.size = Vector2(full - 8.0 - left_width, mail.get_combined_minimum_size().y)
 		y += LINE_H
 	panel._hint.offset_top = position.y + y
 	panel._rename.custom_minimum_size = Vector2(220, UiTheme.TOUCH_PRIMARY)
@@ -475,12 +475,12 @@ func _clear(box: Node) -> void:
 ## The probe line's share of the width the probe and inbox lines split: in proportion to
 ## their texts, at least a quarter each.
 func _probe_share() -> float:
-	var wp: float = _text_w(probes)
-	return clampf(wp / (wp + _text_w(mail)), 0.25, 0.75)
+	var wp: float = _text_width(probes)
+	return clampf(wp / (wp + _text_width(mail)), 0.25, 0.75)
 
 
 ## The width (px) of a line's text at its 13 px size.
-static func _text_w(l: Label) -> float:
+static func _text_width(l: Label) -> float:
 	var font: Font = l.get_theme_font("font")
 	return font.get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x + 1.0
 

@@ -17,7 +17,7 @@ func after_test() -> void:
 # Every HostSession option maps to its server flag; the secret never does (D127).
 func test_server_args_from_the_editor_binary() -> void:
 	var o: HostSession.Options = HostSession.Options.new("192.168.1.20")
-	o.grace_s = 12.5
+	o.grace = 12.5
 	o.idle_exit_min = 10
 	var args: PackedStringArray = HostLauncher.server_args(o, "/u/pid.json", "/proj/")
 	(
@@ -59,7 +59,7 @@ func test_server_args_from_the_editor_binary() -> void:
 	assert_bool(cli.parse_args(args.slice(args.find("--") + 1))).is_true()
 	assert_str(cli.bind_address).is_equal("192.168.1.20")
 	assert_int(cli.port).is_equal(5000)
-	assert_float(cli.grace_s).is_equal(12.5)
+	assert_float(cli.grace).is_equal(12.5)
 	assert_float(cli.idle_exit_min).is_equal(10.0)
 	assert_str(cli.http_root).is_equal("/srv/web")
 	assert_bool(cli.beacon).is_false()

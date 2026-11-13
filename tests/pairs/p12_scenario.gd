@@ -21,7 +21,7 @@ const SITE: int = StoryFixture.SITE
 const CREDITS: int = 1000
 const TRACTOR_LEFT: float = 0.3
 const TRACTOR_PIPS: int = 2
-const DEADLINE_S: float = 10.0
+const DEADLINE: float = 10.0
 const TICK_LIMIT: int = 20 * SimWorld.HZ
 
 
@@ -77,7 +77,7 @@ static func environment(w: SimWorld) -> void:
 		job.needs_subsystem = &"tractor"
 		job.needs_pips = TRACTOR_PIPS
 		PairHarness.send(w, job)
-	elif w.tick == roundi(DEADLINE_S * SimWorld.HZ) and w.story.size() > 1:
+	elif w.tick == roundi(DEADLINE * SimWorld.HZ) and w.story.size() > 1:
 		if w.story.state[1] == StoryTable.State.ACCEPTED:
 			var r: CardResultCommand = CardResultCommand.new()
 			r.card = 1

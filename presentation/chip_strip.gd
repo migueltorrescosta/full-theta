@@ -35,7 +35,7 @@ func show_chips(
 					tr("chip.ask")
 					% [tr(StationCatalogue.name_key(str(c["from"]))), ChipsReader.label(c)]
 				)
-				+ " · %d s" % ceili(ChipsReader.left_s(snap, c))
+				+ " · %d s" % ceili(ChipsReader.time_left(snap, c))
 			)
 		)
 		dim.append(false)
@@ -53,7 +53,7 @@ func show_chips(
 					tr("chip.sent")
 					% [tr(StationCatalogue.name_key(str(c["to"]))), ChipsReader.label(c)]
 				)
-				+ " · %d s" % ceili(ChipsReader.left_s(snap, c))
+				+ " · %d s" % ceili(ChipsReader.time_left(snap, c))
 			)
 		)
 		dim.append(true)

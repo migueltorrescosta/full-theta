@@ -5,7 +5,7 @@ extends GdUnitTestSuite
 ## pause comes instead; with "Fill light stations with bots" two players start a ship.
 
 const PLAYER: int = NetHarness.PLAYER
-const GRACE_S: float = 0.6
+const GRACE: float = 0.6
 
 var h: NetHarness
 
@@ -20,7 +20,7 @@ func after_test() -> void:
 
 ## A server with the stand-ins on (the host's pause option off, its default).
 func _server() -> NetServer:
-	var server: NetServer = h.server(false, GRACE_S)
+	var server: NetServer = h.server(false, GRACE)
 	server.game.lobby.drop_pause = false
 	return server
 

@@ -10,7 +10,7 @@ extends RefCounted
 const MAX_TARGETS: int = 8
 ## A ship's hits are sent at most this often (s); the hits in between are dropped (D471).
 ## The other messages are rare state changes and always go.
-const HIT_INTERVAL_S: float = 0.1
+const HIT_INTERVAL: float = 0.1
 ## Address prefix: /ft/ship/<ship id>/<event>.
 const PREFIX: String = "/ft/ship/"
 
@@ -96,7 +96,7 @@ func messages_for(e: SimEvent, now_us: int) -> Array[Array]:
 	match e.kind:
 		&"hit":
 			var last_us: int = _last_hit_us.get(e.ship_id, -(1 << 62))
-			if now_us - last_us < HIT_INTERVAL_S * 1e6:
+			if now_us - last_us < HIT_INTERVAL * 1e6:
 				return []
 			_last_hit_us[e.ship_id] = now_us
 			return [[at + "hit", [1.0, e.value]]]

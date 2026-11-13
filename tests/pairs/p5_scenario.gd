@@ -2,8 +2,8 @@ class_name P5Scenario
 extends RefCounted
 ## P5 Helm + Comms pair scenario (spec §7.4, FT-PAIR-015): the M1 corvette, at rest at the
 ## origin with its bow on -Z, must dock at a yard 5 km dead ahead. The yard asks for
-## clearance (a CONTRACT card tied to its site): the lane opens LANE_OPEN_S after Comms
-## accepts it and stays open LANE_S; docking outside the window loses reputation with the
+## clearance (a CONTRACT card tied to its site): the lane opens LANE_OPEN_TIME after Comms
+## accepts it and stays open LANE_DURATION; docking outside the window loses reputation with the
 ## yard's faction (StoryRules.on_dock, rep.uncleared_approach).
 ## - Comms (both variants): accepts the clearance at once. Comms alone can do that and
 ##   negotiate (FT-PAIR-004).
@@ -21,8 +21,8 @@ const BLUE: int = 1
 const YARD_FACTION: int = 3
 const YARD_AT: Vector3 = Vector3(0.0, 0.0, -5000.0)
 const DOCK_R: float = 200.0
-const LANE_OPEN_S: float = 70.0
-const LANE_S: float = 40.0
+const LANE_OPEN_TIME: float = 70.0
+const LANE_DURATION: float = 40.0
 const ACCEPT_TICK: int = 2
 const CRUISE_SOLO: float = 100.0
 const ON_POINT: float = PI / 36.0
@@ -49,8 +49,8 @@ static func environment(w: SimWorld) -> void:
 		var c: PostCardCommand = StoryFixture.card(StoryTable.Kind.CONTRACT, &"", _yard)
 		c.title_key = "comms.card.clearance"
 		c.rep_faction = YARD_FACTION
-		c.lane_delay = LANE_OPEN_S
-		c.lane_length = LANE_S
+		c.lane_delay = LANE_OPEN_TIME
+		c.lane_length = LANE_DURATION
 		PairHarness.send(w, c)
 	if (
 		Story.docked_site(w, PLAYER) < 0
@@ -94,9 +94,9 @@ static func coop_crew() -> Callable:
 		if window.is_empty():
 			return
 		if speed[0] == 0.0:
-			var middle_s: float = (window[0] + window[1]) / 2.0 * SimWorld.DT
+			var middle_time: float = (window[0] + window[1]) / 2.0 * SimWorld.DT
 			var to_yard: float = w.kin.relative_to_point(PLAYER, CubePoint.of(YARD_AT)).length()
-			speed[0] = (to_yard - DOCK_R) / (middle_s - w.tick * SimWorld.DT)
+			speed[0] = (to_yard - DOCK_R) / (middle_time - w.tick * SimWorld.DT)
 		helm(w, speed[0])
 
 

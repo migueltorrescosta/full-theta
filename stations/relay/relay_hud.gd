@@ -22,7 +22,7 @@ const LOG_ROWS: int = 4
 ## The box's top edge (from the bottom) when it is a heading over one row of buttons.
 const SHORT_BOX_TOP: float = -82.0
 ## Least width of the log column.
-const LOG_MIN_W: float = 60.0
+const LOG_MIN_WIDTH: float = 60.0
 
 var ctx: StationContext
 var launch: Button
@@ -109,7 +109,7 @@ func setup(context: StationContext) -> void:
 	var log_col: VBoxContainer = VBoxContainer.new()
 	log_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# The inbox buttons take what they need; the log wraps in what is left.
-	log_col.custom_minimum_size.x = LOG_MIN_W
+	log_col.custom_minimum_size.x = LOG_MIN_WIDTH
 	_log_col = log_col
 	log_col.add_child(_heading("relay.log"))
 	_log = VBoxContainer.new()

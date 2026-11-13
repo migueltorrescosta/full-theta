@@ -10,9 +10,9 @@ extends Node3D
 ## Most effects alive at once; the oldest goes first.
 const MAX_LIVE: int = 12
 ## Camera shake (rad) at full strength, its decay (per s) and its pace (rad/s).
-const SHAKE_RAD: float = 0.012
+const SHAKE_ANGLE: float = 0.012
 const SHAKE_DECAY: float = 2.5
-const SHAKE_HZ: float = 38.0
+const SHAKE_FREQUENCY: float = 38.0
 ## How far in front of a camera at the own ship a hit on it shows (m), when no model of the
 ## own ship is drawn.
 const COCKPIT_REACH: float = 8.0
@@ -121,8 +121,8 @@ func kick(amount: float) -> void:
 func shake_basis() -> Basis:
 	if comfort or _shake <= 0.0:
 		return Basis.IDENTITY
-	var amp: float = SHAKE_RAD * _shake * _shake
-	var t: float = _clock * SHAKE_HZ
+	var amp: float = SHAKE_ANGLE * _shake * _shake
+	var t: float = _clock * SHAKE_FREQUENCY
 	return Basis.from_euler(
 		Vector3(sin(t) * amp, sin(t * 1.31 + 1.0) * amp, sin(t * 0.77 + 2.0) * amp)
 	)

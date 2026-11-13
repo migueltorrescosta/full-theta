@@ -148,7 +148,7 @@ func test_phone_landscape_one_right_rail() -> void:
 	assert_float(fire.size.y).is_greater_equal(WeaponsTouch.FIRE_H)
 	assert_bool(rail.encloses(fire)).is_true()
 	var radar: Rect2 = t.radar_box.get_global_rect()
-	assert_float(radar.size.x).is_equal(WeaponsTouch.RADAR_W)
+	assert_float(radar.size.x).is_equal(WeaponsTouch.RADAR_WIDTH)
 	assert_float(radar.position.x).is_less(s._main.get_global_rect().get_center().x)
 	# Pages: Fire first and current; its zone in the rail; the tabs in the top bar.
 	assert_array(p.pages.titles()).is_equal(["Fire", "Mounts", "Crew"])

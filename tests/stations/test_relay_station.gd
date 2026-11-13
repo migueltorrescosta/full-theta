@@ -152,7 +152,7 @@ func test_routes_and_hazard_zones() -> void:
 	assert_array(_sent(s, "route_clear")).is_equal([[0]])
 	p.handle_intent(_ev("hazard_add", s))
 	var hz: Array = _sent(s, "hazard_add")[0]
-	assert_float(hz[0]).is_equal(RelayPanel.HAZARD_RADIUS_M)
+	assert_float(hz[0]).is_equal(RelayPanel.HAZARD_RADIUS)
 	# The server's answer: a hazard and a scan position, drawn as zone items.
 	_event(
 		s,

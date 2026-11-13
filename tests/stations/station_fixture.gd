@@ -26,7 +26,7 @@ const BRAVO_SLOT: int = 1
 const NOW_MS: int = 100_000
 const TICK: int = 3600
 const START_TICK: int = 600
-const PERIOD_M: float = 200_000.0
+const PERIOD: float = 200_000.0
 ## The own ship's position (m) and orientation: yawed 30° to port, pitched
 ## 10° nose up and rolled 25° to port (Basis.from_euler order: yaw, pitch, roll).
 const OWN_POS: Vector3 = Vector3(1200.0, -300.0, 4500.0)
@@ -35,9 +35,9 @@ const OWN_EULER_DEG: Vector3 = Vector3(10.0, 30.0, 25.0)
 const H5: int = 5
 const H6: int = 6
 const ECHO_SLOT: int = 4
-const SEAM_H5: Vector3 = Vector3(PERIOD_M / 2.0 - 400.0, 0.0, 0.0)
-const SEAM_H6: Vector3 = Vector3(-PERIOD_M / 2.0 + 3000.0, 0.0, 0.0)
-const SEAM_ECHO: Vector3 = Vector3(-PERIOD_M / 2.0 + 300.0, 0.0, 0.0)
+const SEAM_H5: Vector3 = Vector3(PERIOD / 2.0 - 400.0, 0.0, 0.0)
+const SEAM_H6: Vector3 = Vector3(-PERIOD / 2.0 + 3000.0, 0.0, 0.0)
+const SEAM_ECHO: Vector3 = Vector3(-PERIOD / 2.0 + 300.0, 0.0, 0.0)
 ## The TapAudit rules every phone screen keeps (48 px targets, 8 px apart, none in the band
 ## or outside the safe area).
 const TOUCH_RULES: Array[String] = [
@@ -125,8 +125,8 @@ class RecordingClient:
 	func route_clear(route: int) -> void:
 		sent.append(["route_clear", [route]])
 
-	func hazard_add(radius_m: float, pos: Vector3) -> void:
-		sent.append(["hazard_add", [radius_m, pos]])
+	func hazard_add(radius: float, pos: Vector3) -> void:
+		sent.append(["hazard_add", [radius, pos]])
 
 	func hazard_delete(id: int) -> void:
 		sent.append(["hazard_delete", [id]])
@@ -281,7 +281,7 @@ static func catalogue(dev_all: bool = false) -> Dictionary:
 ## The snapshot state: own ship, STATUS and MOUNTS blocks, contacts H2, U3, F4 (and H5,
 ## H6 with `seam`).
 static func snap(seam: bool = false) -> SnapshotState:
-	var p_units: int = NetCodec.period_units(PERIOD_M)
+	var p_units: int = NetCodec.period_units(PERIOD)
 	var v: SnapshotState = SnapshotState.new(p_units)
 	v.seq = 10
 	v.tick = TICK
@@ -390,11 +390,11 @@ static func own_rotation() -> Quaternion:
 
 
 ## Ship-frame offset at a clock hour, elevation (degrees) and range (m).
-static func _at(clock_hour: int, elevation_deg: float, range_m: float) -> Vector3:
+static func _at(clock_hour: int, elevation_deg: float, reach: float) -> Vector3:
 	var b: float = deg_to_rad(clock_hour * 30.0)
 	var e: float = deg_to_rad(elevation_deg)
-	var h: float = range_m * cos(e)
-	return Vector3(sin(b) * h, range_m * sin(e), -cos(b) * h)
+	var h: float = reach * cos(e)
+	return Vector3(sin(b) * h, reach * sin(e), -cos(b) * h)
 
 
 ## A ship-frame offset as a position.
@@ -404,11 +404,9 @@ static func _world(local: Vector3) -> Vector3:
 
 ## A position wrapped into the cube, [-P/2, P/2) on each axis.
 static func _site_pos(p: Vector3) -> Vector3:
-	var h: float = PERIOD_M / 2.0
+	var h: float = PERIOD / 2.0
 	return Vector3(
-		fposmod(p.x + h, PERIOD_M) - h,
-		fposmod(p.y + h, PERIOD_M) - h,
-		fposmod(p.z + h, PERIOD_M) - h
+		fposmod(p.x + h, PERIOD) - h, fposmod(p.y + h, PERIOD) - h, fposmod(p.z + h, PERIOD) - h
 	)
 
 

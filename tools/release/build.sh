@@ -58,8 +58,7 @@ touch "$out/$marker" "$out/.gdignore"
 trap 'rm -f "$root/build_info.json"' EXIT
 printf '{"commit": "%s", "version": "%s"}\n' "$commit" "$version" >build_info.json
 
-mapfile -t langs < <(py -c 'import sys; sys.path.insert(0, "tools/release")
-import package; print("\n".join(package.release_languages()))')
+mapfile -t langs < <(py tools/release/package.py --languages)
 echo "build: prerender ${langs[*]}"
 tools/release/prerender.sh "${langs[@]}"
 # Importing the fresh clips crashed Godot 4.7.2 once on fugaku (a segfault that
