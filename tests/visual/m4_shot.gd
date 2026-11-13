@@ -176,13 +176,10 @@ func _gameplay_options() -> void:
 		{"seat": "relay", "name": "Di", "session": 9, "ready": true, "guest": true}
 	)
 	state["bots"] = [{"seat": "helm", "for": "Ana"}, {"seat": "comms", "for": ""}]
-	for id: String in ["ion_storm", "calm_lanes"]:
-		var def: RunModifierDef = RunModifierDef.new()
-		def.id = StringName(id)
-		def.name_key = StringName(id.capitalize())
-		def.detail_key = &"Sensors see half as far; shields recharge faster."
-		ModePanel.modifier_defs[id] = def
-	_ctx.crew.fleet.merge({"drop_pause": true, "fill_bots": true, "modifier": "ion_storm"}, true)
+	var options: Dictionary = {
+		"drop_pause": true, "fill_bots": true, "modifier": "rich_pickings", "rerollable": true
+	}
+	_ctx.crew.fleet.merge(options, true)
 	_ctx.crew.changed.emit(&"fleet")
 
 

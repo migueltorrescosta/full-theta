@@ -141,7 +141,7 @@ func test_two_players_start_with_fill_bots() -> void:
 	assert_bool(await h.pick(guns, "weapons")).is_true()
 	assert_bool(await h.start(server, helm)).is_true()
 	assert_array(server.game.lobby.bots[PLAYER].keys()).contains_exactly_in_any_order(
-		NetLobby.LIGHT_STATIONS
+		StationCatalogue.LIGHT_STATIONS
 	)
 	# A third player takes Relay from its bot later on.
 	var late: NetClient = await h.joined(server, "cy", "relay")

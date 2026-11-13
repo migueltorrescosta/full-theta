@@ -459,6 +459,7 @@ static func fleet(
 		"modifier": "",
 		"drop_pause": false,
 		"fill_bots": false,
+		"rerollable": false,
 	}
 	ctx.crew.handle_event({"type": "fleet", "payload": p}, NOW_MS)
 	# The server's Catalogue lists every crewed ship (NetGame.crew_ships), so a pick
