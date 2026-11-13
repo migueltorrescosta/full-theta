@@ -20,7 +20,7 @@ const KINDS: Array[StringName] = [
 const TEAM_LETTERS: Array[String] = ["A", "B"]
 ## Under this width (px, a phone upright) the columns sit closer and long headers shorten,
 ## so the table fits without scrolling sideways (#28).
-const NARROW_W: float = 480.0
+const NARROW_WIDTH: float = 480.0
 const SHORT_HEADS: Array[String] = ["encounters", "kills"]
 const GAP: int = 32
 const NARROW_GAP: int = 12
@@ -268,7 +268,7 @@ static func _move(node: Control, parent: Node, index: int) -> void:
 
 ## True on a narrow screen (a phone upright).
 func narrow() -> bool:
-	return size.x < NARROW_W
+	return size.x < NARROW_WIDTH
 
 
 func _on_resized() -> void:

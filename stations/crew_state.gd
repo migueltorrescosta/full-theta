@@ -39,7 +39,7 @@ const ALERT_LEVELS: int = CrewMarks.ALERT_RED + 1
 ## Most log entries kept (the server keeps NetProtocol.RELAY_LOG_MAX).
 const MAX_LOG: int = NetProtocol.RELAY_LOG_MAX
 ## Sim ticks per second (spec: 60 Hz), for the mission timer.
-const TICK_HZ: float = SimRate.HZ * 1.0
+const TICK_RATE: float = SimRate.HZ * 1.0
 
 var session: int = -1
 var ship: int = -1
@@ -436,7 +436,7 @@ func has_relaunch_vote() -> bool:
 func mission_seconds(tick: int) -> float:
 	if not started.has(ship):
 		return 0.0
-	return maxf(0.0, float(tick - int(started[ship])) / TICK_HZ)
+	return maxf(0.0, float(tick - int(started[ship])) / TICK_RATE)
 
 
 ## Consumes one event ({"type", "payload", ...}); false when it isn't one of the

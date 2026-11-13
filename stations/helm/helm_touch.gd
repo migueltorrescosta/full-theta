@@ -35,13 +35,13 @@ extends Control
 ## the keyboard).
 
 ## Rail widths (design 2.1: 168 px rails) and the portrait block's height (the mockups).
-const LEFT_W: float = 168.0
-const RIGHT_W: float = 168.0
+const LEFT_WIDTH: float = 168.0
+const RIGHT_WIDTH: float = 168.0
 const BLOCK_H: float = 300.0
 ## The throttle stops feeding helm_surge within this many m/s of its setpoint; the input is
-## the gap over GAIN_S seconds of full ramp.
+## the gap over GAIN_TIME seconds of full ramp.
 const SETPOINT_TOLERANCE: float = 1.0
-const GAIN_S: float = 0.5
+const GAIN_TIME: float = 0.5
 ## The controls' English texts until content/i18n/strings.json has their "touch.helm.*" keys.
 const TEXTS: Dictionary = {
 	"all_stop": "All stop",
@@ -204,7 +204,7 @@ func _build_landscape() -> void:
 	# The rails start a gap below the top bar's buttons (8 px between targets).
 	layout.offset_top = UiTheme.TOUCH_GAP
 	var left: TouchRail = layout.rail(SIDE_LEFT)
-	left.custom_minimum_size.x = LEFT_W
+	left.custom_minimum_size.x = LEFT_WIDTH
 	var col: VBoxContainer = VBoxContainer.new()
 	col.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
 	col.add_child(_button("all_stop", RailButton.Role.DANGER))
@@ -218,7 +218,7 @@ func _build_landscape() -> void:
 	throttle.size_flags_horizontal = Control.SIZE_FILL
 	col.size_flags_stretch_ratio = 2.0
 	var right: TouchRail = layout.rail(SIDE_RIGHT)
-	right.custom_minimum_size.x = RIGHT_W
+	right.custom_minimum_size.x = RIGHT_WIDTH
 	_fill_pages(right.box)
 	slide = _stick("slide")
 	# Right stick: x strafes to starboard, up lifts (the pad's RS_X and -RS_Y).
@@ -541,7 +541,7 @@ func _drive_throttle() -> void:
 	if not is_nan(_target) and not holds:
 		var gap: float = _target * assist.speed_max - setpoint
 		if absf(gap) > SETPOINT_TOLERANCE:
-			touch.axis("helm_surge", clampf(gap / (assist.speed_ramp * GAIN_S), -1.0, 1.0))
+			touch.axis("helm_surge", clampf(gap / (assist.speed_ramp * GAIN_TIME), -1.0, 1.0))
 			return
 	if not is_nan(_target):
 		touch.axis("helm_surge", 0.0)

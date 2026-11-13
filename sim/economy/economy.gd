@@ -11,26 +11,6 @@ const PROBES: StringName = &"probes"
 const AMMO_PREFIX: String = "ammo:"
 
 
-## The one read helper for a ship's economy as a value copy: credits, propellant (kg),
-## parts, probes, ammunition rounds by weapon id, and reputation by other faction.
-static func of_ship(world: SimWorld, ship: int) -> Dictionary:
-	var ammo: Dictionary[StringName, int] = {}
-	for w: StringName in ammo_types(world, ship):
-		ammo[w] = held(world, ship, StringName(AMMO_PREFIX + w))
-	var rep: Dictionary[int, float] = {}
-	var faction: int = world.faction_of(ship)
-	for other: int in world.reputation.others_of(faction):
-		rep[other] = world.reputation.value_of(faction, other)
-	return {
-		"credits": world.economy.credits[ship],
-		"propellant": world.kin.propellant[ship],
-		"parts": held(world, ship, PARTS),
-		"probes": held(world, ship, PROBES),
-		"ammo": ammo,
-		"reputation": rep,
-	}
-
-
 static func credits(world: SimWorld, ship: int) -> int:
 	return world.economy.credits[ship]
 

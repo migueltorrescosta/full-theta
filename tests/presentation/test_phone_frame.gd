@@ -339,8 +339,8 @@ func test_request_chips_and_ping_toast() -> void:
 	var chips: RequestChips = s.frame.request_chips
 	var sel: Control = s.frame.selection_bar
 	if chips.position.y >= sel.position.y + sel.size.y:
-		var view_w: float = s.focused_panel().view_rect().size.x - 2.0 * UiTheme.TOUCH_GAP
-		assert_float(chips.size.x).is_equal_approx(view_w, 1.0)
+		var view_width: float = s.focused_panel().view_rect().size.x - 2.0 * UiTheme.TOUCH_GAP
+		assert_float(chips.size.x).is_equal_approx(view_width, 1.0)
 	s.frame.request_chips.buttons(0)[0].pressed.emit()
 	assert_array(_sent(s, "answer_chip")).is_equal([["answer_chip", [5, true]]])
 	s.frame.request_chips.buttons(0)[1].pressed.emit()

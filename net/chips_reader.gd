@@ -70,7 +70,7 @@ static func outgoing(snap: SnapshotState, stations: Array) -> Array[Dictionary]:
 
 
 ## Seconds a chip has left at the view's tick (never below 0).
-static func left_s(snap: SnapshotState, chip: Dictionary) -> float:
+static func time_left(snap: SnapshotState, chip: Dictionary) -> float:
 	return maxf(0.0, float(int(chip["expires"]) - snap.tick) / float(HZ))
 
 

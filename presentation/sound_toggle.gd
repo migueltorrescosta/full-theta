@@ -6,7 +6,7 @@ extends Button
 ## switched on shows "Tap for sound", so a player who hears nothing sees why.
 
 ## How often the label looks at the browser's audio state (s).
-const WEB_POLL_S: float = 0.5
+const WEB_POLL_INTERVAL: float = 0.5
 
 var _since_poll: float = 0.0
 
@@ -25,7 +25,7 @@ func _process(delta: float) -> void:
 		set_process(false)
 		return
 	_since_poll += delta
-	if _since_poll >= WEB_POLL_S:
+	if _since_poll >= WEB_POLL_INTERVAL:
 		_since_poll = 0.0
 		_refresh()
 

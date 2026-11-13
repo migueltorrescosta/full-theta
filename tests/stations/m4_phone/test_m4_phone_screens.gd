@@ -213,7 +213,7 @@ func test_handover_notice_sits_under_the_row_and_hides_by_itself() -> void:
 		var report: Dictionary = TapAudit.check(n)
 		assert_array(report["targets"]).is_empty()
 		assert_array(StationFixture.rule_breaks(report, "%s handover" % case[0])).is_empty()
-		n.tick(HandoverNotice.SHOW_S)
+		n.tick(HandoverNotice.SHOW_TIME)
 		assert_bool(n.visible).is_false()
 		_drop(root)
 
@@ -319,14 +319,14 @@ func test_main_menu_offers_full_screen_beside_the_title() -> void:
 		assert_bool(fs.is_visible_in_tree()).is_true()
 		# Its whole label shows ("Full screen", not trimmed to the 48 px square).
 		var font: Font = fs.get_theme_font("font")
-		var text_w: float = (
+		var text_width: float = (
 			font
 			. get_string_size(
 				fs.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs.get_theme_font_size("font_size")
 			)
 			. x
 		)
-		assert_float(fs.size.x).is_greater(text_w)
+		assert_float(fs.size.x).is_greater(text_width)
 		var tap: Rect2 = SafeArea.tap_rect(m)
 		var fr: Rect2 = fs.get_global_rect()
 		assert_float(fr.position.y).is_less(tap.position.y + 32.0)

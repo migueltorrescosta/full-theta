@@ -20,7 +20,7 @@ extends VBoxContainer
 ## The frame the boxes are drawn in.
 const FRAME: Vector2 = Vector2(844.0, 390.0)
 ## The drawing's widest (px); narrower in a narrow menu (upright), its height follows FRAME.
-const DRAW_W: float = 422.0
+const DRAW_WIDTH: float = 422.0
 const NUMBER_R: float = 9.0
 ## Text in the drawing: never under 12 px.
 const FONT: int = 12
@@ -126,13 +126,13 @@ class PageDrawing:
 	var first: int = 1
 
 	func _init() -> void:
-		custom_minimum_size = Vector2(0.0, DRAW_W * FRAME.y / FRAME.x)
+		custom_minimum_size = Vector2(0.0, DRAW_WIDTH * FRAME.y / FRAME.x)
 		size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	## Pixels per frame pixel: DRAW_W wide at most, the width it gets in a narrow menu.
+	## Pixels per frame pixel: DRAW_WIDTH wide at most, the width it gets in a narrow menu.
 	func scale_k() -> float:
-		return minf(size.x, DRAW_W) / FRAME.x
+		return minf(size.x, DRAW_WIDTH) / FRAME.x
 
 	func _notification(what: int) -> void:
 		if what == NOTIFICATION_RESIZED:
@@ -150,10 +150,10 @@ class PageDrawing:
 		# drawing, as wide as its 12 px label (PageTabs, design 1.2).
 		var x: float = 251.0 * k
 		for i: int in titles.size():
-			var label_w: float = (
+			var label_width: float = (
 				font.get_string_size(titles[i], HORIZONTAL_ALIGNMENT_LEFT, -1, FONT).x
 			)
-			var r: Rect2 = Rect2(x, 10.0 * k, maxf(64.0 * k, label_w + 6.0), 44.0 * k)
+			var r: Rect2 = Rect2(x, 10.0 * k, maxf(64.0 * k, label_width + 6.0), 44.0 * k)
 			x = r.end.x + 8.0 * k
 			var on: bool = i == current
 			var col: Color = Palette.color("accent" if on else "line")
@@ -187,10 +187,10 @@ class PageDrawing:
 			)
 			# The control's name beside its number when it fits whole (else the number alone).
 			var room: float = r.size.x - 2.0 * NUMBER_R - 8.0
-			var name_w: float = (
+			var name_width: float = (
 				font.get_string_size(str(b[1]), HORIZONTAL_ALIGNMENT_LEFT, -1, FONT).x
 			)
-			if name_w <= room:
+			if name_width <= room:
 				draw_string(
 					font,
 					Vector2(c.x + NUMBER_R + 4.0, c.y + 4.5),

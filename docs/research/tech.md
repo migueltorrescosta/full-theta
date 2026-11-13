@@ -1,5 +1,7 @@
 # Technical architecture and research: cooperative LAN bridge simulator
 
+Historical research note (2026-10-18); not maintained; paths may be stale.
+
 Spec: `spec-v0.3.md`. Date: 2026-10-18. Author: technical architect (agent).
 Status: proposal. Nothing here is decided until the owner answers section 10.
 

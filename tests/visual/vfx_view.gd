@@ -37,4 +37,4 @@ func _ready() -> void:
 		"jump_arrive":
 			fx = space.vfx.attach(ship, VfxEffect.Kind.JUMP_ARRIVE, Vector3.ZERO, Vector3.ZERO)
 	fx.frozen = true
-	fx.set_age(age * fx.duration_s)
+	fx.set_age(age * fx.duration)

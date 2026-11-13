@@ -18,8 +18,8 @@ func after_test() -> void:
 
 
 ## A harness server that can teach: the Shakedown's setup and driver as ServerMain builds them.
-func _teaching_server(grace_s: float = 10.0) -> NetServer:
-	var server: NetServer = h.server(false, grace_s)
+func _teaching_server(grace: float = 10.0) -> NetServer:
+	var server: NetServer = h.server(false, grace)
 	server.training_setup = func() -> RunSetup: return cli.run_setup(DefLibrary.new(), "shakedown")
 	server.training_driver = cli._training_factory
 	return server

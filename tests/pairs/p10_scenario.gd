@@ -16,7 +16,7 @@ const PLAYER: int = 0
 const CAUSES: Array[StringName] = [&"coolant_leak", &"short", &"software"]
 const CAUSE: StringName = &"software"
 ## The fault's energy (J): 12 s of one crew at full rate (repair_rate 2e5 J/s).
-const FAULT_J: float = 2.4e6
+const FAULT_ENERGY: float = 2.4e6
 const SUBSYSTEM: StringName = &"engines"
 const TICK_LIMIT: int = 120 * SimWorld.HZ
 
@@ -39,7 +39,7 @@ static func build() -> SimWorld:
 	var w: SimWorld = SimWorld.new(SEED, "p10")
 	w.science_def = ScienceFixture.science()
 	w.spawn_ship(def, 1)
-	DamageSystem.inflict_fault(w, PLAYER, SUBSYSTEM, CAUSE, FAULT_J)
+	DamageSystem.inflict_fault(w, PLAYER, SUBSYSTEM, CAUSE, FAULT_ENERGY)
 	return w
 
 

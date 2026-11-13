@@ -107,7 +107,7 @@ func test_handover_notice_names_both_ships() -> void:
 	)
 	assert_int(n.mouse_filter).is_equal(Control.MOUSE_FILTER_IGNORE)
 	assert_object(n.find_child("Ok", true, false)).is_null()
-	n.tick(HandoverNotice.SHOW_S - 1.0)
+	n.tick(HandoverNotice.SHOW_TIME - 1.0)
 	assert_bool(n.visible).is_true()
 	n.tick(1.0)
 	assert_bool(n.visible).is_false()

@@ -248,8 +248,8 @@ func claim_text() -> String:
 static func touch_help() -> Array:
 	var rail: Array = []
 	# The rail's buttons two to a row in its 4 px padding; the view beside it, 8 px on.
-	var button_w: float = (EngineeringPhone.PHONE_RAIL_W - 8.0 - UiTheme.TOUCH_GAP) / 2.0
-	var view_x: float = 47.0 + EngineeringPhone.PHONE_RAIL_W + UiTheme.TOUCH_GAP
+	var button_width: float = (EngineeringPhone.PHONE_RAIL_WIDTH - 8.0 - UiTheme.TOUCH_GAP) / 2.0
+	var view_x: float = 47.0 + EngineeringPhone.PHONE_RAIL_WIDTH + UiTheme.TOUCH_GAP
 	var what: Array = [
 		["pip_add", "One more pip on the picked part"],
 		["pip_remove", "One pip less"],
@@ -265,9 +265,9 @@ static func touch_help() -> Array:
 	for i: int in TOUCH_ACTIONS.size():
 		var a: Array = TOUCH_ACTIONS[i]
 		var r: Rect2 = Rect2(
-			51.0 + (i % 2) * (button_w + UiTheme.TOUCH_GAP),
+			51.0 + (i % 2) * (button_width + UiTheme.TOUCH_GAP),
 			76.0 + floori(i / 2.0) * 56.0,
-			button_w,
+			button_width,
 			48.0
 		)
 		(
@@ -451,7 +451,7 @@ func _refresh_lists() -> void:
 				[
 					(
 						tr("eng.hardened")
-						% [model.full_name(i), ceili(model.hardened_ticks(i) / CrewState.TICK_HZ)]
+						% [model.full_name(i), ceili(model.hardened_ticks(i) / CrewState.TICK_RATE)]
 					),
 					"accent"
 				]

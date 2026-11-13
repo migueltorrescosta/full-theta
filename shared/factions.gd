@@ -19,4 +19,4 @@ const NPC: Array[int] = [RAIDER, CIVIL, DEBRIS]
 
 ## The content key of the raider ship and how far out a raider wave appears (m).
 const RAIDER_KEY: StringName = &"m1_raider"
-const RAIDER_RANGE_M: float = 9000.0
+const RAIDER_REACH: float = 9000.0

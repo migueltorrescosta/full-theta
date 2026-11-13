@@ -17,7 +17,7 @@ extends RefCounted
 ## sample holds its last position until then.
 
 ## Sim ticks per second.
-const TICK_HZ: float = SimRate.HZ * 1.0
+const TICK_RATE: float = SimRate.HZ * 1.0
 ## Render delay behind the newest snapshot: 2 snapshot intervals at 30 Hz (PROVISIONAL).
 const DELAY_TICKS: float = 4.0
 ## Samples kept.
@@ -28,7 +28,7 @@ const DRIFT: float = 0.1
 const SNAP_INTERVALS: float = 2.0
 
 ## Ticks per real second the render clock runs at (tests may change it).
-var tick_hz: float = TICK_HZ
+var tick_rate: float = TICK_RATE
 var delay_ticks: float = DELAY_TICKS
 ## The tick being rendered (fractional).
 var render_tick: float = -1.0
@@ -87,7 +87,7 @@ func push(snap: SnapshotState, now_ms: int) -> void:
 func update(now_ms: int) -> void:
 	if _samples.is_empty():
 		return
-	var step: float = float(now_ms - _last_ms) * tick_hz / 1000.0
+	var step: float = float(now_ms - _last_ms) * tick_rate / 1000.0
 	_last_ms = now_ms
 	var newest: float = float(_samples.back()["tick"])
 	var oldest: float = float(_samples[0]["tick"])

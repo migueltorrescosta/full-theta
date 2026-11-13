@@ -96,7 +96,7 @@ func test_map_is_ship_frame_centred_on_ship_or_selection_and_turns_freely() -> v
 	var s: StationScreen = await _screen()
 	var p: RelayPanel = _relay(s)
 	p.refresh()
-	assert_float(p.map.period_m()).is_equal(StationFixture.PERIOD_M)
+	assert_float(p.map.period()).is_equal(StationFixture.PERIOD)
 	var kinds: Array = p.map.picture.items.map(func(it: Dictionary) -> String: return it["kind"])
 	assert_array(kinds).contains(["contact", "mark"])
 	# Centred on the own ship: the ship projects to the middle of what the HUD's boxes and the
@@ -124,9 +124,9 @@ func test_map_is_ship_frame_centred_on_ship_or_selection_and_turns_freely() -> v
 	assert_float(p.map.view.y.dot(start.y)).is_less(-0.99)
 	assert_bool(p.map.view.is_equal_approx(p.map.view.orthonormalized())).is_true()
 	# Wheel zoom.
-	var span: float = p.map.span_m
+	var span: float = p.map.map_span
 	_press(p, Vector2(100, 100), true, MOUSE_BUTTON_WHEEL_UP)
-	assert_float(p.map.span_m).is_less(span)
+	assert_float(p.map.map_span).is_less(span)
 
 
 # FT: FT-RLY-002, FT-SPA-013, FT-M1-017
@@ -227,11 +227,7 @@ func test_attach_and_centre_take_the_minimum_image_across_the_seam() -> void:
 	var h5: Dictionary = p.map.picture.find({"kind": "contact", "id": StationFixture.H5})
 	var want: Vector3 = (
 		StationFixture.own_rotation().inverse()
-		* (
-			StationFixture.SEAM_H5
-			- StationFixture.SEAM_ECHO
-			- Vector3(StationFixture.PERIOD_M, 0, 0)
-		)
+		* (StationFixture.SEAM_H5 - StationFixture.SEAM_ECHO - Vector3(StationFixture.PERIOD, 0, 0))
 	)
 	assert_vector(p.map.rel_of(h5)).is_equal_approx(want, Vector3.ONE * 0.5)
 	assert_dict(p.item_at(p.map.project(want))).is_equal(

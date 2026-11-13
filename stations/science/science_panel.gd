@@ -24,7 +24,7 @@ extends StationPanel
 ## of the target's subsystems (P28-L1, D289).
 
 ## The bar's hint line's least width (px).
-const STATUS_MIN_W: float = 120.0
+const STATUS_MIN_WIDTH: float = 120.0
 ## Scan dial rate with a key or stick at full deflection (rad/s).
 const DIAL_RATE: float = 1.6
 ## Controller cursor speed (px/s) and the snap distance to a contact (px).
@@ -35,13 +35,13 @@ const PAD_ORBIT_PX_S: float = 160.0
 ## A stick must pass this to count as a hack move, and fall under RELEASE to re-arm.
 const STICK_MOVE: float = 0.6
 const STICK_RELEASE: float = 0.3
-const LIST_W: float = 190.0
-const CARD_W: float = 250.0
+const LIST_WIDTH: float = 190.0
+const CARD_WIDTH: float = 250.0
 ## Under this width the list, stage and card stack (a phone, a tablet upright, D195).
-const NARROW_W: float = 900.0
+const NARROW_WIDTH: float = 900.0
 ## A landscape panel at least this wide keeps the list, stage and card side by side even
-## under NARROW_W (150 % UI scale on a 1280 x 720 window, T1).
-const SIDE_BY_SIDE_W: float = 780.0
+## under NARROW_WIDTH (150 % UI scale on a 1280 x 720 window, T1).
+const SIDE_BY_SIDE_WIDTH: float = 780.0
 const STACK_LIST_H: float = 110.0
 ## Stacked, the list shows this many whole rows (it scrolls past them), D319.
 const STACK_LIST_ROWS: int = 3
@@ -97,7 +97,7 @@ func _setup() -> void:
 	rows.add_child(top)
 	_list = ItemList.new()
 	ListLines.attach(_list)
-	_list.custom_minimum_size = Vector2(LIST_W, 0)
+	_list.custom_minimum_size = Vector2(LIST_WIDTH, 0)
 	_list.item_selected.connect(_on_list_selected)
 	top.add_child(_list)
 	_stage = Control.new()
@@ -121,7 +121,7 @@ func _setup() -> void:
 	hack_game.cancelled.connect(cancel_minigame)
 	_stage.add_child(hack_game)
 	card_view = ScienceCard.new()
-	card_view.custom_minimum_size = Vector2(CARD_W, 0)
+	card_view.custom_minimum_size = Vector2(CARD_WIDTH, 0)
 	card_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL if not own_radar() else 0
 	top.add_child(card_view)
 	_build_bar(rows)
@@ -156,7 +156,7 @@ func _build_bar(rows: VBoxContainer) -> void:
 	_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_status.add_theme_color_override("font_color", Palette.color("text_dim"))
 	_status.clip_text = true
-	_status.custom_minimum_size = Vector2(STATUS_MIN_W, 0)
+	_status.custom_minimum_size = Vector2(STATUS_MIN_WIDTH, 0)
 	_bar.add_child(_status)
 
 
@@ -216,15 +216,15 @@ func _show_parts() -> void:
 	if phone != null:
 		return
 	var playing: bool = int(block().get("minigame", MINIGAME_NONE)) != MINIGAME_NONE
-	var show: bool = not docked and not (playing and size.x < NARROW_W)
+	var show: bool = not docked and not (playing and size.x < NARROW_WIDTH)
 	_list.visible = show
 	card_view.visible = show
 
 
-## True when the list, stage and card stack: under NARROW_W wide, unless it is landscape and
+## True when the list, stage and card stack: under NARROW_WIDTH wide, unless it is landscape and
 ## wide enough for three columns (T1).
 func is_narrow() -> bool:
-	return size.x < NARROW_W and not (size.x >= SIDE_BY_SIDE_W and size.x > size.y)
+	return size.x < NARROW_WIDTH and not (size.x >= SIDE_BY_SIDE_WIDTH and size.x > size.y)
 
 
 ## A narrow panel stacks the list above the stage and the card below it (the bar wraps by
@@ -232,9 +232,9 @@ func is_narrow() -> bool:
 func _stack() -> void:
 	var narrow: bool = is_narrow()
 	_top.vertical = narrow
-	_list.custom_minimum_size = Vector2(0, STACK_LIST_H) if narrow else Vector2(LIST_W, 0)
+	_list.custom_minimum_size = Vector2(0, STACK_LIST_H) if narrow else Vector2(LIST_WIDTH, 0)
 	_fit_list()
-	card_view.custom_minimum_size = Vector2(0, STACK_CARD_H) if narrow else Vector2(CARD_W, 0)
+	card_view.custom_minimum_size = Vector2(0, STACK_CARD_H) if narrow else Vector2(CARD_WIDTH, 0)
 	card_view.size_flags_horizontal = (Control.SIZE_EXPAND_FILL if not own_radar() or narrow else 0)
 	_show_parts()
 
@@ -355,14 +355,14 @@ func refresh() -> void:
 		scan_game.noise_text = (
 			"%s %d%%" % [tr("sci.noise"), roundi(float(b["minigame_noise"]) * 100.0)]
 		)
-		scan_game.elapsed_s = age
+		scan_game.elapsed = age
 	elif minigame == MINIGAME_HACK:
 		hack_game.load_block(b)
 		hack_game.title = (
 			tr("sci.hack_title") % ctx.snap.callsign(int(b.get("minigame_contact", -1)))
 		)
 		hack_game.target_text = _goal_text(b)
-		hack_game.elapsed_s = age
+		hack_game.elapsed = age
 	var sel: int = selected_contact()
 	card_view.set_card(ctx.snap.callsign(sel) if sel >= 0 else "", card_of(sel), _hacks_on(sel))
 	_refresh_list()
@@ -378,7 +378,7 @@ func _fit_status() -> void:
 	var font: Font = _status.get_theme_font("font")
 	var px: int = _status.get_theme_font_size("font_size")
 	var w: float = font.get_string_size(_status.text, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
-	w = clampf(ceilf(w) + 2.0, STATUS_MIN_W, maxf(_bar.size.x, STATUS_MIN_W))
+	w = clampf(ceilf(w) + 2.0, STATUS_MIN_WIDTH, maxf(_bar.size.x, STATUS_MIN_WIDTH))
 	if _status.custom_minimum_size.x != w:
 		_status.custom_minimum_size.x = w
 

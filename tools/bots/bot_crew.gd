@@ -4,7 +4,7 @@ extends RefCounted
 ## each tick, act() submits the commands the stations would send. Without a network, so it
 ## submits to the world directly and reads true state, as a crew with a radar lock would; it
 ## is deterministic for a seed. What it does, in order of priority:
-## - fights: the nearest armed hostile within ENGAGE_M (unarmed debris within DEBRIS_M when
+## - fights: the nearest armed hostile within ENGAGE_REACH (unarmed debris within DEBRIS_REACH when
 ##   the profile shoots it), with the pips on the weapons, Face held, the lead aimed and shots
 ##   at the profile's cadence;
 ## - flees: below the profile's hull fraction, in an active encounter with a hostile in
@@ -13,9 +13,9 @@ extends RefCounted
 ##   impulse, and holds there;
 ## - Comms: accepts cards by the profile, answers a hailing raider and demands its surrender.
 
-const ENGAGE_M: float = 12000.0
-const DEBRIS_M: float = 6000.0
-const SHOOT_M: float = 5800.0
+const ENGAGE_REACH: float = 12000.0
+const DEBRIS_REACH: float = 6000.0
+const SHOOT_REACH: float = 5800.0
 ## The yard, site 0 (D205): where a fleeing crew goes and a debris leg ends.
 const HOME: int = 0
 const JUMP_AIM: float = 0.8
@@ -69,10 +69,10 @@ func act(world: SimWorld) -> void:
 
 ## The nearest hostile worth shooting that the crew's faction detects, or -1.
 func _pick_target(world: SimWorld) -> int:
-	var armed: int = CrewMoves.nearest_hostile(world, ship, ENGAGE_M, true)
+	var armed: int = CrewMoves.nearest_hostile(world, ship, ENGAGE_REACH, true)
 	if not profile.shoots_debris:
 		return armed
-	var any: int = CrewMoves.nearest_hostile(world, ship, DEBRIS_M)
+	var any: int = CrewMoves.nearest_hostile(world, ship, DEBRIS_REACH)
 	if armed < 0:
 		return any
 	if any < 0:
@@ -85,7 +85,7 @@ func _pick_target(world: SimWorld) -> int:
 
 
 func _fight(world: SimWorld, target: int) -> void:
-	if not _after(&"fight", world, profile.reaction_s):
+	if not _after(&"fight", world, profile.reaction_time):
 		return
 	if profile.sets_pips and not _pips_set:
 		_pips_set = true
@@ -104,7 +104,7 @@ func _fight(world: SimWorld, target: int) -> void:
 		_aim(world, target)
 	if t % profile.fire_every < profile.think_ticks:
 		var d: float = world.kin.relative(ship, target).length()
-		if d <= SHOOT_M and _rng.randf() >= profile.fire_skip:
+		if d <= SHOOT_REACH and _rng.randf() >= profile.fire_skip:
 			_submit(world, FireCommand.new())
 
 
@@ -267,7 +267,7 @@ func _after(key: StringName, world: SimWorld, seconds: float) -> bool:
 
 
 func _after_card(world: SimWorld, card: int) -> bool:
-	return _after(StringName("card%d" % card), world, profile.comms_s)
+	return _after(StringName("card%d" % card), world, profile.comms_time)
 
 
 func _clear(key: StringName) -> void:

@@ -6,7 +6,7 @@ extends RefCounted
 ## result is the run's debrief record (RunDebrief) plus how it ended.
 
 ## Sim seconds a run may last before it counts as stalled.
-const DEFAULT_CAP_S: float = 7200.0
+const DEFAULT_CAP_TIME: float = 7200.0
 
 
 ## Plays one run of one crewed ship. `outcome` is "win", "loss" or "stalled".
@@ -15,7 +15,7 @@ static func play(
 	profile_name: String,
 	difficulty: String,
 	seed_value: int,
-	cap_s: float = DEFAULT_CAP_S,
+	cap_time: float = DEFAULT_CAP_TIME,
 	jump_share: float = -1.0
 ) -> Dictionary:
 	var main: ServerMain = ServerMain.new()
@@ -37,7 +37,7 @@ static func play(
 	var drive: Callable = func(api: ScenarioApi) -> void:
 		director.before_tick(api)
 		crew.act(world)
-	var cap_ticks: int = ceili(cap_s * SimWorld.HZ)
+	var cap_ticks: int = ceili(cap_time * SimWorld.HZ)
 	var jumps: int = 0
 	var top_speed: float = 0.0
 	var settle: int = 3

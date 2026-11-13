@@ -1,6 +1,6 @@
 class_name NearSection
 extends SnapshotSection
-## Orientations of the contacts within range_m of one ship (Section.NEAR, promoted
+## Orientations of the contacts within reach of one ship (Section.NEAR, promoted
 ## from S9Near), for the views that draw ship models. Positions come from the CONTACTS
 ## section; records come from the faction's OrientModel: a contact is sent when it
 ## enters the range or the shared model refreshes it.
@@ -9,25 +9,25 @@ extends SnapshotSection
 ## ticks: a contact entering the range gets the shared model's record, which may be
 ## older than the snapshot); u16 g, g ids that left the range. Full: the records.
 
-const DEFAULT_RANGE_M: float = 2000.0
+const DEFAULT_REACH: float = 2000.0
 
-var range_m: float = DEFAULT_RANGE_M
+var reach: float = DEFAULT_REACH
 var orient: OrientModel
 ## Ids of the contacts the clients hold.
 var members: Dictionary = {}
 var _tick: int = 0
 
 
-func _init(ship: int, model: OrientModel, near_range_m: float = DEFAULT_RANGE_M) -> void:
+func _init(ship: int, model: OrientModel, near_reach: float = DEFAULT_REACH) -> void:
 	super(StationCatalogue.Section.NEAR, ship)
 	orient = model
-	range_m = near_range_m
+	reach = near_reach
 
 
 ## Ids in `known` within range of the owner ship (minimum image), as a set.
 func in_range(world: SimWorld, known: PackedInt32Array) -> Dictionary:
 	var out: Dictionary = {}
-	var r2: float = range_m * range_m
+	var r2: float = reach * reach
 	for id: int in known:
 		if id != owner and world.kin.can_reach(owner, id):
 			if world.kin.relative(owner, id).length_squared() <= r2:

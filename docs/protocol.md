@@ -283,8 +283,8 @@ Every provisional value, once. Code comments that call a value provisional point
 | Reconnect grace | 15 s (`--grace-s`) | `NetSessions.DEFAULT_GRACE_US` |
 | Transport security | plain `ws://` by default: a sniffer on the LAN sees a rejoining client's token (and could take its session, 4001) and the host secret, which the launcher sends only to localhost; `--tls-cert` serves `wss://` (Welcome `tls`). Accepted for a LAN game (D70) | `NetServer`, `NetGame.tls` |
 | Token lifetime | the server's life, except a lapsed session that held no pick or claim: forgotten 10 min after its drop, with its event outbox and ping limit | `NetSessions.DEFAULT_EVICT_US` |
-| Dead reckoning | 0.5 m, 1° | `SnapshotWriter.pos_tol_m`, `rot_tol_deg` |
-| Near and projectile ranges | 2 km, 3 km | `NearSection.DEFAULT_RANGE_M`, `ProjectilesSection.DEFAULT_RANGE_M` |
+| Dead reckoning | 0.5 m, 1° | `SnapshotWriter.pos_tol`, `rot_tol_deg` |
+| Near and projectile ranges | 2 km, 3 km | `NearSection.DEFAULT_REACH`, `ProjectilesSection.DEFAULT_REACH` |
 | CONTACTS sites | one cube per world (D229), so no site field | `ContactsSection` |
 | Discovery | UDP port 47790, every 1 s, to 255.255.255.255; a host expires 3.5 s after its last beacon | `LanBeacon.DISCOVERY_PORT`, `INTERVAL_USEC`, `BROADCAST_ADDRESS`, `LanBrowser.EXPIRY_USEC` |
 | Default server name | "Full Theta server" | `ServerMain.DEFAULT_NAME` |

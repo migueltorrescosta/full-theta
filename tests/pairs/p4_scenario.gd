@@ -4,7 +4,7 @@ extends RefCounted
 ## at rest at the origin with its bow on -Z, must fly 8 km to an intercept point dead
 ## ahead. A dust cloud (hazard zone, radius 2 km, D205) sits on the straight line, halfway.
 ## The sim has no hazard physics: the environment plays the cloud, the same in both
-## variants. Inside it the hull takes DAMAGE_W J/s and the ship loses DRAG of its velocity
+## variants. Inside it the hull takes DAMAGE_POWER J/s and the ship loses DRAG of its velocity
 ## per second, which the speed hold buys back with propellant.
 ## - Helm (both variants): selects the point it is told to fly to, holds Face, throttles up
 ##   once the bow is on it, and takes the next point when within WAYPOINT_R of this one.

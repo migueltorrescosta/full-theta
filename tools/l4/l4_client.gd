@@ -17,7 +17,7 @@ enum Result { WAIT, DONE, FAIL }
 
 ## Seconds a step may take unless it says timeout=S (2 loaded cores; fail fast on a
 ## real error: rejections and closes fail at once, not at the timeout).
-const DEFAULT_TIMEOUT_S: float = 15.0
+const DEFAULT_TIMEOUT: float = 15.0
 ## Two-character operators first, so ">=" is not read as ">".
 const OPS: Array[String] = ["==", "!=", ">=", "<=", "~=", "!~", "=", ">", "<"]
 ## Keys of a step that are parameters, not matchers, in the expect_* steps.
@@ -39,7 +39,7 @@ var intent_path: String = ""
 var log_path: String = ""
 var token_path: String = ""
 var run_dir: String = ""
-var max_s: float = 120.0
+var max_time: float = 120.0
 ## --set K=V: $K in the intent file reads V.
 var vars: Dictionary = {}
 ## --client ui: the real client UI.
@@ -114,8 +114,8 @@ func _process(_delta: float) -> bool:
 	_observe()
 	if _code < 0:
 		_run_steps()
-	if _code < 0 and Time.get_ticks_usec() - _start_us > int(max_s * 1e6):
-		_finish(1, "client ran longer than --max-s %.0f" % max_s)
+	if _code < 0 and Time.get_ticks_usec() - _start_us > int(max_time * 1e6):
+		_finish(1, "client ran longer than --max-s %.0f" % max_time)
 	if _dirty and _log != null:
 		_log.flush()
 		_dirty = false
@@ -143,7 +143,7 @@ func _parse_args(args: PackedStringArray) -> bool:
 			"--run-dir":
 				run_dir = v
 			"--max-s":
-				max_s = v.to_float()
+				max_time = v.to_float()
 			"--set":
 				vars[v.get_slice("=", 0)] = v.get_slice("=", 1)
 			"--client":
@@ -257,7 +257,7 @@ func _run_steps() -> void:
 		var step: Dictionary = _steps[_i]
 		var r: int = call("_do_" + step["verb"], step)
 		var took_ms: int = (Time.get_ticks_usec() - _step_us) / 1000
-		if r == Result.WAIT and took_ms > int(_num(step, "timeout", DEFAULT_TIMEOUT_S) * 1000.0):
+		if r == Result.WAIT and took_ms > int(_num(step, "timeout", DEFAULT_TIMEOUT) * 1000.0):
 			_st["why"] = "timeout after %d ms: %s" % [took_ms, _st["why"]]
 			r = Result.FAIL
 		if r == Result.WAIT:
@@ -371,7 +371,7 @@ func _matchers(step: Dictionary) -> Array:
 	return step["args"].filter(func(m: Array) -> bool: return not PARAMS.has(m[0]))
 
 
-func _elapsed_s() -> float:
+func _elapsed() -> float:
 	return (Time.get_ticks_usec() - _step_us) / 1e6
 
 
@@ -699,7 +699,7 @@ func _do_expect_no_event(step: Dictionary) -> Result:
 	var k: int = _find_event(_cursor, str(_arg(step, "type", "")), _matchers(step))
 	if k >= 0:
 		return _fail("unexpected event %s" % JSON.stringify(_events[k]))
-	if _elapsed_s() >= _num(step, "for", 1.0):
+	if _elapsed() >= _num(step, "for", 1.0):
 		return Result.DONE
 	return Result.WAIT
 
@@ -723,7 +723,7 @@ func _do_expect_accepted(step: Dictionary) -> Result:
 	for e: Dictionary in _events:
 		if e["type"] == "command_rejected" and int(e["payload"].get("seq", -1)) == seq:
 			return _fail("rejected: %s" % e["payload"].get("reason", ""))
-	return Result.DONE if _elapsed_s() >= _num(step, "for", 1.0) else Result.WAIT
+	return Result.DONE if _elapsed() >= _num(step, "for", 1.0) else Result.WAIT
 
 
 ## expect_flowing [max_gap_ms=1000] [min_snapshots=1]: snapshots arrived since the last
@@ -750,7 +750,7 @@ func _do_expect_tick_still(step: Dictionary) -> Result:
 		_st["n0"] = _client.stats["snapshots"]
 	if _client.snap.tick > int(_st["tick"]):
 		return _fail("tick moved from %d to %d" % [_st["tick"], _client.snap.tick])
-	if _elapsed_s() < _num(step, "for", 1.0):
+	if _elapsed() < _num(step, "for", 1.0):
 		return Result.WAIT
 	if _client.stats["snapshots"] == int(_st["n0"]):
 		return _fail("no snapshots while paused")
@@ -780,7 +780,7 @@ func _do_mark(_step: Dictionary) -> Result:
 
 ## wait s=S: keeps polling for S seconds.
 func _do_wait(step: Dictionary) -> Result:
-	return Result.DONE if _elapsed_s() >= _num(step, "s", 1.0) else Result.WAIT
+	return Result.DONE if _elapsed() >= _num(step, "s", 1.0) else Result.WAIT
 
 
 ## signal name=X [value=V]: creates sig.X (run.sh and other clients wait on it).
@@ -851,7 +851,7 @@ func _do_host_spawn(step: Dictionary) -> Result:
 		options.port = int(_arg(step, "port", 0))
 		options.beacon = false
 		if _arg(step, "grace") != null:
-			options.grace_s = str(_arg(step, "grace")).to_float()
+			options.grace = str(_arg(step, "grace")).to_float()
 		options.extra_args = PackedStringArray(_arg(step, "args", []))
 		if _host.host(options) != OK:
 			return _fail("HostSession.host: %s" % _host.error)

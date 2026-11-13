@@ -432,6 +432,9 @@ def write_sums(out: Path) -> None:
 
 
 def main(argv: list[str]) -> int:
+    if argv == ["--languages"]:  # build.sh: the languages to pre-render
+        print("\n".join(release_languages()))
+        return 0
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--version", required=True)
     ap.add_argument("--commit", required=True)

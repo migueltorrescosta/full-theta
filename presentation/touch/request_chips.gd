@@ -14,7 +14,7 @@ extends VBoxContainer
 ## ✓ or ✕ on chip `id`.
 signal answered(id: int, accept: bool)
 
-const TEXT_W: float = 150.0
+const TEXT_WIDTH: float = 150.0
 const FONT: int = 13
 
 var _keys: Array = []
@@ -103,7 +103,7 @@ func _row(border: String) -> PanelContainer:
 
 func _label(tall: bool) -> Label:
 	var l: Label = Label.new()
-	l.custom_minimum_size.x = TEXT_W
+	l.custom_minimum_size.x = TEXT_WIDTH
 	l.add_theme_font_size_override("font_size", FONT)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE

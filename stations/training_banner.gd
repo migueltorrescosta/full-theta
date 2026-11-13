@@ -24,7 +24,7 @@ extends PanelContainer
 const LINE_PREFIX: String = "shakedown."
 const PAIR_PREFIX: String = "pair_"
 ## Seconds between two looks for room on a touch layout, and the step of the look (px).
-const LOOK_S: float = 0.3
+const LOOK_TIME: float = 0.3
 const STEP_PX: float = 8.0
 ## Where no spot is free, covering a button costs this many times covering a picture.
 const BUTTON_COST: float = 8.0
@@ -197,9 +197,9 @@ func refresh() -> void:
 		if id != _placed_for:
 			_placed_for = id
 			_settle = SETTLE_FRAMES
-		# A new step looks every frame until its text has laid out, then every LOOK_S.
+		# A new step looks every frame until its text has laid out, then every LOOK_TIME.
 		if _look_in <= 0.0 or _settle > 0:
-			_look_in = LOOK_S
+			_look_in = LOOK_TIME
 			_settle = maxi(_settle - 1, 0)
 			place()
 
@@ -318,7 +318,7 @@ func _set_touch_layout(touch: bool) -> void:
 		if is_folded():
 			# Next's width from its words (its combined size may not have caught up yet), so the
 			# text's width below is the one it gets.
-			var next_w: float = (
+			var next_width: float = (
 				(
 					_next
 					. get_theme_font("font")
@@ -333,8 +333,8 @@ func _set_touch_layout(touch: bool) -> void:
 				+ _next.get_theme_stylebox("normal").get_minimum_size().x
 				+ 2.0
 			)
-			_next.custom_minimum_size.x = ceilf(next_w)
-			beside += ceilf(next_w) + UiTheme.TOUCH_GAP
+			_next.custom_minimum_size.x = ceilf(next_width)
+			beside += ceilf(next_width) + UiTheme.TOUCH_GAP
 		var pad: float = get_theme_stylebox("panel").get_minimum_size().x
 		_text.custom_minimum_size.x = maxf(width - pad - beside, 96.0)
 		# The text's wrapped height from its words at that width: the Label's own size catches
@@ -436,7 +436,7 @@ func place() -> Rect2:
 ## sizes catch up a frame later, so they can't tell yet).
 func _folded_fits() -> bool:
 	var next_font: Font = _next.get_theme_font("font")
-	var next_w: float = (
+	var next_width: float = (
 		(
 			next_font
 			. get_string_size(
@@ -451,7 +451,7 @@ func _folded_fits() -> bool:
 		card_width()
 		- get_theme_stylebox("panel").get_minimum_size().x
 		- UiTheme.TOUCH_PRIMARY
-		- ceilf(next_w)
+		- ceilf(next_width)
 		- 2.0 * UiTheme.TOUCH_GAP
 	)
 	var font: Font = _text.get_theme_font("font")

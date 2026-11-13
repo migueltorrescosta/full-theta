@@ -83,7 +83,7 @@ func _extras(id: String, row: Dictionary, runs: Dictionary[String, PairHarness.R
 				runs.solo.metrics.confidence
 			)
 			var cap: float = ScienceFixture.science().scan_cap
-			assert_float(runs.solo.metrics.scan_s).is_less(cap)
+			assert_float(runs.solo.metrics.scan_time).is_less(cap)
 		"p7":
 			# Only co-op lands weak-point hits.
 			assert_float(runs.coop.metrics.weak_hits).is_greater(0.0)

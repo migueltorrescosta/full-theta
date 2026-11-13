@@ -16,7 +16,7 @@ const GAP: float = 4.0
 ## no legend.
 const PHONE_H: float = 228.0
 ## On a phone the focus steps start after their label.
-const FOCUS_LABEL_W: float = 56.0
+const FOCUS_LABEL_WIDTH: float = 56.0
 
 var model: EngineeringModel
 var compact: bool = false:
@@ -238,7 +238,7 @@ func _draw_cap(fs: int) -> void:
 	var used: int = model.pips_used()
 	var text: String = tr("eng.reactor") % [used, cap]
 	if model.boosting():
-		var left: float = float(model.block().get("boost_ticks", 0)) / CrewState.TICK_HZ
+		var left: float = float(model.block().get("boost_ticks", 0)) / CrewState.TICK_RATE
 		text += "  " + tr("eng.boost_left") % ceili(left)
 	_text(Vector2(PAD, y), text, "accent" if model.boosting() else "text", fs)
 	var w: float = (size.x - 2.0 * PAD) / maxi(cap, 1)
@@ -383,8 +383,8 @@ func _steps() -> int:
 
 func _step_rect(k: int) -> Rect2:
 	if _lean_shields():
-		var x0: float = PAD + FOCUS_LABEL_W
-		var pw: float = (size.x - 2.0 * PAD - 80.0 - FOCUS_LABEL_W) / _steps()
+		var x0: float = PAD + FOCUS_LABEL_WIDTH
+		var pw: float = (size.x - 2.0 * PAD - 80.0 - FOCUS_LABEL_WIDTH) / _steps()
 		return Rect2(x0 + k * pw, _shields_y() + (38.0 if _tight else 20.0), pw - GAP, 16.0)
 	var w: float = (size.x - 2.0 * PAD - 96.0) / _steps()
 	return Rect2(PAD + k * w, _shields_y() + 74.0, w - GAP, 16.0)

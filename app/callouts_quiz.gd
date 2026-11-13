@@ -12,7 +12,7 @@ signal finished
 
 const QUESTIONS: int = 3
 ## The widest the quiz's column gets (px).
-const MAX_W: float = 720.0
+const MAX_WIDTH: float = 720.0
 ## The sample callouts: [label, clock, height (-1 low, 0 level, 1 high), range (m), the
 ## other two clocks offered]. Each round takes the next one, so a replay reads a new callout.
 const SAMPLES: Array[Array] = [
@@ -222,7 +222,7 @@ func fit() -> void:
 		return
 	var m: Vector4 = SafeArea.margins(self)
 	# A wide window keeps the quiz to a readable column.
-	var side: float = maxf(16.0, (size.x - MAX_W) / 2.0)
+	var side: float = maxf(16.0, (size.x - MAX_WIDTH) / 2.0)
 	_box.content_margin_left = side + m.x
 	_box.content_margin_top = 16.0 + m.y
 	_box.content_margin_right = side + m.z

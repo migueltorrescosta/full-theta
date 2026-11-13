@@ -31,21 +31,21 @@ const ESCORT_REWARD: int = 400
 const SALVAGE_REWARD: int = 700
 ## The freighter's distance from the ship, abeam of its course (m), when the raiders appear
 ## (s), how far from the freighter (m), how many of them at strength 1.
-const FREIGHTER_RANGE_M: float = 4000.0
-const RAIDERS_AFTER_S: float = 20.0
+const FREIGHTER_REACH: float = 4000.0
+const RAIDERS_AFTER: float = 20.0
 const RAIDERS: int = 2
-const RAIDER_GAP_S: float = 30.0
-## At most this many raiders: the last one arrives at RAIDERS_AFTER_S + RAIDER_GAP_S * 5 =
+const RAIDER_GAP: float = 30.0
+## At most this many raiders: the last one arrives at RAIDERS_AFTER + RAIDER_GAP * 5 =
 ## 170 s, which leaves 130 s of the 300 to destroy them. Hard with six ships (5.25 times the
 ## strength at strength 1) would otherwise ask for 11, the last at 320 s, after the limit.
 const MAX_RAIDERS: int = 6
-## Seconds a salvaging ship must spend within SALVAGE_RANGE_M of the freighter.
-const SALVAGE_S: float = 8.0
-const SALVAGE_RANGE_M: float = 1200.0
-const MAX_S: float = 300.0
-## The cards outlast the encounter: it settles at MAX_S at the latest, and a lapsed card
+## Seconds a salvaging ship must spend within SALVAGE_REACH of the freighter.
+const SALVAGE_TIME: float = 8.0
+const SALVAGE_REACH: float = 1200.0
+const MAX_TIME: float = 300.0
+## The cards outlast the encounter: it settles at MAX_TIME at the latest, and a lapsed card
 ## would pay nothing (review 2 M2).
-const CARD_S: float = MAX_S + 30.0
+const CARD_DURATION: float = MAX_TIME + 30.0
 
 var _ships: PackedInt32Array = PackedInt32Array()
 var _faction: int = -1
@@ -80,7 +80,7 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 	api.set_relation(Factions.CIVIL, Factions.RAIDER, Relation.HOSTILE)
 	api.set_relation(Factions.RAIDER, _faction, Relation.HOSTILE)
 	_freighter = api.spawn_at_offset(
-		FREIGHTER, Factions.CIVIL, lead, _abeam(view.velocity) * FREIGHTER_RANGE_M
+		FREIGHTER, Factions.CIVIL, lead, _abeam(view.velocity) * FREIGHTER_REACH
 	)
 	for ship: int in Scenario.fleet(api, _ships):
 		api.message("npc.distress", {"npc": NPC}, LineAudience.npc(NPC, ship))
@@ -92,8 +92,8 @@ static func raider_count(strength: float) -> int:
 
 
 ## When the last of `count` raiders arrives (s).
-static func last_raider_s(count: int) -> float:
-	return RAIDERS_AFTER_S + RAIDER_GAP_S * (count - 1)
+static func last_raider_time(count: int) -> float:
+	return RAIDERS_AFTER + RAIDER_GAP * (count - 1)
 
 
 ## The unit direction at right angles to the course (level with it), or +X for a ship at
@@ -124,7 +124,7 @@ func _offer_cards(api: ScenarioApi) -> void:
 	escort.rep_interaction = &"rep.complete_mission"
 	escort.subject = freighter
 	escort.subject_flag = 2
-	escort.expiry = CARD_S
+	escort.expiry = CARD_DURATION
 	escort.faction_wide = true
 	var to: int = Scenario.fleet(api, _ships)[0]
 	_escort = api.offer(to, escort)
@@ -136,7 +136,7 @@ func _offer_cards(api: ScenarioApi) -> void:
 	salvage.reward_credits = SALVAGE_REWARD
 	salvage.rep_interaction = &"rep.salvage_wreck"
 	salvage.subject = freighter
-	salvage.expiry = CARD_S
+	salvage.expiry = CARD_DURATION
 	salvage.faction_wide = true
 	_salvage = api.offer(to, salvage)
 
@@ -151,12 +151,12 @@ func step(api: ScenarioApi) -> void:
 		_offer_cards(api)
 	if _offered:
 		_one_card_only(api)
-	var elapsed_s: float = Scenario.seconds_since(api, _started)
-	# The raiders come one after the other, RAIDER_GAP_S apart, once the freighter exists.
+	var elapsed: float = Scenario.seconds_since(api, _started)
+	# The raiders come one after the other, RAIDER_GAP apart, once the freighter exists.
 	if (
 		_offered
 		and _raiders.size() < _raider_count
-		and elapsed_s >= RAIDERS_AFTER_S + RAIDER_GAP_S * _raiders.size()
+		and elapsed >= RAIDERS_AFTER + RAIDER_GAP * _raiders.size()
 	):
 		var clock: int = 10 + 2 * _raiders.size()
 		_raiders.append(
@@ -164,21 +164,21 @@ func step(api: ScenarioApi) -> void:
 				Factions.RAIDER_KEY,
 				Factions.RAIDER,
 				_freighter.id(),
-				Factions.RAIDER_RANGE_M,
+				Factions.RAIDER_REACH,
 				clock,
 				0
 			)
 		)
 	if _raiders.size() < _raider_count:
-		if elapsed_s >= MAX_S:
+		if elapsed >= MAX_TIME:
 			_settle(api, Result.PARTIAL)
 		return
 	var salvaging: bool = _state(api, _salvage) == CardInfo.State.ACCEPTED
-	if salvaging and _nearest_to_freighter(api) <= SALVAGE_RANGE_M:
+	if salvaging and _nearest_to_freighter(api) <= SALVAGE_REACH:
 		_near_ticks += 1
 	if api.all_gone(_raiders):
 		_settle(api, Result.WON)
-	elif elapsed_s >= MAX_S:
+	elif elapsed >= MAX_TIME:
 		_settle(api, Result.PARTIAL)
 
 
@@ -229,7 +229,7 @@ func _settle(api: ScenarioApi, result: int) -> void:
 			for ship: int in Scenario.fleet(api, _ships):
 				api.message("npc.rescue_thanks", {}, LineAudience.npc(NPC, ship))
 	if _state(api, _salvage) == CardInfo.State.ACCEPTED:
-		var done: bool = _near_ticks >= SimRate.ticks(SALVAGE_S)
+		var done: bool = _near_ticks >= SimRate.ticks(SALVAGE_TIME)
 		api.settle_card(_salvage.id(), done, result == Result.PARTIAL)
 
 

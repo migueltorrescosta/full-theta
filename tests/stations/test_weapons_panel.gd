@@ -70,10 +70,10 @@ func _repush(ctx: StationContext) -> void:
 	ctx.interp.update(StationFixture.NOW_MS)
 
 
-func _bearing(clock_deg: float, el_deg: float, range_m: float) -> Vector3:
+func _bearing(clock_deg: float, el_deg: float, reach: float) -> Vector3:
 	var b: float = deg_to_rad(clock_deg)
 	var e: float = deg_to_rad(el_deg)
-	return Vector3(sin(b) * cos(e), sin(e), -cos(b) * cos(e)) * range_m
+	return Vector3(sin(b) * cos(e), sin(e), -cos(b) * cos(e)) * reach
 
 
 # FT: FT-WPN-001, FT-WPN-002, FT-WPN-004, FT-WPN-006, FT-SIM-014, FT-M1-004

@@ -6,12 +6,12 @@ extends Control
 ## actions and the always-live set are outlined and named, every other station's keys
 ## carry only small station-coloured ticks (hover for the names). Labels come from
 ## Bindings through ControlsModel, so a rebind redraws at once; the text list stays the
-## fallback (ControlsPane). Drawn in code in design pixels (DESIGN_W wide) and scaled to
+## fallback (ControlsPane). Drawn in code in design pixels (DESIGN_WIDTH wide) and scaled to
 ## the width it gets; the height follows.
 
 ## The design width: two label columns around the hardware zone.
-const DESIGN_W: float = 1412.0
-const COL_W: float = 340.0
+const DESIGN_WIDTH: float = 1412.0
+const COL_WIDTH: float = 340.0
 const ZONE_X: float = 356.0
 const TOP: float = 6.0
 const LINE_H: float = 17.0
@@ -73,7 +73,7 @@ func shown_args() -> Array:
 
 ## The callout labels, in design pixels: [{"rect", "name", "keys", "id", "binding",
 ## "anchors", "side", "emphasis", "group"}]; tests check they don't overlap or leave
-## [0, DESIGN_W] x [0, design_height()].
+## [0, DESIGN_WIDTH] x [0, design_height()].
 func labels() -> Array[Dictionary]:
 	return _labels
 
@@ -178,7 +178,9 @@ func _layout() -> void:
 	_dy = maxf(0.0, zones.get(ZONE_RIGHT, []).size() * LINE_H - 20.0)
 	fig = ControlsFigure.get_figure(_device, _dy)
 	size = fig["size"]
-	_origin = Vector2(ZONE_X + (ControlsFigure.ZONE_W - size.x) * 0.5, TOP + tiers * LINE_H + 14.0)
+	_origin = Vector2(
+		ZONE_X + (ControlsFigure.ZONE_WIDTH - size.x) * 0.5, TOP + tiers * LINE_H + 14.0
+	)
 	for l: Dictionary in items:
 		var mean: Vector2 = Vector2.ZERO
 		for id: String in l["parts"]:
@@ -286,15 +288,21 @@ func _zone_specs() -> Dictionary:
 		mouse_top = lmb.position.y - 4.0
 		kb_bottom = _rect_of("Escape").position.y + 6.0 * ControlsFigure.U + 14.0
 	return {
-		ZONE_LEFT: {"edge": COL_W - 4.0, "dir": -1.0, "room": COL_W - 8.0, "anchor": "left"},
+		ZONE_LEFT:
+		{"edge": COL_WIDTH - 4.0, "dir": -1.0, "room": COL_WIDTH - 8.0, "anchor": "left"},
 		ZONE_NUMPAD:
-		{"edge": DESIGN_W - COL_W + 4.0, "dir": 1.0, "room": COL_W - 8.0, "anchor": "right"},
+		{
+			"edge": DESIGN_WIDTH - COL_WIDTH + 4.0,
+			"dir": 1.0,
+			"room": COL_WIDTH - 8.0,
+			"anchor": "right"
+		},
 		ZONE_RIGHT: {"y0": kb_bottom},
 		ZONE_MOUSE:
 		{
 			"edge": mouse_right + 24.0,
 			"dir": 1.0,
-			"room": DESIGN_W - 8.0 - mouse_right - 24.0,
+			"room": DESIGN_WIDTH - 8.0 - mouse_right - 24.0,
 			"anchor": "centre",
 			"y0": mouse_top + 6.0
 		},
@@ -304,13 +312,13 @@ func _zone_specs() -> Dictionary:
 ## Sizes `l` for `room` and sets its "name", the text that fits, and "w".
 func _fit_label(l: Dictionary, room: float) -> void:
 	var font: Font = get_theme_default_font()
-	var keys_w: float = font.get_string_size(l["keys"], HORIZONTAL_ALIGNMENT_LEFT, -1, FONT).x
+	var keys_width: float = font.get_string_size(l["keys"], HORIZONTAL_ALIGNMENT_LEFT, -1, FONT).x
 	var name_text: String = l["label"]
-	var avail: float = room - keys_w - 10.0
-	while name_text.length() > 1 and _text_w(font, name_text) > avail:
+	var avail: float = room - keys_width - 10.0
+	while name_text.length() > 1 and _text_width(font, name_text) > avail:
 		name_text = name_text.left(name_text.length() - 2).strip_edges() + "…"
 	l["name"] = name_text
-	l["w"] = _text_w(font, name_text) + 10.0 + keys_w
+	l["w"] = _text_width(font, name_text) + 10.0 + keys_width
 
 
 func _anchor_of(id: String, kind: String) -> Vector2:
@@ -544,7 +552,7 @@ func _place_vertical(list: Array, above: bool, y0: float) -> void:
 ## The room for a label from `x` on the row at `y`: to the drawing's edge, or to the first
 ## label already placed on that row (a busy screen's right half reaches the numpad column).
 func _room_right_of(x: float, y: float) -> float:
-	var end: float = DESIGN_W - 8.0
+	var end: float = DESIGN_WIDTH - 8.0
 	for other: Dictionary in _labels:
 		var r: Rect2 = other["rect"]
 		if r.position.x > x and r.position.y < y + LINE_H - 2.0 and r.end.y > y:
@@ -569,13 +577,13 @@ func _rect_of(id: String) -> Rect2:
 	return Rect2(r.position + _origin, r.size)
 
 
-static func _text_w(font: Font, text: String) -> float:
+static func _text_width(font: Font, text: String) -> float:
 	return font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT).x
 
 
 ## The minimum height for the width: the drawing scales to fit and keeps its shape.
 func _fit() -> void:
-	_scale = clampf(size.x / DESIGN_W, MIN_SCALE, MAX_SCALE)
+	_scale = clampf(size.x / DESIGN_WIDTH, MIN_SCALE, MAX_SCALE)
 	var want: float = ceilf(_height * _scale)
 	if not is_equal_approx(custom_minimum_size.y, want):
 		custom_minimum_size = Vector2(0.0, want)
@@ -585,7 +593,7 @@ func _fit() -> void:
 func _draw() -> void:
 	if _bindings == null:
 		return
-	var ox: float = maxf(0.0, (size.x - DESIGN_W * _scale) * 0.5)
+	var ox: float = maxf(0.0, (size.x - DESIGN_WIDTH * _scale) * 0.5)
 	# The legend takes the first LEGEND_H of the height, so a scrolled pane shows it at rest.
 	draw_set_transform(Vector2(ox, LEGEND_H * _scale), 0.0, Vector2(_scale, _scale))
 	var fig: Dictionary = ControlsFigure.get_figure(_device, _dy)
@@ -702,7 +710,7 @@ func _draw_labels() -> void:
 		var station: bool = l["emphasis"] == ControlsModel.STATION
 		var name_col: Color = group_color(l["group"]) if station else Palette.color("text_dim")
 		draw_string(font, base, l["name"], HORIZONTAL_ALIGNMENT_LEFT, -1, FONT, name_col)
-		var kx: float = base.x + _text_w(font, l["name"]) + 10.0
+		var kx: float = base.x + _text_width(font, l["name"]) + 10.0
 		draw_string(
 			font,
 			Vector2(kx, base.y),
@@ -749,11 +757,11 @@ func _draw_legend() -> void:
 			FONT,
 			Palette.color("text_dim")
 		)
-		x += 40.0 + _text_w(font, c["text"])
+		x += 40.0 + _text_width(font, c["text"])
 
 
 func _get_tooltip(at_position: Vector2) -> String:
-	var ox: float = maxf(0.0, (size.x - DESIGN_W * _scale) * 0.5)
+	var ox: float = maxf(0.0, (size.x - DESIGN_WIDTH * _scale) * 0.5)
 	var p: Vector2 = Vector2((at_position.x - ox) / _scale, at_position.y / _scale - LEGEND_H)
 	for part: Dictionary in ControlsFigure.get_figure(_device, _dy)["parts"]:
 		var r: Rect2 = Rect2(part["rect"].position + _origin, part["rect"].size)

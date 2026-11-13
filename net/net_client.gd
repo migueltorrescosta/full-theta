@@ -327,7 +327,7 @@ func decline_mark(id: int) -> void:
 
 
 ## Routes and hazard zones are Relay's Mark ops: a waypoint on route `route`, a hazard of
-## `radius_m` (a multiple of 100 m) at a point, deleting a zone by id (FT-RLY-005).
+## `radius` (a multiple of 100 m) at a point, deleting a zone by id (FT-RLY-005).
 func route_add(route: int, pos: Vector3) -> void:
 	_mark("route_add", route, "", -1, pos)
 
@@ -336,8 +336,8 @@ func route_clear(route: int) -> void:
 	_mark("route_clear", route, "", -1, Vector3.ZERO)
 
 
-func hazard_add(radius_m: float, pos: Vector3) -> void:
-	_mark("hazard_add", roundi(radius_m / 100.0), "", -1, pos)
+func hazard_add(radius: float, pos: Vector3) -> void:
+	_mark("hazard_add", roundi(radius / 100.0), "", -1, pos)
 
 
 func hazard_delete(id: int) -> void:

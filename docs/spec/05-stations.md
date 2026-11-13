@@ -225,7 +225,7 @@ Centre: the world map, a freely rotatable 3D map of the wrapping cube, centred o
 - **FT-RLY-001** Relay shall show a freely rotatable 3D map of the wrapping cube, centred on the ship or a selected mark, site or contact, with probe coverage, routes, hazards and marks, and no grid squares, altitude layers or world-fixed up. (D52, D124, D229)
 - **FT-RLY-002** Relay shall place marks by dragging on the view plane through the map's centre and set depth along the view direction with Shift+drag. (D52, D124)
 - **FT-RLY-003** Relay shall rename, attach to a contact, move and delete any mark of its ship. (D44)
-- **FT-RLY-004** Relay shall launch probes to a chosen point from a finite stock. (D56, D205, D208)
+- **FT-RLY-004** Relay shall launch probes to a chosen point from a finite stock. (D56, D205, D208, D453)
 - **FT-RLY-005** Relay shall draw routes; on Easy a route appears as a ribbon on Helm's HUD. (D52, D69)
 - **FT-RLY-006** Relay shall list probes and contacts and keep a ship's log. (D52)
 - **FT-RLY-007** Relay shall show no NPC dialogue text. (D52)

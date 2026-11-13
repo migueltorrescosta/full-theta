@@ -1,6 +1,6 @@
 class_name ProjectilesSection
 extends SnapshotSection
-## Live projectiles within range_m of one ship (Section.PROJECTILES, promoted from
+## Live projectiles within reach of one ship (Section.PROJECTILES, promoted from
 ## S9Proj), for the views that draw tracers. Projectiles fly straight, so each is sent
 ## once, when it enters the range, as a position and velocity at the snapshot's tick;
 ## clients extrapolate it (NetCodec.predict) and wrap it. Ids that
@@ -13,9 +13,9 @@ extends SnapshotSection
 ## Delta: u16 n records (u16 id, 3 x s32 position, 3 x s16 velocity in 1/8 m/s); u16
 ## g, g gone ids. Full: the records each with a u16 age.
 
-const DEFAULT_RANGE_M: float = 3000.0
+const DEFAULT_REACH: float = 3000.0
 
-var range_m: float = DEFAULT_RANGE_M
+var reach: float = DEFAULT_REACH
 ## Net id -> [Vector3i position, Vector3i velocity, int tick] as sent.
 var model: Dictionary = {}
 var _ids: Dictionary = {}
@@ -23,9 +23,9 @@ var _next_id: int = 0
 var _tick: int = 0
 
 
-func _init(ship: int, proj_range_m: float = DEFAULT_RANGE_M) -> void:
+func _init(ship: int, proj_reach: float = DEFAULT_REACH) -> void:
 	super(StationCatalogue.Section.PROJECTILES, ship)
-	range_m = proj_range_m
+	reach = proj_reach
 
 
 func update(world: SimWorld) -> PackedByteArray:
@@ -34,7 +34,7 @@ func update(world: SimWorld) -> PackedByteArray:
 	var kin: Kinematics = world.kin
 	var proj: ProjectileTable = world.projectiles
 	var own: Vector3i = NetCodec.quant_pos(kin.point(owner), p_units)
-	var r2: float = range_m * range_m
+	var r2: float = reach * reach
 	var buf: StreamPeerBuffer = StreamPeerBuffer.new()
 	buf.put_u16(0)
 	var n: int = 0

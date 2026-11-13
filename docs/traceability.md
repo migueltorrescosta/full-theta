@@ -110,22 +110,22 @@ Active ids per area: FT-GEN 14, FT-ARC 23, FT-NET 47, FT-SIM 37, FT-STN 17, FT-H
 | FT-SIM-017 | tests | `tests/sim/shields/test_shields.gd` |
 | FT-SIM-018 | tests | `tests/sim/core/test_tick_order.gd`, `tests/sim/shields/test_shields.gd` |
 | FT-SIM-019 | tests | `tests/sim/core/test_tick_order.gd`, `tests/sim/shields/test_shields.gd` |
-| FT-SIM-020 | tests | `tests/sim/core/test_tick_order.gd`, `tests/sim/damage/test_damage.gd` |
+| FT-SIM-020 | tests | `tests/sim/core/test_tick_order.gd`, `tests/sim/damage/test_damage.gd`, `tests/sim/damage/test_damage_edges.gd` |
 | FT-SIM-021 | tests | `tests/sim/core/test_edge_paths.gd`, `tests/sim/damage/test_damage.gd`, `tests/sim/power/test_reactor_and_heat.gd` |
 | FT-SIM-022 | tests | `tests/sim/combat/test_ordnance.gd`, `tests/sim/damage/test_damage_types.gd`, `tests/sim/science/test_reveals.gd` |
 | FT-SIM-023 | tests | `tests/sim/damage/test_damage_types.gd`, `tests/sim/science/test_reveals.gd` |
-| FT-SIM-024 | tests | `tests/sim/core/test_tick_order.gd`, `tests/sim/damage/test_repair.gd` |
+| FT-SIM-024 | tests | `tests/sim/core/test_tick_order.gd`, `tests/sim/damage/test_damage_edges.gd`, `tests/sim/damage/test_repair.gd` |
 | FT-SIM-025 | tests | `tests/content/test_content_defs.gd`, `tests/sim/damage/test_faults.gd`, `tests/sim/science/test_self_scan_faults.gd`, `tests/stations/engineering/test_engineering_pair_verbs.gd` |
 | FT-SIM-026 | tests | `tests/sim/core/test_tick_order.gd`, `tests/sim/power/test_power.gd`, `tests/sim/power/test_reactor_and_heat.gd` |
 | FT-SIM-027 | tests | `tests/sim/ai/test_npc_ai.gd`, `tests/sim/ai/test_npc_ai_choices.gd` |
 | FT-SIM-028 | tests | `tests/sim/ai/test_npc_ai.gd`, `tests/sim/core/test_tick_order.gd` |
 | FT-SIM-029 | tests | `tests/director/test_director_no_write.gd`, `tests/scenarios/test_shakedown.gd`, `tests/sim/ai/test_npc_ai_choices.gd`, `tests/sim/core/test_edge_paths.gd` |
-| FT-SIM-030 | tests | `tests/sim/damage/test_damage.gd`, `tests/sim/damage/test_repair.gd`, `tests/sim/replay/test_command_log.gd`, `tests/sim/replay/test_replay_determinism.gd`, `tests/sim/run/test_event_stream.gd`, `tests/sim/run/test_outcome.gd` |
+| FT-SIM-030 | tests | `tests/sim/damage/test_damage.gd`, `tests/sim/damage/test_damage_edges.gd`, `tests/sim/damage/test_repair.gd`, `tests/sim/replay/test_command_log.gd`, `tests/sim/replay/test_replay_determinism.gd`, `tests/sim/run/test_event_stream.gd`, `tests/sim/run/test_outcome.gd` |
 | FT-SIM-031 | tests | `tests/sim/run/test_event_stream.gd`, `tests/sim/shields/test_shields.gd` |
 | FT-SIM-032 | tests | `tests/stations/test_station_alerts.gd` |
 | FT-SIM-033 | tests | `tests/content/test_content_defs.gd` |
-| FT-SIM-034 | tests | `tests/sim/core/test_no_space_id.gd`, `tests/sim/flight/test_jump.gd`, `tests/sim/story/test_conversation_guards.gd` |
-| FT-SIM-035 | tests | `tests/net/test_net_relay_l3.gd`, `tests/shared/test_cube_point.gd`, `tests/sim/ai/test_npc_ai.gd`, `tests/sim/combat/test_weapons.gd`, `tests/sim/core/test_cube_point_paths.gd`, `tests/sim/core/test_no_space_id.gd`, `tests/sim/core/test_sim_world.gd`, `tests/sim/flight/test_jump.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/sim/relay/test_probes.gd`, `tests/sim/replay/test_command_log.gd`, `tests/sim/run/test_map_def.gd`, `tests/sim/run/test_precision.gd`, `tests/sim/run/test_run_setup_map.gd`, `tests/sim/run/test_site_wrap.gd`, `tools/tests/test_lint_arch.py` |
+| FT-SIM-034 | tests | `tests/sim/core/test_no_space_id.gd`, `tests/sim/flight/test_jump.gd`, `tests/sim/flight/test_jump_edges.gd`, `tests/sim/story/test_conversation_guards.gd` |
+| FT-SIM-035 | tests | `tests/net/test_net_relay_l3.gd`, `tests/shared/test_cube_point.gd`, `tests/sim/ai/test_npc_ai.gd`, `tests/sim/combat/test_weapons.gd`, `tests/sim/core/test_cube_point_paths.gd`, `tests/sim/core/test_no_space_id.gd`, `tests/sim/core/test_sim_world.gd`, `tests/sim/flight/test_jump.gd`, `tests/sim/flight/test_jump_edges.gd`, `tests/sim/hazard/test_hazard_seam.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/sim/relay/test_probes.gd`, `tests/sim/replay/test_command_log.gd`, `tests/sim/run/test_map_def.gd`, `tests/sim/run/test_precision.gd`, `tests/sim/run/test_run_setup_map.gd`, `tests/sim/run/test_site_wrap.gd`, `tools/tests/test_lint_arch.py` |
 | FT-SIM-036 | tests | `tests/sim/flight/test_assist_modes.gd` |
 | FT-SIM-037 | tests | `tests/sim/flight/test_assist_modes.gd`, `tests/sim/run/test_site_wrap.gd` |
 | FT-SIM-038 | tests | `tests/sim/core/test_hot_path_equivalence.gd`, `tests/sim/core/test_integrator.gd` |
@@ -179,7 +179,7 @@ Active ids per area: FT-GEN 14, FT-ARC 23, FT-NET 47, FT-SIM 37, FT-STN 17, FT-H
 | FT-ENG-005 | tests | `tests/stations/engineering/test_engineering_model.gd`, `tests/stations/engineering/test_engineering_panel.gd` |
 | FT-ENG-006 | tests | `tests/net/test_net_toggles_l3.gd`, `tests/net/test_shortcut_filter.gd`, `tests/sim/damage/test_faults.gd`, `tests/sim/science/test_self_scan_faults.gd`, `tests/stations/engineering/test_engineering_pair_verbs.gd`, `tests/stations/engineering/test_engineering_rail.gd` |
 | FT-ENG-007 | tests | `tests/net/test_net_engineering_view_l3.gd` |
-| FT-ENG-008 | tests | `tests/net/test_hazard_rows.gd`, `tests/sim/damage/test_faults.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/stations/engineering/test_engineering_pair_verbs.gd`, `tests/stations/engineering/test_engineering_phone.gd`, `tests/stations/engineering/test_engineering_rail.gd`, `tests/stations/test_data_shortcut_views.gd` |
+| FT-ENG-008 | tests | `tests/net/test_hazard_rows.gd`, `tests/sim/damage/test_damage_edges.gd`, `tests/sim/damage/test_faults.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/stations/engineering/test_engineering_pair_verbs.gd`, `tests/stations/engineering/test_engineering_phone.gd`, `tests/stations/engineering/test_engineering_rail.gd`, `tests/stations/test_data_shortcut_views.gd` |
 | FT-SCI-001 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_reveals.gd`, `tests/stations/science/test_science_phone.gd`, `tests/stations/test_phone_fixups.gd`, `tests/stations/test_science_panel.gd` |
 | FT-SCI-002 | tests | `tests/net/test_net_science_l3.gd`, `tests/net/test_science_section.gd`, `tests/sim/science/test_reveals.gd`, `tests/stations/test_science_panel.gd` |
 | FT-SCI-003 | tests | `tests/sim/damage/test_damage_types.gd`, `tests/sim/science/test_science_noise.gd`, `tests/stations/science/test_science_phone.gd`, `tests/stations/test_science_panel.gd` |
@@ -196,7 +196,7 @@ Active ids per area: FT-GEN 14, FT-ARC 23, FT-NET 47, FT-SIM 37, FT-STN 17, FT-H
 | FT-SCI-014 | tests | `tests/sim/science/test_scan.gd`, `tests/stations/test_science_panel.gd` |
 | FT-SCI-015 | tests | `tests/sim/science/test_scan.gd` |
 | FT-SCI-016 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_scan.gd` |
-| FT-RLY-001 | tests | `tests/net/test_hazard_rows.gd`, `tests/presentation/test_contact_picture.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/stations/relay/test_relay_phone.gd`, `tests/stations/test_phone_fixups.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_relay_station.gd` |
+| FT-RLY-001 | tests | `tests/net/test_hazard_rows.gd`, `tests/presentation/test_contact_picture.gd`, `tests/sim/hazard/test_hazard_seam.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/stations/relay/test_relay_phone.gd`, `tests/stations/test_phone_fixups.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_relay_station.gd` |
 | FT-RLY-002 | tests | `tests/stations/relay/test_relay_phone.gd`, `tests/stations/test_relay_panel.gd` |
 | FT-RLY-003 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/stations/relay/test_relay_phone.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_panel.gd` |
 | FT-RLY-004 | tests | `tests/content/test_content_defs.gd`, `tests/net/test_net_relay_l3.gd`, `tests/presentation/test_contact_picture.gd`, `tests/sim/combat/test_ordnance.gd`, `tests/sim/combat/test_track_quality.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/sim/relay/test_probes.gd`, `tests/sim/run/test_run_reset.gd`, `tests/stations/relay/test_relay_phone.gd`, `tests/stations/test_relay_station.gd` |
@@ -408,7 +408,7 @@ Active ids per area: FT-GEN 14, FT-ARC 23, FT-NET 47, FT-SIM 37, FT-STN 17, FT-H
 | FT-TST-017 | tests | `tools/tests/test_traceability.py` |
 | FT-TST-019 | tests | `tests/release/test_release_bundle.gd`, [#12](https://github.com/migueltorrescosta/full-theta/issues/12) |
 | FT-TST-020 | tests | `tools/tests/test_l5.py` |
-| FT-TST-021 | tests | `tests/stations/test_first_visit_help.gd`, [#9](https://github.com/migueltorrescosta/full-theta/issues/9) |
+| FT-TST-021 | tests | `tests/stations/test_first_visit_help.gd`, `tools/tests/test_web_check.py`, [#9](https://github.com/migueltorrescosta/full-theta/issues/9) |
 | FT-TST-022 | tests | `tests/scenarios/test_enemy_wave.gd`, `tests/tools/test_bot_batch.gd` |
 | FT-LIC-001 | manual | [#2](https://github.com/migueltorrescosta/full-theta/issues/2) |
 | FT-LIC-002 | manual | [#2](https://github.com/migueltorrescosta/full-theta/issues/2) |

@@ -21,6 +21,23 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The cheap gate tier of ci.yml (L0), so a tag on a commit that never passed
+  # CI cannot publish a draft.
+  l0:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/full-theta
+          key: godot-${{ hashFiles('tools/godot-version', 'tools/godot.sha512') }}
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: tools/uv.lock
+      - run: tools/gate.sh l0
+
   # Builds the slim Godot web template (tools/release/build_web_template.sh,
   # D211) unless the cache already holds it. The key hashes the recipe (which
   # pins emsdk and the SCons flags) and the Godot version, so changing either
@@ -97,7 +114,7 @@ jobs:
   # The only job with write access: it runs no repository code, just drafts
   # the release from the package job's files.
   draft:
-    needs: package
+    needs: [l0, package]
     if: ${{ github.actor != 'nektos/act' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15

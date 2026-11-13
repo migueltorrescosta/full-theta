@@ -121,7 +121,7 @@ func test_a_ship_arriving_at_speed_does_not_hit_the_freighter() -> void:
 
 
 # FT: FT-MIS-004, FT-MIS-021
-# Review 2 M2: the cards outlast the encounter (it settles at MAX_S at the latest), so an
+# Review 2 M2: the cards outlast the encounter (it settles at MAX_TIME at the latest), so an
 # accepted escort is still ACCEPTED when it is settled, however long the rescue took. #35 A3:
 # the time ran out with raiders left, so it ends as partial and pays half (m3_run partial_pay).
 func test_the_cards_outlast_a_long_rescue_and_the_escort_is_paid_in_part() -> void:

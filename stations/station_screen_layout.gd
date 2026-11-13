@@ -141,7 +141,7 @@ func _place_phone_bar() -> void:
 		s._phone_bar.reparent(parent, false)
 	s._phone_bar.vertical = in_side
 	var w: float = (
-		StationScreen.OPENER_W
+		StationScreen.OPENER_WIDTH
 		if s.share_opener.get_parent() == s._phone_bar and not in_side
 		else 0.0
 	)
@@ -256,7 +256,7 @@ func build() -> void:
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	# A wide bar shows at a glance that the column scrolls.
-	scroll.get_v_scroll_bar().custom_minimum_size.x = StationScreen.SCROLL_BAR_W
+	scroll.get_v_scroll_bar().custom_minimum_size.x = StationScreen.SCROLL_BAR_WIDTH
 	# The margin under the scroll makes its last visible row whole at rest (snap_side).
 	s._side_margin = MarginContainer.new()
 	s._side_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL

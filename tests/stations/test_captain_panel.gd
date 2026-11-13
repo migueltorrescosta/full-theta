@@ -107,8 +107,8 @@ func test_a_gone_request_shows_answered_or_expired_then_goes() -> void:
 			"from": "helm",
 			"to": "engineering",
 			"label": "Boost",
-			"left_s": left,
-			"total_s": 20.0
+			"time_left": left,
+			"total_time": 20.0
 		}
 	var both: Array[Dictionary] = [row.call(1, 12.0), row.call(2, 1.0)]
 	list.show_rows(both, 0)

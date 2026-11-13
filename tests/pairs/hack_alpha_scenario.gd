@@ -2,13 +2,13 @@ class_name HackAlphaScenario
 extends RefCounted
 ## The Hack alpha play (spec §7.4, FT-PAIR-022): S->H+E+W, pairs P7, P2 and P6. A gunship
 ## (the M1 corvette with eight mass drivers on the bow) faces a raider at rest 1.8 km
-## away, 70 degrees to port, behind a deep shield (SHIELD_J, which absorbs a large share
-## of every shot while its power is up) and a hull (HULL_J) that outlasts the window.
+## away, 70 degrees to port, behind a deep shield (SHIELD_ENERGY, which absorbs a large share
+## of every shot while its power is up) and a hull (HULL_ENERGY) that outlasts the window.
 ## The crew's plan:
 ## - Science scans the raider and hacks its shields (ScienceHand, the average
 ##   player's timing): the hack drops the shields for the data-defined window (8 s).
 ## - Helm selects the raider and holds Face, bringing the mounts to bear (P2).
-## - Engineering puts the reactor's 2 spare pips on the weapons ENGINEER_LEAD_S before
+## - Engineering puts the reactor's 2 spare pips on the weapons ENGINEER_LEAD_TIME before
 ##   the window opens (P6); the weapons run hot only for that long, under the fault
 ##   threshold.
 ## - Weapons holds fire until the window's planned start (window_start(), the callout
@@ -29,13 +29,13 @@ const RAIDER: int = 1
 const MOUNTS: int = 8
 ## 70 degrees to port of the bow, 1.8 km.
 const RAIDER_AT: Vector3 = Vector3(-1691.4, 0.0, -615.6)
-const SHIELD_J: float = 1.0e9
-const HULL_J: float = 1.0e10
+const SHIELD_ENERGY: float = 1.0e9
+const HULL_ENERGY: float = 1.0e10
 const WINDOW_TICKS: int = 8 * SimWorld.HZ
 ## Longest Science alone may take to open the window while measuring it.
 const LIMIT_TICKS: int = 60 * SimWorld.HZ
 ## Engineering powers the weapons this long before the window (s).
-const ENGINEER_LEAD_S: float = 2.0
+const ENGINEER_LEAD_TIME: float = 2.0
 const SCAN_AT: int = 2
 const WPN: int = SubsystemDef.Kind.WEAPONS
 
@@ -67,8 +67,8 @@ static func harness() -> PairHarness:
 
 ## The raider as a copy with a deep shield and a hull that outlasts the window.
 static func target_def() -> ShipDef:
-	var def: ShipDef = Gunnery.raider_with_shields(SHIELD_J)
-	def.hull_max = HULL_J
+	var def: ShipDef = Gunnery.raider_with_shields(SHIELD_ENERGY)
+	def.hull_max = HULL_ENERGY
 	return def
 
 
@@ -130,7 +130,7 @@ static func helm(w: SimWorld) -> void:
 
 ## Engineering: the spare pips to the weapons shortly before the window.
 static func engineering(w: SimWorld) -> void:
-	if w.tick == window_start() - roundi(ENGINEER_LEAD_S * SimWorld.HZ):
+	if w.tick == window_start() - roundi(ENGINEER_LEAD_TIME * SimWorld.HZ):
 		var c: SetPipsCommand = SetPipsCommand.new()
 		c.ship_id = PLAYER
 		c.subsystem_kind = WPN

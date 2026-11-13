@@ -22,13 +22,13 @@ const LOOK_TICKS: int = 2 * SimRate.HZ
 ## Helm lets the ship drift below this speed (m/s).
 const REST_MS: float = 8.0
 ## Weapons and Science look this far for the drone (m).
-const SIGHT_M: float = 12000.0
+const SIGHT_REACH: float = 12000.0
 ## Science keeps a scan open this long, and waits this long before the next (ticks).
 const SCAN_HOLD_TICKS: int = 8 * SimRate.HZ
 const SCAN_WAIT_TICKS: int = 40 * SimRate.HZ
 ## Relay launches its probe this long after the lesson starts, and this far ahead (m).
 const PROBE_AFTER_TICKS: int = 30 * SimRate.HZ
-const PROBE_AHEAD_M: float = 3000.0
+const PROBE_AHEAD_DISTANCE: float = 3000.0
 ## A subsystem above its nominal pips cools down at this share of its fault heat.
 const COOL_SHARE: float = 0.7
 ## The crew stations a bot can hold, in the order they look.
@@ -85,7 +85,7 @@ func act(api: ScenarioApi, driver: TrainingDriver, busy: Dictionary[StringName, 
 
 
 func _weapons(hands: ApiCrew, ship: int) -> void:
-	var target: int = hands.nearest_hostile(ship, SIGHT_M)
+	var target: int = hands.nearest_hostile(ship, SIGHT_REACH)
 	if target >= 0:
 		hands.aim_at(ship, target)
 
@@ -104,7 +104,7 @@ func _science(api: ScenarioApi, hands: ApiCrew, ship: int) -> void:
 		return
 	if now - _scan_at < SCAN_WAIT_TICKS or not hands.science_idle(ship):
 		return
-	var target: int = hands.nearest_hostile(ship, SIGHT_M)
+	var target: int = hands.nearest_hostile(ship, SIGHT_REACH)
 	if target >= 0:
 		_scan_at = now
 		_scanning = hands.scan(ship, target)
@@ -114,7 +114,7 @@ func _relay(api: ScenarioApi, hands: ApiCrew, ship: int) -> void:
 	if _probe_sent or api.tick() - _started_tick < PROBE_AFTER_TICKS:
 		return
 	_probe_sent = true
-	hands.launch_probe(ship, PROBE_AHEAD_M)
+	hands.launch_probe(ship, PROBE_AHEAD_DISTANCE)
 
 
 # --- the scripted halves of pair steps ---
@@ -126,7 +126,7 @@ func half(api: ScenarioApi, ship: int, station: StringName, action: StringName) 
 	if station == _solo:
 		return
 	var hands: ApiCrew = api.crew()
-	var target: int = hands.nearest_hostile(ship, SIGHT_M)
+	var target: int = hands.nearest_hostile(ship, SIGHT_REACH)
 	match action:
 		&"helm_speed":
 			hands.helm_speed(ship, 0.5)
@@ -143,4 +143,4 @@ func half(api: ScenarioApi, ship: int, station: StringName, action: StringName) 
 				_scan_at = api.tick()
 				_scanning = hands.rescan(ship, target)
 		&"relay_probe":
-			hands.launch_probe(ship, PROBE_AHEAD_M)
+			hands.launch_probe(ship, PROBE_AHEAD_DISTANCE)

@@ -271,7 +271,7 @@ func test_every_page_keeps_the_touch_rules_both_ways_up() -> void:
 		if sz[0] == SIDEWAYS:
 			p.pages.current = RelayPhone.PAGE_LOG
 			await _frames(3)
-			assert_float(p.phone.layout.left.size.x).is_equal(RelayPhone.LOG_W)
+			assert_float(p.phone.layout.left.size.x).is_equal(RelayPhone.LOG_WIDTH)
 		# The Send sheet keeps the rules too.
 		p.pages.current = RelayPhone.PAGE_MAP
 		p.open_send()
@@ -327,7 +327,7 @@ func test_map_gestures_depth_pinch_and_twist() -> void:
 	var placed: Array = StationFixture.sent(s.ctx).of("place_mark")
 	assert_int(placed.size()).is_equal(1)
 	# Pinch and twist: no mark, the span and the view change.
-	var span: float = p.map.span_m
+	var span: float = p.map.map_span
 	var view: Basis = p.map.view
 	var a: Vector2 = at
 	var b0: Vector2 = at + Vector2(100.0, 0.0)
@@ -335,7 +335,7 @@ func test_map_gestures_depth_pinch_and_twist() -> void:
 	_touch(p, 0, a, true)
 	_touch(p, 1, b0, true)
 	_drag(p, 1, at + Vector2(140.0, 40.0), Vector2(40.0, 40.0))
-	assert_float(p.map.span_m).is_less(span)
+	assert_float(p.map.map_span).is_less(span)
 	assert_bool(p.map.view.is_equal_approx(view)).is_false()
 	_touch(p, 1, b0, false)
 	_touch(p, 0, a, false)

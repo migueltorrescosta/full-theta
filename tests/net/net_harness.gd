@@ -22,15 +22,15 @@ func _init(owner: Node) -> void:
 	node = owner
 
 
-## A listening server on 127.0.0.1 port 0 with the M1 encounter; grace_s is the
+## A listening server on 127.0.0.1 port 0 with the M1 encounter; grace is the
 ## reconnect grace (--grace-s). Not started: the lobby is open.
-func server(dev_all: bool = false, grace_s: float = 10.0, host_secret: String = "") -> NetServer:
+func server(dev_all: bool = false, grace: float = 10.0, host_secret: String = "") -> NetServer:
 	var s: NetServer = NetServer.new()
 	var m1: M1Encounter = M1Encounter.new(5, "test", TestDefs.corvette(), TestDefs.raider_enemy())
 	m1.science = load("res://content/science/science.tres") as ScienceDef
 	if s.start(m1, 0, "127.0.0.1", dev_all, host_secret) != OK:
 		return null
-	s.game.sessions.grace_us = int(grace_s * 1_000_000.0)
+	s.game.sessions.grace_us = int(grace * 1_000_000.0)
 	# A served world trims its command log; tests read the history of the run.
 	s.world.keep_command_log = true
 	node.add_child(s)
@@ -46,7 +46,7 @@ func fleet_server(
 	n: int,
 	teams: Array[int] = [],
 	dev_all: bool = false,
-	grace_s: float = 10.0,
+	grace: float = 10.0,
 	host_secret: String = ""
 ) -> NetServer:
 	var f: FleetFixture = FleetFixture.make(mode, n, teams)
@@ -55,7 +55,7 @@ func fleet_server(
 	var s: NetServer = NetServer.new()
 	if s.start(f.setup, 0, "127.0.0.1", dev_all, host_secret) != OK:
 		return null
-	s.game.sessions.grace_us = int(grace_s * 1_000_000.0)
+	s.game.sessions.grace_us = int(grace * 1_000_000.0)
 	s.game.fleet.rules = f.rules
 	s.game.fleet.slots = f.setup.slots
 	s.world.keep_command_log = true

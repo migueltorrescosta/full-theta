@@ -108,10 +108,10 @@ func _scan(w: SimWorld) -> void:
 		return
 	var truth: Vector3 = ScienceFixture.solution(w, _ship)
 	if _due < 0:
-		var secs: float = ScriptedPlayer.SCAN_READ_S + ScriptedPlayer.CONFIRM_S
+		var secs: float = ScriptedPlayer.SCAN_READ_TIME + ScriptedPlayer.CONFIRM_TIME
 		for a: int in 3:
 			if t.axes[_ship] & (1 << a):
-				secs += absf(truth[a]) / ScriptedPlayer.TURN_RATE + ScriptedPlayer.SETTLE_S
+				secs += absf(truth[a]) / ScriptedPlayer.TURN_RATE + ScriptedPlayer.SETTLE_TIME
 		_due = w.tick + roundi(secs * SimWorld.HZ)
 	if w.tick < _due:
 		return
@@ -133,13 +133,13 @@ func _hack(w: SimWorld) -> void:
 		return
 	if _due < 0:
 		_route = ScienceFixture.route(w, _ship)
-		_due = w.tick + roundi(ScriptedPlayer.HACK_READ_S * SimWorld.HZ)
+		_due = w.tick + roundi(ScriptedPlayer.HACK_READ_TIME * SimWorld.HZ)
 	if w.tick < _due or _submitted:
 		return
 	var node: int = _route.pop_front()
-	var blind: float = ScriptedPlayer.BLIND_S if (t.known[_ship] & (1 << node)) == 0 else 0.0
+	var blind: float = ScriptedPlayer.BLIND_DURATION if (t.known[_ship] & (1 << node)) == 0 else 0.0
 	var move: ScienceHackMoveCommand = ScienceFixture.move_cmd(node)
 	move.ship_id = _ship
 	w.submit(move)
-	_due = w.tick + roundi((ScriptedPlayer.MOVE_S + blind) * SimWorld.HZ)
+	_due = w.tick + roundi((ScriptedPlayer.MOVE_TIME + blind) * SimWorld.HZ)
 	_submitted = _route.is_empty()

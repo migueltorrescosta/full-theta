@@ -127,12 +127,12 @@ func _draw() -> void:
 	var widths: Array[float] = []
 	var total: int = 0
 	# (a held mount's row wraps short of its "You" chip, so the chip never runs off the edge)
-	var chip_w: float = _mine_chip_w(font)
+	var chip_width: float = _mine_chip_width(font)
 	for k: int in lines.size():
 		var text: String = lines[k]
 		var w_k: float = width
 		if k < rows.size() and _p.is_mine(k):
-			w_k = maxf(width - chip_w, 40.0)
+			w_k = maxf(width - chip_width, 40.0)
 		widths.append(w_k)
 		var wrapped: float = (
 			font.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, w_k, FONT_SIZE).y
@@ -193,7 +193,7 @@ func _draw_mine_chip(font: Font, at: Vector2, text: String, width: float, line_h
 
 
 ## The room (px) a "You" chip takes after its row: the gap, the chip and its padding.
-func _mine_chip_w(font: Font) -> float:
+func _mine_chip_width(font: Font) -> float:
 	var chip: String = WeaponsReadout.mine_chip(_p)
 	return font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE - 2).x + 24.0
 

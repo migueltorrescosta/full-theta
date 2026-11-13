@@ -15,14 +15,14 @@ signal alert_sheet_requested
 ## Bar height before UI scale (px).
 const HEIGHT: float = 40.0
 ## The least width of the first row's free stretch that takes the toasts (notice_rect).
-const NOTICE_MIN_W: float = 220.0
+const NOTICE_MIN_WIDTH: float = 220.0
 ## The goal chip's row under the bar's rows (px): what the crew is trying to do, with progress.
 ## A phone's bar has no room for the row: its goal is the second line of the timer's cell.
 const GOAL_H: float = 20.0
 const GOAL_SIZE: int = 13
 const CHIP_LETTER_SIZE: int = 12
 ## The phone timer's width, and its narrower one beside the full-screen icon (a 390 px bar).
-const TIMER_W: float = 48.0
+const TIMER_WIDTH: float = 48.0
 const TIMER_W_NARROW: float = 40.0
 ## The phone timer cell's text size, and its smaller one beside the full-screen icon when the
 ## goal line would not fit.
@@ -156,7 +156,7 @@ func _init() -> void:
 	tabs.size_flags_horizontal = SIZE_EXPAND_FILL
 	_phone_timer.add_theme_font_size_override("font_size", TIMER_SIZE)
 	_phone_timer.add_theme_color_override("font_color", Palette.color("text"))
-	_phone_timer.custom_minimum_size.x = TIMER_W
+	_phone_timer.custom_minimum_size.x = TIMER_WIDTH
 	_phone_timer.clip_text = true
 	_phone_timer.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_phone_timer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -168,7 +168,7 @@ func _init() -> void:
 
 
 func _fit_timer() -> void:
-	var w: float = TIMER_W_NARROW if fullscreen.visible else TIMER_W
+	var w: float = TIMER_W_NARROW if fullscreen.visible else TIMER_WIDTH
 	var fs: int = TIMER_SIZE
 	var second: String = _second_line()
 	if second != "":
@@ -275,14 +275,22 @@ func show_state(
 	status: Dictionary,
 	alert: int,
 	stations: Array,
-	mission_s: float,
+	mission_time: float,
 	focused: String = "",
 	maxes: Dictionary = {},
 	summaries: Dictionary = {}
 ) -> void:
 	# The raw inputs first: between two snapshots nothing is formatted or translated (R20-13).
 	var raw: Array = [
-		ship_name, status, alert, stations, int(mission_s), focused, maxes, summaries, _goal_short
+		ship_name,
+		status,
+		alert,
+		stations,
+		int(mission_time),
+		focused,
+		maxes,
+		summaries,
+		_goal_short
 	]
 	if raw == _raw:
 		return
@@ -319,7 +327,7 @@ func show_state(
 		var star: bool = stations.size() > 1 and str(s) == focused
 		names.append(tr(StationCatalogue.name_key(str(s))) + ("*" if star else ""))
 	_stations.text = " + ".join(names)
-	var secs: int = int(mission_s)
+	var secs: int = int(mission_time)
 	_timer.text = "%02d:%02d" % [secs / 60, secs % 60]
 	var second: String = _second_line()
 	_phone_timer.text = _timer.text if second == "" else "%s\n%s" % [_timer.text, second]
@@ -347,13 +355,13 @@ static func _fill(
 
 ## Where a toast or the critical banner shows on a desktop or a tablet (C5): the free stretch
 ## of the first row between the station names and the timer, so the ship's name, hull, shields
-## and power stay in view; status_rect() where that stretch is under NOTICE_MIN_W.
+## and power stay in view; status_rect() where that stretch is under NOTICE_MIN_WIDTH.
 func notice_rect() -> Rect2:
 	if not phone and _stations.is_visible_in_tree() and _timer.is_visible_in_tree():
 		var row: Rect2 = _row.get_global_rect()
 		var left: float = _stations.get_global_rect().end.x + 12.0
 		var right: float = _timer.get_global_rect().position.x - 12.0
-		if right - left >= NOTICE_MIN_W:
+		if right - left >= NOTICE_MIN_WIDTH:
 			return Rect2(left, row.position.y, right - left, row.size.y)
 	return status_rect()
 

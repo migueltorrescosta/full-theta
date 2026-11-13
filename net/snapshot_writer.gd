@@ -18,10 +18,10 @@ extends RefCounted
 var seq: int = 0
 var tick: int = 0
 var chunk_size: int = NetChunker.DEFAULT_CHUNK_SIZE
-var pos_tol_m: float = 0.5
+var pos_tol: float = 0.5
 var rot_tol_deg: float = 1.0
-var near_range_m: float = NearSection.DEFAULT_RANGE_M
-var proj_range_m: float = ProjectilesSection.DEFAULT_RANGE_M
+var near_reach: float = NearSection.DEFAULT_REACH
+var proj_reach: float = ProjectilesSection.DEFAULT_REACH
 ## Counters since the last take_counts(): snapshot builds, section updates, stream-key
 ## messages assembled (delta and full).
 var counts: Dictionary = {}
@@ -232,11 +232,11 @@ func _make(kind: int, owner: int, filter: ShortcutFilter) -> SnapshotSection:
 		StationCatalogue.Section.KIN:
 			section = KinSection.new(kind, owner)
 		StationCatalogue.Section.CONTACTS:
-			section = ContactsSection.new(owner, pos_tol_m)
+			section = ContactsSection.new(owner, pos_tol)
 		StationCatalogue.Section.NEAR:
-			section = NearSection.new(owner, _orient_of(_world.faction_of(owner)), near_range_m)
+			section = NearSection.new(owner, _orient_of(_world.faction_of(owner)), near_reach)
 		StationCatalogue.Section.PROJECTILES:
-			section = ProjectilesSection.new(owner, proj_range_m)
+			section = ProjectilesSection.new(owner, proj_reach)
 		StationCatalogue.Section.OWNERSHIP:
 			section = OwnershipSection.new(kind, owner)
 		StationCatalogue.Section.CHIPS:

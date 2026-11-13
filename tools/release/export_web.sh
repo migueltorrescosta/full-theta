@@ -6,7 +6,8 @@
 # else the stock one; FT_STOCK_WEB_TEMPLATE=1 forces the stock template. With
 # FT_REQUIRE_SLIM_WEB_TEMPLATE=1 (release builds: tools/release/build.sh sets it) a missing
 # slim template, or FT_STOCK_WEB_TEMPLATE=1, is an error instead of a silent stock export. The preset file is
-# swapped for a copy that names the template while the export runs, and restored.
+# swapped for a copy that names the template while the export runs, and restored; a flock
+# on $root/.godot/export_presets.lock keeps two exports from one checkout from racing.
 set -euo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)
 cd "$root"
@@ -20,7 +21,9 @@ if [[ -n ${FT_REQUIRE_SLIM_WEB_TEMPLATE:-} ]]; then
   [[ -f $template ]] \
     || { echo "export_web: release mode needs the slim template $template; run tools/release/build_web_template.sh" >&2; exit 1; }
 fi
-mkdir -p "$dir"
+mkdir -p "$dir" .godot
+exec 9>.godot/export_presets.lock
+flock 9
 presets=$(mktemp)
 cp export_presets.cfg "$presets"
 trap 'cp "$presets" export_presets.cfg; rm -f "$presets"' EXIT
