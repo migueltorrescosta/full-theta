@@ -168,10 +168,12 @@ func _hack() -> String:
 
 ## A confidence bar from x: "ok" once its part is revealed, else "warn".
 func _bar(at: Vector2, width: float, value: float, revealed: bool) -> void:
-	draw_rect(Rect2(at, Vector2(width, BAR_H)), Palette.color("background"))
-	draw_rect(
-		Rect2(at, Vector2(width * clampf(value, 0.0, 1.0), BAR_H)),
-		Palette.color("ok") if revealed else Palette.color("warn")
+	BarPaint.draw(
+		self,
+		Rect2(at, Vector2(width, BAR_H)),
+		value,
+		Palette.color("ok") if revealed else Palette.color("warn"),
+		Palette.color("background")
 	)
 
 

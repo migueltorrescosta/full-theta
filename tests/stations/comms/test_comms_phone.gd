@@ -17,9 +17,6 @@ func before() -> void:
 
 
 func after_test() -> void:
-	SafeArea.simulate([])
-	LayoutMode.forced = -1
-	RotateBanner.dismissed_here = false
 	if FileAccess.file_exists(SETTINGS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
@@ -100,7 +97,7 @@ func _tap_row(p: CommsPanel, kind: String) -> int:
 	var taps: int = 0
 	for _turn: int in 4:
 		for i: int in o.rows().size():
-			if o.rows()[i]["kind"] == kind and o._rects[i].size != Vector2.ZERO:
+			if o.rows()[i].kind == kind and o._rects[i].size != Vector2.ZERO:
 				_tap(o, o._rects[i].get_center())
 				return taps + 1
 		o.next_button.pressed.emit()
@@ -281,19 +278,17 @@ func test_overlay_keeps_the_touch_rules() -> void:
 # Each rail button sends exactly what its key sends.
 func test_rail_buttons_send_the_key_intents() -> void:
 	var cases: Array = [
-		["hail", {"id": "comms_hail", "target": "comms"}],
-		["accept", {"id": "accept", "target": "screen"}],
-		["decline", {"id": "decline", "target": "screen"}],
-		["claim", {"id": "claim", "target": "screen"}],
-		["hold_fire", {"id": "request", "target": "screen"}],
+		["hail", IntentEvent.of("comms_hail", true, IntentTable.KBM, "comms")],
+		["accept", IntentEvent.of("accept", true, IntentTable.KBM, "screen")],
+		["decline", IntentEvent.of("decline", true, IntentTable.KBM, "screen")],
+		["claim", IntentEvent.of("claim", true, IntentTable.KBM, "screen")],
+		["hold_fire", IntentEvent.of("request", true, IntentTable.KBM, "screen")],
 	]
 	for c: Array in cases:
 		var touch: StationScreen = await _screen(SIDEWAYS, LANDSCAPE)
 		(touch.focused_panel() as CommsPanel)._buttons[c[0]].pressed.emit()
 		var keys: StationScreen = await _screen(SIDEWAYS, LANDSCAPE)
-		var ev: Dictionary = c[1].duplicate()
-		ev.merge({"pressed": true, "device": IntentTable.KBM})
-		keys.dispatch(ev)
+		keys.dispatch(c[1])
 		var by_touch: Array = StationFixture.sent(touch.ctx).sent
 		assert_array(by_touch).override_failure_message("%s: %s" % [c[0], by_touch]).is_not_empty()
 		assert_array(by_touch).is_equal(StationFixture.sent(keys.ctx).sent)
@@ -321,7 +316,7 @@ func test_pages_follow_the_selection_and_badge_a_waiting_hail() -> void:
 	var s: StationScreen = await _screen(SIDEWAYS, LANDSCAPE)
 	var p: CommsPanel = s.focused_panel()
 	assert_bool(p.pages.badge(CommsPanel.Page.HAILS)).is_true()
-	s.dispatch({"id": "comms_next_column", "target": "comms", "pressed": true})
+	s.dispatch(IntentEvent.of("comms_next_column", true, IntentTable.KBM, "comms"))
 	assert_int(p.pages.current).is_equal(CommsPanel.Page.CONTRACTS)
 	assert_int(p.board.column_shown()).is_equal(CommsPanel.Page.CONTRACTS)
 	p.board._swipe(1)
@@ -362,12 +357,12 @@ func test_desktop_keeps_the_board() -> void:
 # The touch help: one entry per page titled as its tab, the rail on the first page only,
 # each rail box where the button sits on a phone on its side.
 func test_touch_help_matches_the_pages() -> void:
-	var help: Array = CommsPanel.touch_help()
+	var help: Array[HelpPage] = CommsPanel.touch_help()
 	assert_int(help.size()).is_equal(5)
 	var titles: Array[String] = CommsPanel.page_titles()
 	for i: int in help.size():
-		assert_str(help[i]["page"]).is_equal(titles[i])
-		assert_array(help[i]["boxes"]).is_not_empty()
+		assert_str(help[i].title).is_equal(titles[i])
+		assert_array(help[i].boxes).is_not_empty()
 	var s: StationScreen = await _screen(SIDEWAYS, LANDSCAPE)
 	var p: CommsPanel = s.focused_panel()
 	# (two players at Comms: the help shows the whole rail, Claim included)
@@ -375,17 +370,17 @@ func test_touch_help_matches_the_pages() -> void:
 	await _frames(3)
 	var ids: Array[String] = ["hail", "accept", "decline", "claim", "hold_fire"]
 	for i: int in ids.size():
-		var box: Rect2 = help[0]["boxes"][i][0]
+		var box: Rect2 = help[0].boxes[i].box
 		var real: Rect2 = p._buttons[ids[i]].get_global_rect()
 		assert_vector(box.position).is_equal_approx(real.position, Vector2.ONE)
 		assert_vector(box.size).is_equal_approx(real.size, Vector2.ONE)
-	var card: Rect2 = help[0]["boxes"][5][0]
+	var card: Rect2 = help[0].boxes[5].box
 	var drawn: Rect2 = p.board.card_rect(CommsFixture.MISSION)
 	drawn.position = p.board.get_global_transform() * drawn.position
 	assert_vector(card.position).is_equal_approx(drawn.position, Vector2.ONE)
-	for e: Dictionary in help.slice(1):
-		for b: Array in e["boxes"]:
-			assert_bool((b[0] as Rect2).intersects(Rect2(47, 64, 136, 300))).is_false()
+	for e: HelpPage in help.slice(1):
+		for b: HelpBox in e.boxes:
+			assert_bool(b.box.intersects(Rect2(47, 64, 136, 300))).is_false()
 	_drop(s)
 
 

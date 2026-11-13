@@ -38,16 +38,8 @@ func _comms(s: StationScreen) -> CommsPanel:
 	return s.panels[s.stations.find("comms")] as CommsPanel
 
 
-func _ev(id: String, s: StationScreen, device: String = "kbm") -> Dictionary:
-	return {
-		"id": id,
-		"group": IntentTable.row(id)["group"],
-		"target": IntentTable.target(id, device, s.focused_station(), s.stations),
-		"kind": IntentTable.row(id)["kind"],
-		"pressed": true,
-		"value": 1.0,
-		"device": device,
-	}
+func _ev(id: String, s: StationScreen, device: String = "kbm") -> IntentEvent:
+	return IntentEvent.routed(id, device, true, s.focused_station(), s.stations)
 
 
 func _commands(s: StationScreen, kind: String) -> Array:
@@ -161,8 +153,8 @@ func test_replies_by_key_and_by_pad() -> void:
 	var s: StationScreen = await _screen()
 	var panel: CommsPanel = _comms(s)
 	panel.open_card(CommsFixture.OFFER)
-	var rows: Array[Dictionary] = panel.overlay.rows()
-	assert_str(panel.overlay.row_text(rows[1])).contains("Call the bluff").contains("[scan")
+	var rows: Array[CommsRows.Row] = panel.overlay.rows()
+	assert_str(rows[1].text()).contains("Call the bluff").contains("[scan")
 	s.dispatch(_ev("comms_reply_3", s))
 	assert_str(_commands(s, "comms_reply")[0]["option"]).is_equal("o4")
 	assert_int(_commands(s, "comms_reply")[0]["card"]).is_equal(CommsFixture.OFFER)
@@ -324,8 +316,8 @@ func test_every_comms_intent_is_handled_and_named() -> void:
 		if IntentTable.row(id)["kind"] == IntentTable.AXIS:
 			assert_bool(IntentTable.defaults(id, IntentTable.PAD).is_empty()).is_false()
 		else:
-			var ev: Dictionary = _ev(id, s)
-			ev["target"] = "comms"
+			var ev: IntentEvent = _ev(id, s)
+			ev.target = "comms"
 			assert_bool(panel.handle_intent(ev)).override_failure_message(id).is_true()
 		assert_str(TranslationServer.translate(IntentTable.label_key(id))).is_not_equal(
 			IntentTable.label_key(id)

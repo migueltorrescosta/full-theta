@@ -10,15 +10,11 @@ var _toasts: Array[String] = []
 
 func before() -> void:
 	I18n.apply("en")
-	# gdUnit's 64 x 64 window is a phone on its side; these check the desktop layout (#28).
-	LayoutMode.forced = LayoutMode.Kind.DESKTOP
-
-
-func after() -> void:
-	LayoutMode.forced = -1
 
 
 func before_test() -> void:
+	# gdUnit's 64 x 64 window is a phone on its side; these check the desktop layout (#28).
+	LayoutMode.forced = LayoutMode.Kind.DESKTOP
 	_toasts = []
 
 
@@ -41,20 +37,7 @@ func _panel(s: StationScreen) -> EngineeringPanel:
 
 ## Routes an intent like the matcher would, from `device`.
 func _press(s: StationScreen, id: String, device: String = "kbm") -> bool:
-	return (
-		s
-		. dispatch(
-			{
-				"id": id,
-				"group": IntentTable.row(id)["group"],
-				"target": IntentTable.target(id, device, s.focused_station(), s.stations),
-				"kind": IntentTable.row(id)["kind"],
-				"pressed": true,
-				"value": 1.0,
-				"device": device,
-			}
-		)
-	)
+	return s.dispatch(IntentEvent.routed(id, device, true, s.focused_station(), s.stations))
 
 
 func _commands(s: StationScreen) -> Array:

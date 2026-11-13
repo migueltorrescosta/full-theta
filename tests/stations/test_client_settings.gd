@@ -6,12 +6,11 @@ const PATH: String = "user://test_client_settings.cfg"
 
 func before() -> void:
 	I18n.apply("en")
+
+
+func before_test() -> void:
 	# Change keys: a phone (the headless window) has none.
 	LayoutMode.forced = LayoutMode.Kind.DESKTOP
-
-
-func after() -> void:
-	LayoutMode.forced = -1
 
 
 func after_test() -> void:
@@ -277,7 +276,6 @@ func test_fullscreen_button_keeps_its_label() -> void:
 		. x
 	)
 	assert_float(b.get_combined_minimum_size().x).is_greater(w)
-	FullscreenButton.forced = -1
 
 
 # FT: FT-AUD-010, FT-STN-013

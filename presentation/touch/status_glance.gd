@@ -24,8 +24,8 @@ var show_pips: bool = true
 func _init() -> void:
 	custom_minimum_size = Vector2(WIDTH, 40.0)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	rows[0][0] = TouchText.of("topbar.short_hull", "Hull")
-	rows[1][0] = TouchText.of("topbar.short_shields", "Sh")
+	rows[0][0] = tr("topbar.short_hull")
+	rows[1][0] = tr("topbar.short_shields")
 
 
 ## Sets the values; redraws only on a change.
@@ -73,9 +73,7 @@ func _draw() -> void:
 		var text_x: float = BAR_X
 		if fill >= 0.0:
 			var bar: Rect2 = Rect2(BAR_X, y + 6, BAR_WIDTH, BAR_H)
-			draw_rect(bar, Color(1, 1, 1, 0.15))
-			var part: Vector2 = Vector2(bar.size.x * clampf(fill, 0.0, 1.0), BAR_H)
-			draw_rect(Rect2(bar.position, part), Palette.color(r[3]))
+			BarPaint.draw(self, bar, fill, Palette.color(r[3]), Color(1, 1, 1, 0.15))
 			text_x = BAR_X + BAR_WIDTH + 4.0
 		draw_string(
 			font,

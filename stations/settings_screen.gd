@@ -353,7 +353,7 @@ func _build_controls() -> void:
 
 
 func _phone() -> bool:
-	return is_inside_tree() and LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE
+	return is_inside_tree() and PhoneSheet.is_phone(self)
 
 
 ## The Game tab: the ship, Sound, Full screen, the host's Pause, Abandon or Give up, Leave;

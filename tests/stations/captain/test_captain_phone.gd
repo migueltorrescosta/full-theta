@@ -15,8 +15,6 @@ func before() -> void:
 
 
 func after_test() -> void:
-	SafeArea.simulate([])
-	LayoutMode.forced = -1
 	if FileAccess.file_exists(SETTINGS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
@@ -164,9 +162,9 @@ func test_rail_taps_send_the_key_intents() -> void:
 		var by_touch: Array = _sent(touch).sent.duplicate()
 		_drop(touch)
 		var keys: StationScreen = await _screen(Vector2i(844, 390), LANDSCAPE)
-		var ev: Dictionary = {
-			"id": "captain_view_%d" % (i + 1), "target": "captain", "pressed": true
-		}
+		var ev: IntentEvent = IntentEvent.of(
+			"captain_view_%d" % (i + 1), true, IntentTable.KBM, "captain"
+		)
 		assert_bool(keys.dispatch(ev)).is_true()
 		assert_array(by_touch).override_failure_message(str(i)).is_equal(_sent(keys).sent)
 		_drop(keys)
@@ -176,9 +174,7 @@ func test_rail_taps_send_the_key_intents() -> void:
 		var by_touch: Array = _sent(touch).sent.duplicate()
 		_drop(touch)
 		var keys: StationScreen = await _screen(Vector2i(844, 390), LANDSCAPE)
-		var ev: Dictionary = {
-			"id": id, "target": "screen", "pressed": true, "device": IntentTable.PAD
-		}
+		var ev: IntentEvent = IntentEvent.of(id, true, IntentTable.PAD, "screen")
 		# The pad's "under the reticle" is the mirror's centre: nothing there, so the selection.
 		keys.dispatch(ev)
 		assert_array(by_touch).override_failure_message(id).is_not_empty()
@@ -255,29 +251,29 @@ func test_turning_remakes_and_tablets_keep_columns() -> void:
 # The controls help has one entry per page, the rail on the first page only, every box in
 # the 844x390 frame's safe part.
 func test_touch_help_lists_every_page() -> void:
-	var help: Array = CaptainPanel.touch_help()
+	var help: Array[HelpPage] = CaptainPanel.touch_help()
 	(
-		assert_array(help.map(func(e: Dictionary) -> String: return e["page"]))
+		assert_array(help.map(func(e: HelpPage) -> String: return e.title))
 		. is_equal(["Screen", "Requests", "Cards"])
 	)
-	assert_int(help[0]["boxes"].size()).is_equal(8)
-	for e: Dictionary in help:
-		for box: Array in e["boxes"]:
-			var r: Rect2 = box[0]
+	assert_int(help[0].boxes.size()).is_equal(8)
+	for e: HelpPage in help:
+		for box: HelpBox in e.boxes:
+			var r: Rect2 = box.box
 			(
 				assert_bool(Rect2(47, 0, 750, 369).encloses(r))
-				. override_failure_message(str(box))
+				. override_failure_message(box.label)
 				. is_true()
 			)
-			assert_str(str(box[1])).is_not_empty()
-			assert_str(str(box[2])).is_not_empty()
+			assert_str(box.label).is_not_empty()
+			assert_str(box.what).is_not_empty()
 	# The rail's boxes are where the buttons are, the lists' where the panel is.
 	var s: StationScreen = await _screen(Vector2i(844, 390), LANDSCAPE)
 	var p: CaptainPanel = _cap(s)
 	var ids: Array[String] = ["view_0", "view_1", "view_2", "view_3", "view_4", "ping", "mark"]
 	for i: int in ids.size():
 		var real: Rect2 = (p.phone.buttons[ids[i]] as Control).get_global_rect()
-		var drawn: Rect2 = help[0]["boxes"][i][0]
+		var drawn: Rect2 = help[0].boxes[i].box
 		for d: Vector2 in [real.position - drawn.position, real.end - drawn.end]:
 			(
 				assert_float(d.length())
@@ -287,7 +283,7 @@ func test_touch_help_lists_every_page() -> void:
 	p.pages.current = 2
 	await _frames(2)
 	var lists: Rect2 = p.phone.card_box.get_global_rect()
-	var drawn_lists: Rect2 = help[2]["boxes"][0][0]
+	var drawn_lists: Rect2 = help[2].boxes[0].box
 	assert_float((lists.position - drawn_lists.position).length()).is_less(1.5)
 	_drop(s)
 

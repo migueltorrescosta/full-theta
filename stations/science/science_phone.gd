@@ -93,9 +93,9 @@ func build(p: SciencePanel, phone_form: LayoutMode.Form) -> void:
 		_build_landscape()
 	else:
 		_build_portrait()
-	pages.add_page(TouchText.of("page.contacts", "Contacts"), [panel._list])
-	pages.add_page(TouchText.of("page.card", "Card"), [panel.card_view])
-	pages.add_page(TouchText.of("page.crew", "Crew"), [crew])
+	pages.add_page(tr("page.contacts"), [panel._list])
+	pages.add_page(tr("page.card"), [panel.card_view])
+	pages.add_page(tr("page.crew"), [crew])
 	pages.page_changed.connect(_on_page)
 	panel._stage.add_child(status)
 
@@ -156,7 +156,7 @@ func _make_controls() -> void:
 	cancel.name = "Cancel"
 	cancel.pressed.connect(panel.cancel_minigame)
 	_hack_hint = Label.new()
-	_hack_hint.text = TouchText.of("sci.hack_tap", "Tap a node next to the green one.")
+	_hack_hint.text = tr("sci.hack_tap")
 	_hack_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_hack_hint.add_theme_color_override("font_color", Palette.color("text"))
 	status = Label.new()
@@ -272,7 +272,7 @@ func view_in_stage() -> Rect2:
 		r.size.y = minf(r.size.y, bottom - r.position.y)
 	var top: float = panel.top_reserve
 	r.position.y += top
-	r.size.y = maxf(r.size.y - top - panel.bottom_reserve, 1.0)
+	r.size.y = maxf(r.size.y - top, 1.0)
 	return r
 
 
@@ -347,12 +347,12 @@ func update(minigame: int) -> void:
 func _short(key: String, text: String) -> String:
 	match key:
 		"mark":
-			return TouchText.of("sci.short_mark", "Mark")
+			return tr("sci.short_mark")
 		"self":
-			return TouchText.of("sci.short_self", "Own ship")
+			return tr("sci.short_self")
 		"mode":
 			var active: bool = bool(panel.block().get("active", false))
 			if active:
-				return TouchText.of("sci.short_active", "Active")
-			return TouchText.of("sci.short_passive", "Passive")
+				return tr("sci.short_active")
+			return tr("sci.short_passive")
 	return text

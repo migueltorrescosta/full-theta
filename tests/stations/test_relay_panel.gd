@@ -35,16 +35,8 @@ func _relay(s: StationScreen) -> RelayPanel:
 	return s.panels[s.stations.find("relay")] as RelayPanel
 
 
-func _ev(id: String, device: String, s: StationScreen) -> Dictionary:
-	return {
-		"id": id,
-		"group": IntentTable.row(id)["group"],
-		"target": IntentTable.target(id, device, s.focused_station(), s.stations),
-		"kind": IntentTable.row(id)["kind"],
-		"pressed": true,
-		"value": 1.0,
-		"device": device,
-	}
+func _ev(id: String, device: String, s: StationScreen) -> IntentEvent:
+	return IntentEvent.routed(id, device, true, s.focused_station(), s.stations)
 
 
 func _sent(s: StationScreen, method: String) -> Array:
@@ -329,5 +321,5 @@ func _nearest(s: StationScreen, slot: int) -> int:
 func test_attach_with_a_vanished_mark_selected_does_nothing() -> void:
 	var s: StationScreen = await _screen()
 	s.ctx.crew.select("mark", 6)
-	assert_bool(_relay(s).handle_intent({"id": "mark_attach", "pressed": true})).is_false()
+	assert_bool(_relay(s).handle_intent(IntentEvent.of("mark_attach"))).is_false()
 	assert_array(_sent(s, "move_mark")).is_empty()

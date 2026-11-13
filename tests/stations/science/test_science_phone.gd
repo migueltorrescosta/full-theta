@@ -23,8 +23,6 @@ func before() -> void:
 
 
 func after_test() -> void:
-	SafeArea.simulate([])
-	RotateBanner.dismissed_here = false
 	if FileAccess.file_exists(SETTINGS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
@@ -176,10 +174,10 @@ func test_hack_opens_a_sheet_of_the_targets_subsystems() -> void:
 	)
 	# The key's choice: ] picks the next subsystem, then Hack sends at once (1 tap), the
 	# same command as the H key.
-	p.handle_intent({"id": "sci_sub_next", "pressed": true})
+	p.handle_intent(IntentEvent.of("sci_sub_next"))
 	PhoneReach.tap(p.phone.actions["hack"])
 	assert_bool(s.sheet.is_open()).is_false()
-	p.handle_intent({"id": "sci_hack", "pressed": true})
+	p.handle_intent(IntentEvent.of("sci_hack"))
 	sent = _cmds(s, "science_hack")
 	assert_int(sent.size()).is_equal(3)
 	assert_dict(sent[1][1][0]).is_equal(sent[2][1][0])
@@ -213,7 +211,7 @@ func test_scan_minigame_title_and_buttons() -> void:
 	assert_int(p.scan_game.selected).is_equal(1)
 	PhoneReach.tap(p.phone.submit)
 	assert_int(_cmds(s, "science_scan_submit").size()).is_equal(1)
-	p.handle_intent({"id": "accept", "pressed": true})
+	p.handle_intent(IntentEvent.of("accept"))
 	assert_int(_cmds(s, "science_scan_submit").size()).is_equal(2)
 	PhoneReach.tap(p.phone.cancel)
 	assert_int(_cmds(s, "science_cancel").size()).is_equal(1)
@@ -333,9 +331,9 @@ func _finger(r: DiscRadar, index: int, down: bool) -> void:
 # FT: FT-STN-012
 # P28-Help: the touch picture's pages.
 func test_touch_help_has_every_page() -> void:
-	var pages: Array = SciencePanel.touch_help()
+	var pages: Array[HelpPage] = SciencePanel.touch_help()
 	(
-		assert_array(pages.map(func(p: Dictionary) -> String: return p["page"]))
+		assert_array(pages.map(func(p: HelpPage) -> String: return p.title))
 		. is_equal(["Contacts", "Card", "Crew"])
 	)
 

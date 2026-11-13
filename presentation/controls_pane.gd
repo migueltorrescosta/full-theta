@@ -106,7 +106,7 @@ func build(bindings: Bindings, stations: Array, device: String, role: String = "
 	_role = role
 	_device = device
 	_stations = stations
-	_phone = is_inside_tree() and LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE
+	_phone = is_inside_tree() and PhoneSheet.is_phone(self)
 	_bindings.changed.connect(_refresh_notes)
 	_summary.visible = role != ""
 	(_buttons.get_node(VIEW_KBM) as Control).visible = not _phone

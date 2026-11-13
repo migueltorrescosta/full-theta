@@ -22,9 +22,6 @@ func before() -> void:
 
 
 func after_test() -> void:
-	SafeArea.simulate([])
-	LayoutMode.forced = -1
-	RotateBanner.dismissed_here = false
 	if FileAccess.file_exists(SETTINGS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
@@ -193,7 +190,7 @@ func test_portrait_reduced_layout_with_bottom_tabs() -> void:
 	assert_int(_screen.form).is_equal(LayoutMode.Form.PHONE_PORTRAIT)
 	assert_bool(_ui().portrait).is_true()
 	assert_bool(_screen.rotate_banner.visible).is_true()
-	assert_str(_screen.rotate_banner.label.text).is_equal(HelmTouch.ROTATE_TEXT)
+	assert_str(_screen.rotate_banner.label.text).is_equal(tr(HelmTouch.ROTATE_KEY))
 	assert_object(_screen.frame.bottom_tabs.host).is_same(_ui().pages)
 	assert_bool(_screen.frame.bottom_tabs.is_visible_in_tree()).is_true()
 	await _audit_pages("portrait")
@@ -436,18 +433,18 @@ func test_matcher_touch_intents_follow_focus_toggles_and_release() -> void:
 	var m: InputMatcher = InputMatcher.new()
 	m.set_context(["helm", "weapons"], "helm")
 	assert_array(m.touch_press("all_stop")).has_size(1)
-	assert_str(m.touch_press("all_stop")[0]["target"]).is_equal("helm")
-	assert_str(m.touch_press("all_stop")[0]["device"]).is_equal(IntentTable.TOUCH)
+	assert_str(m.touch_press("all_stop")[0].target).is_equal("helm")
+	assert_str(m.touch_press("all_stop")[0].device).is_equal(IntentTable.TOUCH)
 	# Another station's intent reaches nobody while Helm has the focus.
 	assert_array(m.touch_press("mount_1")).is_empty()
 	m.touch_axis("helm_yaw", 0.5)
 	assert_float(m.axis("helm_yaw")).is_equal(0.5)
 	m.touch_axis("aim_x", 0.5)
 	assert_float(m.axis("aim_x")).is_equal(0.0)
-	var down: Array[Dictionary] = m.touch_hold("approach", true)
-	assert_bool(down[0]["pressed"]).is_true()
+	var down: Array[IntentEvent] = m.touch_hold("approach", true)
+	assert_bool(down[0].pressed).is_true()
 	assert_bool(m.is_held("approach")).is_true()
-	assert_bool(m.touch_hold("approach", false)[0]["pressed"]).is_false()
+	assert_bool(m.touch_hold("approach", false)[0].pressed).is_false()
 	assert_bool(m.is_held("approach")).is_false()
 	# A player's hold-to-toggle choice applies to the touch button too.
 	m.bindings.set_toggle("approach", true)

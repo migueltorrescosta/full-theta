@@ -63,7 +63,7 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 		if t.pressed and _touch < 0 and not _mouse:
 			_touch = t.index
-			TouchInput.held += 1
+			TouchInput.hold(self)
 			_drag(t.position)
 		elif not t.pressed and t.index == _touch:
 			_release()
@@ -101,8 +101,7 @@ func _exit_tree() -> void:
 
 ## Lets go of the knob (focus loss, hiding, a finger lifted).
 func _release() -> void:
-	if _touch >= 0:
-		TouchInput.held = maxi(TouchInput.held - 1, 0)
+	TouchInput.release(self)
 	_touch = -1
 	_mouse = false
 	_apply(Vector2.ZERO)

@@ -139,7 +139,7 @@ func fit() -> void:
 	_box.content_margin_bottom = 16.0 + maxf(m.w, SafeArea.tap_band(self))
 	var upright: bool = LayoutMode.form_of(self) == LayoutMode.Form.PHONE_PORTRAIT
 	_grid.columns = 2 if upright else 4
-	var phone: bool = LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE
+	var phone: bool = PhoneSheet.is_phone(self)
 	var compact: bool = LayoutMode.form_of(self) == LayoutMode.Form.PHONE_LANDSCAPE
 	# (the drill's card names itself: on its side a phone drops the heading above it)
 	(find_child("GroupHeading", true, false) as Label).visible = not compact

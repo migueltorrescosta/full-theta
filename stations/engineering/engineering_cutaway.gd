@@ -615,9 +615,7 @@ func hint() -> String:
 	if model == null or model.ctx == null or model.ctx.settings.hint_seen(HINT_KEY):
 		return ""
 	if finger():
-		return TouchText.of(
-			"eng.cutaway_hint_touch", "Drag a crew onto a part to fix it. Drag empty space to turn."
-		)
+		return tr("eng.cutaway_hint_touch")
 	if model.ctx.matcher.device == IntentTable.PAD:
 		return tr("eng.cutaway_hint_pad")
 	return tr("eng.cutaway_hint")

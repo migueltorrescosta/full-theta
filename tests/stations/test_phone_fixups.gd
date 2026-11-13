@@ -16,8 +16,6 @@ func before() -> void:
 
 
 func after_test() -> void:
-	SafeArea.simulate([])
-	RotateBanner.dismissed_here = false
 	if FileAccess.file_exists(SETTINGS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
@@ -63,13 +61,14 @@ func _share_buttons(s: StationScreen) -> Array[Button]:
 
 # FT: FT-STN-005, FT-PAIR-007, FT-JNT-001
 # On a phone every station with share buttons holds them on its Crew page (shows_shares): no
-# Share opener and no second set beside the radar, on its side or upright, alone or in a
+# second set beside the radar, on its side or upright, alone or in a
 # joint view (w-yk5: Survey showed "Share: Weak points" twice).
 func test_phone_panels_keep_their_shares_on_the_crew_page() -> void:
 	var cases: Array = [
 		["systems", 0],
 		["quartermaster", 1],
 		["comms", 0],
+		["relay", 0],
 		["science", 0],
 		["approach", 0],
 		["survey", 0],
@@ -83,22 +82,8 @@ func test_phone_panels_keep_their_shares_on_the_crew_page() -> void:
 			var insets: Array = LANDSCAPE if size.x > size.y else PORTRAIT
 			var p: StationScreen = await _screen(size, c[0], insets, c[1])
 			assert_bool(p.focused_panel().shows_shares).override_failure_message(what).is_true()
-			(
-				assert_bool(p.share_opener.is_visible_in_tree())
-				. override_failure_message(what)
-				. is_false()
-			)
 			assert_bool(p.share_bar.is_visible_in_tree()).override_failure_message(what).is_false()
 			_drop(p)
-
-
-# FT: FT-STN-005, FT-PAIR-007
-# Relay's phone layout has its own share drawer: the screen adds no second opener.
-func test_panels_with_their_own_share_place_keep_one_opener() -> void:
-	var r: StationScreen = await _screen(Vector2i(844, 390), "relay", LANDSCAPE)
-	assert_bool(r.focused_panel().shows_shares).is_true()
-	assert_bool(r.share_opener.visible).is_false()
-	_drop(r)
 
 
 # FT: FT-STN-005, FT-JNT-001
@@ -135,10 +120,9 @@ func test_joint_views_upright_show_the_focused_station_alone() -> void:
 
 
 # FT: FT-STN-005, FT-PAIR-007
-# On a desktop the share buttons keep their place in the radar column, with no opener.
+# On a desktop the share buttons keep their place in the radar column.
 func test_share_buttons_stay_in_the_column_on_a_desktop() -> void:
 	var desk: StationScreen = await _screen(Vector2i(1280, 720), "systems", [])
-	assert_bool(desk.share_opener.visible).is_false()
 	assert_bool(desk.share_bar.is_visible_in_tree()).is_true()
 	assert_float(_share_buttons(desk)[0].size.y).is_equal(ShareBar.BUTTON_H)
 	_drop(desk)
@@ -320,12 +304,11 @@ func test_every_view_keeps_the_touch_rules_on_a_phone() -> void:
 
 # FT: FT-PAIR-007, FT-SCI-001
 # #35 A11 (D217): Science alone on a desktop hides the radar column, so its share buttons
-# sit in the panel, under its action bar: on screen, no opener, and a press shares.
+# sit in the panel, under its action bar: on screen, and a press shares.
 func test_science_alone_on_a_desktop_shows_its_share_buttons() -> void:
 	var s: StationScreen = await _screen(Vector2i(1280, 720), "science", [])
 	var p: SciencePanel = s.focused_panel() as SciencePanel
 	assert_bool(p.full_screen()).is_true()
-	assert_bool(s.share_opener.is_visible_in_tree()).is_false()
 	assert_object(s.share_bar.get_parent()).is_same(p.share_home)
 	assert_bool(s.share_bar.is_visible_in_tree()).is_true()
 	var buttons: Array[Button] = _share_buttons(s)
@@ -341,7 +324,6 @@ func test_science_alone_on_a_desktop_shows_its_share_buttons() -> void:
 func test_science_alone_upright_reaches_its_share_buttons() -> void:
 	var s: StationScreen = await _screen(Vector2i(390, 844), "science", PORTRAIT)
 	var p: SciencePanel = s.focused_panel() as SciencePanel
-	assert_bool(s.share_opener.is_visible_in_tree()).is_false()
 	p.pages.select(p.pages.count() - 1)
 	await _frames(2)
 	var crew: CrewPage = p.phone.crew

@@ -68,7 +68,7 @@ class FrameDemo:
 			pages.add_page("Power" if t.size() == 4 else "Ship", [grid])
 		var crew: CrewPage = CrewPage.new(self)
 		zone.add_child(crew)
-		pages.add_page(TouchText.of("page.crew", "Crew"), [crew])
+		pages.add_page(tr("page.crew"), [crew])
 		if upright:
 			var col: VBoxContainer = VBoxContainer.new()
 			col.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

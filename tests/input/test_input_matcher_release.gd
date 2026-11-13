@@ -9,9 +9,9 @@ func test_context_change_releases_to_the_old_target() -> void:
 	_m.set_context(["helm", "weapons"], "weapons")
 	_m.feed(_motion(JOY_AXIS_TRIGGER_RIGHT, 1.0), 0)
 	_m.set_context(["helm", "weapons"], "helm")
-	var up: Array[Dictionary] = _m.update(10, 0.0)
+	var up: Array[IntentEvent] = _m.update(10, 0.0)
 	assert_array(_ids(up)).is_equal(["fire/up"])
-	assert_str(up[0]["target"]).is_equal("weapons")
+	assert_str(up[0].target).is_equal("weapons")
 
 
 # FT: FT-STN-014, FT-STN-009

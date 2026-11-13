@@ -22,5 +22,6 @@ textures/vram_compression/import_etc2_astc=true
 [gdunit4]
 
 hooks/session_hooks=Dictionary[String, bool]({
-"res://tests/thread_guard_hook.gd": true
+"res://tests/thread_guard_hook.gd": true,
+"res://tests/ui_overrides_hook.gd": true
 })

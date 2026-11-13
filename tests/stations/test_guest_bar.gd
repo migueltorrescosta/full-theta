@@ -108,4 +108,3 @@ func test_the_bar_keeps_clear_of_the_handover_notice() -> void:
 	notice.visible = false
 	await get_tree().process_frame
 	assert_float(b.position.y).is_equal(GuestBar.DESK_TOP)
-	LayoutMode.forced = -1

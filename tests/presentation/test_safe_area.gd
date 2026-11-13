@@ -16,9 +16,6 @@ func before() -> void:
 
 
 func after_test() -> void:
-	SafeArea.simulate([])
-	LayoutMode.forced = -1
-	RotateBanner.dismissed_here = false
 	if FileAccess.file_exists(SETTINGS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
@@ -92,7 +89,7 @@ func test_phone_portrait_shows_the_dismissible_banner() -> void:
 	var s: StationScreen = await _screen(Vector2i(390, 844), "helm", PORTRAIT)
 	assert_int(s.form).is_equal(LayoutMode.Form.PHONE_PORTRAIT)
 	assert_bool(s.rotate_banner.visible).is_true()
-	assert_str(s.rotate_banner.label.text).is_equal(HelmTouch.ROTATE_TEXT)
+	assert_str(s.rotate_banner.label.text).is_equal(tr(HelmTouch.ROTATE_KEY))
 	var report: Dictionary = TapAudit.check(s)
 	assert_array(report["outside_safe"]).is_empty()
 	assert_array(report["in_band"]).is_empty()

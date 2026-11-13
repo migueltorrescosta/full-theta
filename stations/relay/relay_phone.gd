@@ -98,11 +98,11 @@ func build(p: RelayPanel, phone_form: LayoutMode.Form) -> void:
 		[[crew], []],
 	]
 	var titles: Array[String] = [
-		TouchText.of("page.map", "Map"),
+		tr("page.map"),
 		tr("relay.marks"),
 		tr("relay.contacts"),
 		tr("relay.log"),
-		TouchText.of("page.crew", "Crew"),
+		tr("page.crew"),
 	]
 	layout = RailLayout.new()
 	if form == LayoutMode.Form.PHONE_LANDSCAPE:
@@ -123,15 +123,15 @@ func _make_controls() -> void:
 		["lanes", tr("relay.lanes_off"), "flag_lanes"],
 		["accept", tr("relay.accept"), "accept"],
 		["decline", tr("relay.decline"), "decline"],
-		["send", TouchText.of("relay.send_to", "Send ▸"), ""],
-		["centre", TouchText.of("relay.centre", "Centre"), "map_centre"],
-		["rename", TouchText.of("relay.rename", "Rename"), "mark_rename"],
-		["delete", TouchText.of("relay.delete", "Delete"), "mark_delete"],
-		["attach", TouchText.of("relay.attach", "Attach"), "mark_attach"],
-		["centre_mark", TouchText.of("relay.centre", "Centre"), "map_centre"],
-		["send_mark", TouchText.of("relay.send_to", "Send ▸"), ""],
+		["send", tr("relay.send_to"), ""],
+		["centre", tr("relay.centre"), "map_centre"],
+		["rename", tr("relay.rename"), "mark_rename"],
+		["delete", tr("relay.delete"), "mark_delete"],
+		["attach", tr("relay.attach"), "mark_attach"],
+		["centre_mark", tr("relay.centre"), "map_centre"],
+		["send_mark", tr("relay.send_to"), ""],
 		["route_contact", tr("intent.route"), "route"],
-		["centre_contact", TouchText.of("relay.centre", "Centre"), "map_centre"],
+		["centre_contact", tr("relay.centre"), "map_centre"],
 	]
 	for i: int in MainScreen.NAMES.size():
 		specs.append(
@@ -367,7 +367,7 @@ func _route_empty() -> bool:
 
 
 func _intent(id: String) -> void:
-	panel.handle_intent({"id": id, "pressed": true})
+	panel.handle_intent(IntentEvent.of(id))
 
 
 ## A tap on Launch probe launches (to the selection, else arms the map), unless the press
@@ -420,7 +420,7 @@ func _fill_marks() -> void:
 	_fill_incoming()
 	if crew_state.marks.is_empty():
 		var none: Label = _label()
-		none.text = TouchText.of("relay.no_marks", "No marks yet: drag on the map.")
+		none.text = tr("relay.no_marks")
 		none.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		none.clip_text = false
 		_marks_box.add_child(none)

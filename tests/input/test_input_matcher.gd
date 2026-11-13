@@ -5,11 +5,10 @@ extends MatcherSuite
 
 # FT: FT-STN-005, FT-STN-009, FT-SPA-009
 func test_plain_key_fires_on_press_with_target_and_device() -> void:
-	var events: Array[Dictionary] = _m.feed(_key("T", true), 0)
+	var events: Array[IntentEvent] = _m.feed(_key("T", true), 0)
 	assert_array(_ids(events)).is_equal(["cycle_target"])
-	assert_str(events[0]["target"]).is_equal("screen")
-	assert_str(events[0]["group"]).is_equal("common")
-	assert_str(events[0]["device"]).is_equal("kbm")
+	assert_str(events[0].target).is_equal("screen")
+	assert_str(events[0].device).is_equal("kbm")
 	assert_array(_feed(_key("T", false), 10)).is_empty()
 	# D175: Z toggles the radar side strip.
 	assert_array(_feed(_key("Z", true), 20)).is_equal(["radar_strip"])
@@ -141,13 +140,13 @@ func test_focus_routes_station_intents_but_keeps_the_live_set() -> void:
 	# Helm translation is live on KB/M only; face on both devices.
 	_feed(_key("W", true), 30)
 	assert_float(_m.axis("helm_surge")).is_equal(1.0)
-	var face: Array[Dictionary] = _m.feed(_key("F", true), 40)
+	var face: Array[IntentEvent] = _m.feed(_key("F", true), 40)
 	assert_array(_ids(face)).is_equal(["face"])
-	assert_str(face[0]["target"]).is_equal("helm")
+	assert_str(face[0].target).is_equal("helm")
 	_feed(_key("F", false), 45)
-	var pad_face: Array[Dictionary] = _m.feed(_pad("L3", true), 50)
+	var pad_face: Array[IntentEvent] = _m.feed(_pad("L3", true), 50)
 	assert_array(_ids(pad_face)).is_equal(["face"])
-	assert_str(pad_face[0]["target"]).is_equal("helm")
+	assert_str(pad_face[0].target).is_equal("helm")
 	# A Helm key that isn't live reaches nothing; the always-live keys still work.
 	assert_array(_feed(_key("C", true), 60)).is_empty()
 	assert_array(_feed(_key("Space", true), 70)).is_equal(["all_stop"])
@@ -157,9 +156,9 @@ func test_focus_routes_station_intents_but_keeps_the_live_set() -> void:
 # FT: FT-STN-009
 func test_identical_bindings_emit_both_in_table_order() -> void:
 	_m.set_context(["weapons"], "weapons")
-	var events: Array[Dictionary] = _m.feed(_mouse(MOUSE_BUTTON_LEFT, true), 0)
+	var events: Array[IntentEvent] = _m.feed(_mouse(MOUSE_BUTTON_LEFT, true), 0)
 	assert_array(_ids(events)).is_equal(["select", "fire"])
-	assert_str(events[1]["target"]).is_equal("weapons")
+	assert_str(events[1].target).is_equal("weapons")
 	assert_array(_feed(_mouse(MOUSE_BUTTON_LEFT, false), 50)).is_equal(["fire/up"])
 
 

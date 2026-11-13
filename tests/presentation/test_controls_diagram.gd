@@ -84,7 +84,6 @@ func before() -> void:
 
 func after() -> void:
 	I18n.apply("en")
-	LayoutMode.forced = -1
 
 
 func _model(bindings: Bindings, stations: Array, device: String) -> ControlsModel:

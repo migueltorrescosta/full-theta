@@ -5,6 +5,11 @@ extends RefCounted
 ## the snapshot state and its interpolation, the CrewState model, the send seam, the
 ## player's settings and bindings, the input matcher and a clock.
 
+## Fuel shares (of propellant_capacity) under which Helm's Fuel bar turns amber and red and
+## its low-fuel toasts fire (StationAlerts, D490): the one place to change them.
+const FUEL_LOW: float = 0.2
+const FUEL_ALMOST_GONE: float = 0.1
+
 ## The connected client, or null in fixtures. Panels send through `intents`, not this.
 var client: NetClient = null
 var intents: ShipIntents = ShipIntents.new()
@@ -78,6 +83,18 @@ func ship_def() -> ShipDef:
 			_ship_def = load(path) as ShipDef if ResourceLoader.exists(path) else null
 		return _ship_def
 	return null
+
+
+## Propellant left as a share of the own ship's capacity (ShipDef in content/; 0 before the
+## first snapshot), or -1 when the def is unknown.
+func propellant_share() -> float:
+	var def: ShipDef = ship_def()
+	var left: float = float(
+		snap.blocks.get(StationCatalogue.Section.STATUS, {}).get("propellant", 0.0)
+	)
+	if def == null or def.propellant_capacity <= 0.0:
+		return -1.0
+	return clampf(left / def.propellant_capacity, 0.0, 1.0)
 
 
 ## Pips the reactor can feed now: the STATUS block's pip_cap (lower while the reactor is

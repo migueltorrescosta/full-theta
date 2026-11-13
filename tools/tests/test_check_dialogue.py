@@ -105,3 +105,25 @@ def test_number_table_needs_every_language(tmp_path):
     assert check_dialogue.run(root) == [
         "content/dialogue/numbers.json: languages: 'it' is a required property"
     ]
+
+
+# FT: FT-DAT-011
+def test_literal_ui_keys_must_be_in_the_table(tmp_path):
+    root = repo_copy(tmp_path)
+    (root / "stations").mkdir()
+    (root / "tests").mkdir()
+    (root / "stations/a.gd").write_text(
+        'func f() -> void:\n'
+        '\tprint(tr("alert.normal"), TouchText.t("no.such_key"))\n'
+        '\tprint(tr("no.prefix." + x), tr("a.b"), str("x"))  # built keys are skipped\n'
+        '\t# tr("in.a_comment")\n'
+        '\tprint(TranslationServer.translate(\n\t\t"also.missing"\n\t))\n',
+        encoding="utf-8",
+    )
+    (root / "tests/b.gd").write_text('var x = tr("not.scanned")\n', encoding="utf-8")
+    errors = check_dialogue.run(root)
+    assert errors == [
+        "stations/a.gd:2: UI string key not in content/i18n/strings.json: no.such_key",
+        "stations/a.gd:3: UI string key not in content/i18n/strings.json: a.b",
+        "stations/a.gd:5: UI string key not in content/i18n/strings.json: also.missing",
+    ]

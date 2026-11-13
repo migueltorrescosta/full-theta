@@ -241,7 +241,6 @@ func test_dev_all_stations_seat_only_with_the_flag() -> void:
 	_picked(l, "all")
 	_cell(l, "viewer").pressed.emit()
 	assert_array(_sent_picks(l)[-1][1]).is_equal([0, "viewer"])
-	ClientSettings.dev_flag = false
 
 
 # FT: FT-STN-013, FT-NET-015

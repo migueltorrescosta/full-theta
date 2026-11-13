@@ -62,8 +62,6 @@ const SCROLL_BAR_WIDTH: float = 14.0
 ## (the bare digits and Alt + digit belong to the stations' own keys).
 const TABS_FROM: int = 3
 const TAB_HINT_KEY: String = "dev_tabs"
-## The share opener at the bottom of the view on a phone on its side.
-const OPENER_WIDTH: float = 160.0
 
 var ctx: StationContext
 ## Station ids of the panels, in order (F1, F2, ...).
@@ -96,10 +94,6 @@ var rotate_banner: RotateBanner
 ## six-station sheet. It leads the page tabs: in the top bar on its side, in the bottom tab
 ## bar upright. Null until a phone shows one.
 var joint_switch: RailButton = null
-## On a phone on its side the share buttons sit in this drawer over the main area, opened
-## by `share_opener` (#28): the radar column has no room for 48 px buttons under the disc.
-var share_drawer: TouchDrawer
-var share_opener: RailButton
 ## The phone frame (#28 follow-up, PhoneFrame): shown only on phones, so tablets and
 ## desktops keep their layout. `phone` is set by the layout.
 var phone: bool = false
@@ -125,9 +119,6 @@ var _extras: VBoxContainer
 var _side_margin: MarginContainer
 var _side_scroll: ScrollContainer
 var _blocked: bool = false
-## The phone-landscape buttons (joint switch, share opener): at the top of the radar column
-## or, with the column hidden, at the bottom centre of the main area.
-var _phone_bar: BoxContainer
 var _extras_pad: Control
 ## The dev seat's station tabs (one button per panel) and its one-line hint; null when the
 ## screen holds one or two panels.
@@ -274,10 +265,10 @@ func _tab_hotkey(event: InputEvent) -> bool:
 	return true
 
 
-## Routes one intent event (InputMatcher's dictionary); true when something handled
+## Routes one intent event (InputMatcher's IntentEvent); true when something handled
 ## it. Public so tests can drive the screen without devices.
-func dispatch(ev: Dictionary) -> bool:
-	var target: String = str(ev.get("target", ""))
+func dispatch(ev: IntentEvent) -> bool:
+	var target: String = ev.target
 	if target == "screen":
 		return common.run(ev)
 	var i: int = stations.find(target)
@@ -293,7 +284,7 @@ func feed(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseMotion and not focused_panel().mouse_steers():
 		return
-	var batch: Array[Dictionary] = ctx.matcher.feed(event, ctx.now_ms())
+	var batch: Array[IntentEvent] = ctx.matcher.feed(event, ctx.now_ms())
 	_dispatch_batch(batch)
 
 
@@ -360,7 +351,6 @@ func _process(delta: float) -> void:
 	var none: Array[StringName] = []
 	var own: bool = phone and focused_panel().shows_shares
 	share_bar.show_features(none if own else common.shareable(), left)
-	layout.sync_share()
 
 
 ## Where the toasts and the critical banner show (C5, D319), in the screen's coordinates: the
@@ -455,14 +445,14 @@ func _update_block() -> void:
 	ctx.matcher.restrict(UNBLOCKED if _blocked else [])
 
 
-func _dispatch_batch(batch: Array[Dictionary]) -> void:
+func _dispatch_batch(batch: Array[IntentEvent]) -> void:
 	var consumed: bool = false
-	for ev: Dictionary in batch:
-		if consumed and ev.get("target", "") != "screen":
+	for ev: IntentEvent in batch:
+		if consumed and ev.target != "screen":
 			# The press never reached its panel: undo its hold or toggle flip.
-			ctx.matcher.cancel(ev["id"])
+			ctx.matcher.cancel(ev.id)
 			continue
-		if dispatch(ev) and ev["id"] == "select":
+		if dispatch(ev) and ev.id == "select":
 			consumed = true
 
 
@@ -474,7 +464,7 @@ func _dispatch_batch(batch: Array[Dictionary]) -> void:
 ## True when the screen uses the phone frame: a phone-sized viewport (LayoutMode PHONE, as
 ## the stations' phone layouts), either way up.
 func phone_frame() -> bool:
-	return is_inside_tree() and LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE
+	return is_inside_tree() and PhoneSheet.is_phone(self)
 
 
 ## The menu button: the shell opens the menu, as Esc does.

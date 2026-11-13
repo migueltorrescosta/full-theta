@@ -17,8 +17,6 @@ func after() -> void:
 
 
 func after_test() -> void:
-	SafeArea.simulate([])
-	LayoutMode.forced = -1
 	LayoutMode.apply(get_tree().root)
 
 

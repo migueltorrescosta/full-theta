@@ -199,21 +199,21 @@ func touch() -> WeaponsTouch:
 ## A rail button's press intent (`mount_next`, `ammo_next`, `fire_guided`).
 func touch_press(id: String) -> void:
 	touch_intent.emit(id)
-	handle_intent({"id": id, "pressed": true, "device": TOUCH})
+	handle_intent(IntentEvent.of(id, true, TOUCH))
 
 
 ## A held rail button (`fire`): pressed on the finger's down, released on its up.
 func touch_hold(down: bool, id: String) -> void:
 	if down:
 		touch_intent.emit(id)
-	handle_intent({"id": id, "pressed": down, "device": TOUCH})
+	handle_intent(IntentEvent.of(id, down, TOUCH))
 
 
 ## Claim or Release: the screen's common `claim` intent.
 func touch_claim() -> void:
 	touch_intent.emit("claim")
 	if _screen != null:
-		_screen.dispatch({"id": "claim", "target": "screen", "pressed": true, "device": TOUCH})
+		_screen.dispatch(IntentEvent.of("claim", true, TOUCH, "screen"))
 
 
 ## A finger dragged `relative` px across the view turns the camera mount's aim by the angle
@@ -267,9 +267,9 @@ func step(delta: float) -> void:
 		_tablet.refresh()
 
 
-func handle_intent(ev: Dictionary) -> bool:
-	var id: String = ev["id"]
-	var pressed: bool = bool(ev.get("pressed", true))
+func handle_intent(ev: IntentEvent) -> bool:
+	var id: String = ev.id
+	var pressed: bool = ev.pressed
 	match id:
 		"fire":
 			_firing = pressed

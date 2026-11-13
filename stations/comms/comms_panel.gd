@@ -155,11 +155,11 @@ func _setup() -> void:
 ## The phone's tab titles, in Page order.
 static func page_titles() -> Array[String]:
 	return [
-		TouchText.of("comms.page.missions", "Missions"),
-		TouchText.of("comms.page.contracts", "Contracts"),
-		TouchText.of("comms.page.hails", "Hails"),
-		TouchText.of("comms.page.rep", "Rep"),
-		TouchText.of("page.crew", "Crew"),
+		TouchText.t("comms.page.missions"),
+		TouchText.t("comms.page.contracts"),
+		TouchText.t("comms.page.hails"),
+		TouchText.t("comms.page.rep"),
+		TouchText.t("page.crew"),
 	]
 
 
@@ -358,71 +358,58 @@ func _call_help() -> void:
 
 ## Controls help on touch (P28-Help): per page, the boxes of its controls in the 844x390
 ## landscape frame (the rail's on the first page only) with a label and what each does.
-static func touch_help() -> Array:
+static func touch_help() -> Array[HelpPage]:
 	var t: Array[String] = page_titles()
-	var rail: Array = []
+	var rail: Array[HelpBox] = []
 	var rows: Array = [
-		["hail", "comms.hail", "Hail the selected contact"],
-		["accept", "comms.accept", "Accept the card, or answer a hail"],
-		["decline", "comms.decline", "Decline the card"],
-		["claim", "comms.claim", "Take or release the card's conversation"],
-		["hold_fire", "comms.hold_fire", "Ask Weapons to hold fire on the contact"],
+		["hail", "comms.hail"],
+		["accept", "comms.accept"],
+		["decline", "comms.decline"],
+		["claim", "comms.claim"],
+		["hold_fire", "comms.hold_fire"],
 	]
 	# Call for help (gp-14) shows only in a fight, so the help sheet leaves it out.
 	for i: int in rows.size():
 		var r: Array = rows[i]
-		(
-			rail
-			. append(
-				[
-					Rect2(47, 72 + 56 * i, 136, 48),
-					TranslationServer.translate(r[1]),
-					TouchText.of("help.comms." + r[0], r[2]),
-				]
+		rail.append(
+			HelpBox.new(
+				Rect2(47, 72 + 56 * i, 136, 48),
+				TouchText.t(r[1]),
+				TouchText.t("help.comms." + r[0])
 			)
 		)
 	var card: Rect2 = Rect2(195.0, 132.0 + CommsBoard.PAGE_WHY_H, 414, 72)
-	var open: String = TouchText.of("help.comms.card", "Tap to open; long-press pings its contact")
-	rail.append([card, TouchText.of("help.comms.mission", "Mission card"), open])
+	var open: String = TouchText.t("help.comms.card")
+	rail.append(HelpBox.new(card, TouchText.t("help.comms.mission"), open))
 	return [
-		{"page": t[Page.MISSIONS], "boxes": rail},
-		{
-			"page": t[Page.CONTRACTS],
-			"boxes": [[card, TouchText.of("help.comms.contract", "Contract card"), open]],
-		},
-		{
-			"page": t[Page.HAILS],
-			"boxes":
+		HelpPage.new(t[Page.MISSIONS], rail),
+		HelpPage.new(
+			t[Page.CONTRACTS], [HelpBox.new(card, TouchText.t("help.comms.contract"), open)]
+		),
+		HelpPage.new(
+			t[Page.HAILS],
+			[HelpBox.new(card, TouchText.t("help.comms.offer"), TouchText.t("help.comms.talk"))]
+		),
+		HelpPage.new(
+			t[Page.REP],
 			[
-				[
-					card,
-					TouchText.of("help.comms.offer", "Offer or hail"),
-					TouchText.of("help.comms.talk", "Tap to talk, buy or sell"),
-				]
-			],
-		},
-		{
-			"page": t[Page.REP],
-			"boxes":
-			[
-				[
+				HelpBox.new(
 					Rect2(191, 132, 422, 180),
-					TranslationServer.translate("comms.rep"),
-					TouchText.of("help.comms.rep", "Docked site, credits and standing per faction"),
-				]
-			],
-		},
-		{
-			"page": t[Page.CREW],
-			"boxes":
+					TouchText.t("comms.rep"),
+					TouchText.t("help.comms.rep")
+				)
+			]
+		),
+		HelpPage.new(
+			t[Page.CREW],
 			[
-				[
+				HelpBox.new(
 					Rect2(191, 132, 207, 48),
-					TranslationServer.translate("share.drawer"),
-					TranslationServer.translate("help.crew_share"),
-				],
-			],
-		},
+					TouchText.t("share.drawer"),
+					TouchText.t("help.crew_share")
+				)
+			]
+		),
 	]
 
 
@@ -533,50 +520,16 @@ func _claim() -> void:
 
 
 ## Does what a row of the overlay says: a reply, one buy step of an item, a module, a sale.
-func _activate_row(row: Dictionary) -> void:
-	var card: int = overlay.card_id
-	match row["kind"]:
-		"reply":
-			if not bool(row["enabled"]):
-				_note(tr("comms.refused_requirement"))
-			else:
-				ctx.intents.command({"kind": "comms_reply", "card": card, "option": row["id"]})
-		"buy":
-			_trade(row, true)
-		"module":
-			(
-				ctx
-				. intents
-				. command(
-					{
-						"kind": "comms_buy_module",
-						"card": card,
-						"module_key": row["module"],
-						"slot": row["slot"],
-					}
-				)
-			)
-		"sell_module":
-			ctx.intents.command({"kind": "comms_sell_module", "card": card, "slot": row["slot"]})
+func _activate_row(row: CommsRows.Row) -> void:
+	if row is CommsRows.Reply and not row.enabled:
+		_note(tr("comms.refused_requirement"))
+	else:
+		_send(row.command(overlay.card_id))
 
 
-func _trade(row: Dictionary, buy: bool) -> void:
-	var item: String = str(row["item"])
-	if not buy and int(row["sell"]) <= 0:
-		return
-	(
-		ctx
-		. intents
-		. command(
-			{
-				"kind": "comms_trade",
-				"card": overlay.card_id,
-				"item": item,
-				"qty": CommsData.step_of(item) if not item.begins_with("repair:") else 1,
-				"buy": buy,
-			}
-		)
-	)
+func _send(cmd: Dictionary) -> void:
+	if not cmd.is_empty():
+		ctx.intents.command(cmd)
 
 
 func _note(text: String) -> void:
@@ -585,9 +538,9 @@ func _note(text: String) -> void:
 	overlay.queue_redraw()
 
 
-func _focused_row() -> Dictionary:
-	var rows: Array[Dictionary] = overlay.rows()
-	return rows[overlay.focus] if overlay.focus < rows.size() else {}
+func _focused_row() -> CommsRows.Row:
+	var rows: Array[CommsRows.Row] = overlay.rows()
+	return rows[overlay.focus] if overlay.focus < rows.size() else null
 
 
 # --- Events. ---
@@ -611,10 +564,10 @@ func _on_sim_event(kind: StringName, p: Dictionary) -> void:
 # --- Input. ---
 
 
-func handle_intent(ev: Dictionary) -> bool:
-	if not bool(ev.get("pressed", true)):
+func handle_intent(ev: IntentEvent) -> bool:
+	if not ev.pressed:
 		return false
-	var id: String = str(ev["id"])
+	var id: String = ev.id
 	var handled: bool = true
 	if id.begins_with("comms_reply_"):
 		handled = _reply_key(id.trim_prefix("comms_reply_").to_int())
@@ -655,8 +608,8 @@ func handle_intent(ev: Dictionary) -> bool:
 ## the focused card, or does the focused line of the overlay.
 func take_select() -> bool:
 	if overlay.card_id >= 0:
-		var row: Dictionary = _focused_row()
-		if not row.is_empty():
+		var row: CommsRows.Row = _focused_row()
+		if row != null:
 			_activate_row(row)
 		return true
 	return _open_selected()
@@ -691,16 +644,9 @@ func _reply_key(n: int) -> bool:
 func _buy_sell(buy: bool) -> bool:
 	if overlay.card_id < 0:
 		return false
-	var row: Dictionary = _focused_row()
-	match str(row.get("kind", "")):
-		"buy":
-			_trade(row, buy)
-		"module":
-			if buy:
-				_activate_row(row)
-		"sell_module":
-			if not buy:
-				_activate_row(row)
+	var row: CommsRows.Row = _focused_row()
+	if row != null:
+		_send(row.trade(overlay.card_id, buy))
 	return true
 
 
