@@ -85,10 +85,11 @@ func director_for(faction: int) -> Director:
 	return _directors.get(faction)
 
 
-## The faction's Director's current site offers (E2, w-bzx); none in a race or without one.
+## The faction's Director's current site offers (E2, w-bzx), as RunDriver.site_offers; none
+## without one.
 func site_offers(faction: int) -> Array[Dictionary]:
 	var d: Director = director_for(faction)
-	if d == null or _mode == ScenarioApi.MODE_RACE:
+	if d == null:
 		return []
 	return d.site_offers(faction)
 

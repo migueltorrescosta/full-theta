@@ -95,3 +95,27 @@ func test_no_choice_for_a_non_picker_or_a_single_offer() -> void:
 		var offer: Button = b.find_child("Offer0", true, false)
 		assert_bool(offer == null or not offer.is_visible_in_tree()).is_true()
 		assert_bool((b.find_child("Next", true, false) as Button).is_visible_in_tree()).is_false()
+
+
+# FT: FT-MIS-025
+# New offers (a new gap) rebuild the toggles in a fresh group and close them again: the pick
+# pressed is the new one, and "Next" names its site, never a stale toggle's.
+func test_new_offers_rebuild_the_choice() -> void:
+	I18n.apply("en")
+	var b: GapBanner = _picker_banner([StationFixture.SESSION], _offers(3), 1)
+	b.expanded = true
+	b.refresh()
+	(b.find_child("Offer2", true, false) as Button).button_pressed = true
+	b.expanded = true
+	var fresh: Array = [
+		{"site": 5, "name_key": "site.pale_drift", "risk": 0, "reward": 1},
+		{"site": 6, "name_key": "site.cinder_field", "risk": 2, "reward": 2},
+	]
+	var gap: Dictionary = b.ctx.crew.gap.duplicate()
+	gap.merge({"offers": fresh, "pick": 0}, true)
+	b.ctx.crew.handle_event({"type": NetProtocol.EVENT_GAP, "payload": gap}, 0)
+	b.refresh()
+	assert_bool(b.expanded).is_false()
+	assert_bool((b.find_child("Offer0", true, false) as Button).button_pressed).is_true()
+	assert_bool((b.find_child("Offer1", true, false) as Button).button_pressed).is_false()
+	assert_str((b.find_child("Next", true, false) as Button).text).is_equal("Next: Pale Drift")

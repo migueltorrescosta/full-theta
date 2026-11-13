@@ -1,6 +1,7 @@
 extends GdUnitTestSuite
 ## Docking doesn't stop the encounter clock (w-ckm): in an active encounter, a crewed ship
-## docked while a live hostile spawned since the encounter opened exists is out of the fight.
+## docked while a live hostile spawned since the encounter opened is in the fight (within its
+## sensor range of it or of the site) is out of the fight.
 ## It leaves as fled, charged the flee cost only when a hostile sees it (D233); the rest of a
 ## fleet fights on, and a lone ship's encounter ends FLED. Limping home, travel legs and
 ## pending encounters are unchanged. Worlds are ScenarioFixture's on m3_run.
@@ -54,9 +55,10 @@ func test_a_docked_ship_pays_the_flee_cost_only_when_seen() -> void:
 	)
 	var unseen: ScenarioFixture = _wave()
 	var raider: int = unseen.ships_of(&"m1_raider")[0]
-	# The raider, far off, still makes the fight but sees nothing.
+	# The raider, beyond its sensors (15 km) but within the ship's (20 km) of the site, still
+	# makes the fight but sees nothing.
 	unseen.world.kin.place(
-		raider, CubePoint.plus(unseen.world.sites.point(unseen.site), Vector3(6.0e4, 0.0, 0.0))
+		raider, CubePoint.plus(unseen.world.sites.point(unseen.site), Vector3(1.9e4, 0.0, 0.0))
 	)
 	unseen.run(2)
 	assert_int(EncounterSystem.hostile_seeing(unseen.world, 0)).is_equal(-1)
@@ -129,3 +131,33 @@ func test_a_docked_crew_waits_out_pending_then_leaves_once_it_starts() -> void:
 	f.run(SimRate.ticks(w.run_def.director.arrival_timeout))
 	assert_int(f.api.encounter(f.encounter).result).is_equal(Scenario.Result.FLED)
 	assert_int(w.ships.fled_count[0]).is_equal(1)
+
+
+# FT: FT-MIS-025, FT-MIS-041
+# Two encounters: a raider of the other one, spawned after this travel leg opened but far off at
+# the other site, leaves a ship docked on the leg in it; one at the docked ship does not.
+func test_another_encounters_hostiles_far_off_leave_a_docked_ship_in() -> void:
+	var f: ScenarioFixture = ScenarioFixture.make(1, 2)
+	var w: SimWorld = f.world
+	f.ships = PackedInt32Array([0])
+	f.begin(&"debris_leg", SITE)
+	f.run(3)
+	var other: int = w.sites.open(w, &"cinder_field")
+	w.kin.place(1, w.sites.point(other))
+	var wave: ApiHandle = f.api.begin_encounter(&"enemy_wave", other, PackedInt32Array([1]), 0)
+	w.step()
+	assert_int(w.ships.encounter[1]).is_equal(wave.id())
+	var raider: int = w.spawn_npc(
+		TestDefs.raider_enemy(),
+		Factions.RAIDER,
+		CubePoint.plus(w.sites.point(other), Vector3(3000.0, 0.0, 0.0))
+	)
+	assert_int(raider).is_greater_equal(w.encounters.npc_floor[f.encounter])
+	w.helm.docked_site[0] = f.site  # a stand-in dock at the leg's start (one at the yard wins it)
+	f.run(2)
+	assert_int(w.ships.encounter[0]).is_equal(f.encounter)
+	assert_int(w.encounters.fled_mask[f.encounter]).is_equal(0)
+	w.kin.place(raider, CubePoint.plus(w.kin.point(0), Vector3(2000.0, 0.0, 0.0)))
+	f.run(2)
+	assert_int(w.encounters.fled_mask[f.encounter]).is_equal(1)
+	assert_int(w.ships.encounter[0]).is_equal(-1)

@@ -24,7 +24,6 @@ class ThreeOffers:
 					{
 						"site": 10 + i,
 						"name_key": "site.vesper_beacon",
-						"scenario": &"wave",
 						"risk": i,
 						"reward": 2 - i,
 					}
@@ -95,7 +94,7 @@ func _pick(server: NetServer) -> int:
 
 # FT: FT-MIS-025
 # With a Captain seated, only the Captain picks: the payload names them alone and carries the
-# offers without the scenario; Comms, a viewer and a bad index are refused; the Captain's pick
+# driver's offers; Comms, a viewer and a bad index are refused; the Captain's pick
 # sets the flag through a logged command and comes back as the payload's pick.
 func test_the_captain_picks_and_everyone_else_is_refused() -> void:
 	var server: NetServer = _server()

@@ -31,8 +31,6 @@ var ship: int
 ## The current gap's site offers (RunDriver.site_offers of the crew's faction), a
 ## `func() -> Array[Dictionary]`; unset, the crew never picks.
 var offers: Callable = Callable()
-## The crew's site picks: {tick, offered: [scenario], pick: offer index}.
-var picks: Array[Dictionary] = []
 
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _seen: Dictionary[StringName, int] = {}
@@ -47,8 +45,8 @@ var _hail_at: Dictionary[int, int] = {}
 var _moving: bool = false
 ## The mount the last aim went to; the shots follow it.
 var _mount: int = 0
-## The offer list the crew last picked from (pick once per list).
-var _picked: String = ""
+## The gap (its gap flag value) the crew last picked in (pick once per gap).
+var _picked: int = -1
 
 
 func _init(crew_profile: BotProfiles.Profile, ship_id: int, seed_value: int) -> void:
@@ -384,7 +382,7 @@ func _demand_surrender(world: SimWorld, card: int) -> void:
 # --- Captain ---
 
 
-## Picks one of the gap's offers once per offer list, comms_time after it appears: a logged
+## Picks one of the gap's offers once per gap, comms_time after they appear: a logged
 ## SetFlagCommand on the faction's pick flag, the offer's index plus one.
 func _pick_site(world: SimWorld) -> void:
 	if not offers.is_valid():
@@ -393,19 +391,15 @@ func _pick_site(world: SimWorld) -> void:
 	if list.size() < 2:
 		return
 	var faction: int = world.faction_of(ship)
-	var key: String = "%d %s" % [world.story_flags.get_flag(Director.gap_flag(faction)), list]
-	if key == _picked or not _after(StringName("pick " + key), world, profile.comms_time):
+	var gap: int = world.story_flags.get_flag(Director.gap_flag(faction))
+	if gap == _picked or not _after(StringName("pick %d" % gap), world, profile.comms_time):
 		return
-	_picked = key
+	_picked = gap
 	var pick: int = choose(list, _fleet_hull(world), profile)
 	var flag: SetFlagCommand = SetFlagCommand.new()
 	flag.flag_name = Director.pick_flag(faction)
 	flag.value = pick + 1
 	world.submit(flag)  # a run-wide command, as the server's: no ship
-	var offered: Array[String] = []
-	for o: Dictionary in list:
-		offered.append(String(o["scenario"]))
-	picks.append({"tick": world.tick, "offered": offered, "pick": pick})
 
 
 ## The offer a crew whose weakest ship is at hull fraction `hull` picks: bold, the best pay

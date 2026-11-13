@@ -60,8 +60,7 @@ static func play(
 		if world.ships.ship_outcome[0] == ShipStateTable.ShipOutcome.NONE
 		else record["result"]
 	)
-	_note_picks(world, record["encounters"], crew.picks)
-	record["crew_picks"] = crew.picks.size()
+	record["crew_picks"] = _note_picks(record["encounters"], director.decisions())
 	record["profile"] = profile_name
 	record["difficulty"] = difficulty
 	record["seed"] = seed_value
@@ -71,16 +70,26 @@ static func play(
 	return record
 
 
-## Marks each encounter row with the crew's pick made in the gap before it opened: "picked"
-## and "offered" (the offers' scenarios; empty with no pick).
-static func _note_picks(world: SimWorld, rows: Array, picks: Array[Dictionary]) -> void:
-	var since: int = -1
+## Marks each encounter row with the crew's site pick from the director's log (its
+## PICK_ENCOUNTER decision, in order by scenario and site): "picked" and "offered" (the offers'
+## scenarios; empty with no pick). Returns the run's crew picks.
+static func _note_picks(rows: Array, decisions: Array[DirectorDecision]) -> int:
+	var picks: int = 0
+	var at: int = 0
 	for row: Dictionary in rows:
-		var opened: int = world.encounters.open_tick[row["id"]]
 		var offered: Array = []
-		for p: Dictionary in picks:
-			if p["tick"] >= since and p["tick"] < opened:
-				offered = p["offered"]  # the last pick of the gap holds
+		while at < decisions.size():
+			var d: DirectorDecision = decisions[at]
+			at += 1
+			if (
+				d.kind == DirectorDecision.Kind.PICK_ENCOUNTER
+				and String(d.scenario_id) == String(row["scenario"])
+				and d.site == row["site"]
+			):
+				if d.reason_key == "director.reason.crew_pick":
+					offered = d.reason_args["offers"]
+				break
 		row["picked"] = not offered.is_empty()
 		row["offered"] = offered
-		since = opened
+		picks += 1 if row["picked"] else 0
+	return picks

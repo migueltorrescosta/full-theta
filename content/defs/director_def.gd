@@ -60,7 +60,8 @@ extends Resource
 ## Crew-chosen sites (E2, w-bzx): at the start of each quiet gap before a regular encounter the
 ## director offers up to this many picks, each a different scenario at a different free site
 ## (count; 0 or 1: no choice, the director picks as before). The Captain, or Comms when no
-## Captain is seated, picks one; with no pick the first (the director's own) is played.
+## Captain is seated, picks one; with no pick the director picks when the gap ends, as before
+## (the first offer, its own pick, was judged at the gap's start).
 @export var site_offers: int = 0
 ## Each offer's risk tag by scenario id: 0 low, 1 some, 2 high (a scenario not listed: 2 when
 ## tagged hostile, else 0).

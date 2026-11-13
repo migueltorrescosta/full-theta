@@ -22,7 +22,9 @@ func solo_station() -> StringName:
 
 
 ## The crew-chosen site offers (E2, w-bzx) of the faction's current quiet gap, in offer order
-## (the first is the director's own pick): [{site: int, name_key: String, scenario: StringName,
-## risk: int, reward: int}]; empty outside a gap, before a finale, in a race or with no choice.
+## (the first is the director's own pick): [{site: int (the site id), name_key: String (the
+## site's name key), risk: int (DirectorDef.offer_risk), reward: int (DirectorDef.offer_reward)}];
+## empty outside a gap, before a finale, in a race or with DirectorDef.site_offers below 2. With
+## one free site or one scenario fitting there is a single offer (no choice to show).
 func site_offers(_faction: int) -> Array[Dictionary]:
 	return []

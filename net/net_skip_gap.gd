@@ -12,9 +12,9 @@ extends RefCounted
 ## human Comms players) may pick one of the gap's site offers (SitePick{offer}); the server sets
 ## Director.pick_flag to offer + 1 through a logged SetFlagCommand, and the director plays it
 ## when the gap ends. Event `gap` {faction, ends_at, ready, voters, offers, pick, pickers}
-## (ends_at 0: no gap; ready, voters and pickers are session ids; offers [{site, name_key, risk,
-## reward}]; pick the chosen offer, 0 for none) goes to the sessions on the faction's ships
-## whenever it changes.
+## (ends_at 0: no gap; ready, voters and pickers are session ids; offers as
+## RunDriver.site_offers; pick the chosen offer, 0 for none) goes to the sessions on the
+## faction's ships whenever it changes.
 
 ## request_rejected reasons: no gap is on for the sender's fleet, or the sender doesn't vote;
 ## an offer index outside the gap's offers.
@@ -151,18 +151,7 @@ func _update(faction: int) -> void:
 	if ends_at > 0:
 		who = voters(faction)
 		pick_by = pickers(faction)
-		for o: Dictionary in _offers(faction):
-			(
-				offers
-				. append(
-					{
-						"site": o["site"],
-						"name_key": o["name_key"],
-						"risk": o["risk"],
-						"reward": o["reward"],
-					}
-				)
-			)
+		offers = _offers(faction)
 	var ready: Array[int] = []
 	for id: int in _ready.get(faction, {}):
 		if who.has(id):

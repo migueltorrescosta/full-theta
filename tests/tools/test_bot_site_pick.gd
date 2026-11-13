@@ -1,11 +1,12 @@
 extends GdUnitTestSuite
 ## The bot Captain's site pick (E2, w-bzx; FT-TST-022): by the fleet's lowest hull it takes the
-## best pay, the best pay less risk or the lowest risk; once per offer list, comms_time after
-## the list appears, as a SetFlagCommand on the faction's pick flag; never with one offer.
+## best pay, the best pay less risk or the lowest risk; once per gap, comms_time after
+## the list appears, as a SetFlagCommand on the faction's pick flag; never with one offer. The
+## batch reads the picks back from the director's log.
 
 
 func _offer(scenario: StringName, risk: int, reward: int) -> Dictionary:
-	return {"site": 1, "name_key": "", "scenario": scenario, "risk": risk, "reward": reward}
+	return {"site": 1, "name_key": String(scenario), "risk": risk, "reward": reward}
 
 
 func _offers() -> Array[Dictionary]:
@@ -68,13 +69,12 @@ func _play(source: Callable, seconds: float) -> Array:
 
 
 # FT: FT-TST-022
-func test_the_captain_picks_once_per_list_with_the_pick_flag() -> void:
+func test_the_captain_picks_once_per_gap_with_the_pick_flag() -> void:
 	var source: Callable = func() -> Array[Dictionary]: return _offers()
 	var played: Array = _play(source, BotProfiles.average().comms_time - 1.0)
 	assert_array(played[2]).is_empty()  # not before comms_time
 	played = _play(source, BotProfiles.average().comms_time * 3.0)
 	var world: SimWorld = played[0]
-	var crew: BotCrew = played[1]
 	var flags: Array = played[2]
 	assert_int(flags.size()).is_equal(1)
 	var flag: SetFlagCommand = flags[0]
@@ -82,10 +82,6 @@ func test_the_captain_picks_once_per_list_with_the_pick_flag() -> void:
 	assert_int(flag.value).is_equal(2)  # offer 1 at full hull
 	assert_int(flag.ship_id).is_equal(-1)
 	assert_int(world.story_flags.get_flag(Director.pick_flag(world.faction_of(0)))).is_equal(2)
-	assert_int(crew.picks.size()).is_equal(1)
-	assert_array(crew.picks[0]["offered"]).contains_exactly(
-		["enemy_wave", "rescue", "debris_leg", "rescue"]
-	)
 
 
 # FT: FT-TST-022
@@ -96,10 +92,10 @@ func test_a_new_gap_gets_a_new_pick() -> void:
 	var crew: BotCrew = played[1]
 	var gap: StringName = Director.gap_flag(world.faction_of(0))
 	world.story_flags.set_flag(gap, 1000)
-	_step(world, crew, crew.profile.comms_time * 2.0)
+	var flags: Array[SetFlagCommand] = _step(world, crew, crew.profile.comms_time * 2.0)
 	world.story_flags.set_flag(gap, 5000)
-	_step(world, crew, crew.profile.comms_time * 2.0)
-	assert_int(crew.picks.size()).is_equal(2)
+	flags.append_array(_step(world, crew, crew.profile.comms_time * 2.0))
+	assert_int(flags.size()).is_equal(2)
 
 
 # FT: FT-TST-022
@@ -107,6 +103,40 @@ func test_no_pick_with_fewer_than_two_offers() -> void:
 	var one: Callable = func() -> Array[Dictionary]: return [_offer(&"rescue", 1, 2)]
 	var played: Array = _play(one, BotProfiles.average().comms_time * 3.0)
 	assert_array(played[2]).is_empty()
-	assert_array((played[1] as BotCrew).picks).is_empty()
 	var none: Callable = func() -> Array[Dictionary]: return []
 	assert_array(_play(none, BotProfiles.average().comms_time * 3.0)[2]).is_empty()
+
+
+static func _decision(
+	scenario: StringName, site: int, reason: String, args: Dictionary
+) -> DirectorDecision:
+	return DirectorDecision.make(
+		0,
+		0,
+		DirectorDecision.Kind.PICK_ENCOUNTER,
+		{"scenario_id": scenario, "site": site, "reason": reason, "args": args}
+	)
+
+
+# FT: FT-TST-022
+# The batch's per-encounter picked/offered and per-run crew_picks come from the director's log:
+# a crew_pick decision names the offers; any other pick (and a rejected begin) none.
+func test_the_batch_reads_the_picks_from_the_log() -> void:
+	var rows: Array = [
+		{"scenario": "rescue", "site": 2},
+		{"scenario": "enemy_wave", "site": 3},
+		{"scenario": "rescue", "site": 4},
+	]
+	var picks: Array[DirectorDecision] = [
+		_decision(&"rescue", 2, "crew_pick", {"offers": ["debris_leg", "rescue"], "pick": 1}),
+		_decision(&"debris_leg", 5, "crew_pick", {"offers": ["debris_leg"], "pick": 0}),
+		_decision(&"enemy_wave", 3, "budget_fits", {}),
+		_decision(&"rescue", 4, "crew_pick", {"offers": ["rescue", "enemy_wave"], "pick": 0}),
+	]
+	picks[1].kind = DirectorDecision.Kind.SKIP
+	assert_int(BotRun._note_picks(rows, picks)).is_equal(2)
+	assert_bool(rows[0]["picked"]).is_true()
+	assert_array(rows[0]["offered"]).is_equal(["debris_leg", "rescue"])
+	assert_bool(rows[1]["picked"]).is_false()
+	assert_array(rows[1]["offered"]).is_empty()
+	assert_array(rows[2]["offered"]).is_equal(["rescue", "enemy_wave"])

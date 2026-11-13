@@ -25,6 +25,7 @@ var _pick_box: VBoxContainer
 var _heading: Label
 var _next: Button
 var _offers: GridContainer
+## The offer toggles' group, new with each set of toggles (no stale pressed button).
 var _group: ButtonGroup = ButtonGroup.new()
 ## The offers and the pick the toggles show (rebuilt and re-pressed when the event changes them,
 ## so an optimistic press holds until the server's answer).
@@ -106,6 +107,8 @@ func _show_offers(offers: Array, pick: int, form: LayoutMode.Form) -> void:
 	if offers != _shown_offers:
 		_shown_offers = offers
 		_shown_pick = -1
+		expanded = false
+		_group = ButtonGroup.new()
 		for b: Node in _offers.get_children():
 			_offers.remove_child(b)
 			b.queue_free()

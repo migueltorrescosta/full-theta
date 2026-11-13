@@ -77,9 +77,8 @@ var _finale_ix: int = -1
 var _finale_tries: Dictionary[int, int] = {}
 ## The tick the current quiet gap was announced (gap_flag set), per unit; absent outside a gap.
 var _gap_from: Dictionary[int, int] = {}
-## The current gap's site offers (E2, w-bzx), in offer order: {index, site, reason, name_key}
-## (the first is the director's own pick, whose reason is the one used); empty outside a gap
-## with offers.
+## The current gap's site offers (E2, w-bzx), in offer order: {index, site, name_key} (the
+## first is the director's own pick); empty outside a gap with offers.
 var _offers: Array[Dictionary] = []
 
 
@@ -450,12 +449,15 @@ func _pick(api: ScenarioApi, now: int, ship: int, regular: Vector2i) -> void:
 		_pick_race(api, now, ship)
 		return
 	var fewest: int = regular.x
-	if _finale_ix >= 0 and (_finale_tries.has(ship) or _done.get(ship, 0) >= regular.y):
+	if _finale_next(ship, regular):
 		_pick_finale(api, now, ship)
 		return
-	if not _offers.is_empty():
-		_pick_offer(api, now, ship)
+	# The crew's pick of the gap's offers; with none, the pick below, judged now as before E2.
+	var k: int = api.flag(pick_flag(_faction)) - 1
+	if k >= 0 and k < _offers.size():
+		_pick_offer(api, now, ship, k)
 		return
+	_offers.clear()
 	var fits: Array[int] = _fits(ship, fewest)
 	var reason: String = "budget_fits"
 	var calm: Array[int] = _calm(api, fits)
@@ -473,6 +475,11 @@ func _pick(api: ScenarioApi, now: int, ship: int, regular: Vector2i) -> void:
 			_skip(now, ship)
 		return
 	_place(api, now, ship, fits[_rng.randi() % fits.size()], _free_site(api), reason)
+
+
+## Whether the unit's next encounter is the finale (`regular`: as _pick's).
+func _finale_next(ship: int, regular: Vector2i) -> bool:
+	return _finale_ix >= 0 and (_finale_tries.has(ship) or _done.get(ship, 0) >= regular.y)
 
 
 ## The regular scenarios (catalogue indexes) that fit the unit's budget by _affordable's rule.
@@ -499,31 +506,26 @@ func _calm(api: ScenarioApi, fits: Array[int]) -> Array[int]:
 
 
 ## E2 (w-bzx): at the start of a quiet gap before a regular encounter, the picks the crew may
-## choose from: the director's own (today's rule, at a random free site), then up to
-## DirectorDef.site_offers - 1 other scenarios of the budget fits (no low-hull filter), each at
-## another free site. The pick flag clears. No finale, race or nothing fitting: no offers.
+## choose from: the director's own (today's rule on the hull now, at a random free site), then
+## up to DirectorDef.site_offers - 1 other scenarios of the budget fits (no low-hull filter),
+## each at another free site. The pick flag clears. site_offers below 2, a finale, a race or
+## nothing fitting: no offers.
 func _make_offers(api: ScenarioApi, ship: int, regular: Vector2i) -> void:
 	_offers.clear()
-	if _def.site_offers < 1 or not _race.is_empty():
-		return
-	if _finale_ix >= 0 and (_finale_tries.has(ship) or _done.get(ship, 0) >= regular.y):
+	if _def.site_offers < 2 or not _race.is_empty() or _finale_next(ship, regular):
 		return
 	var fits: Array[int] = _fits(ship, regular.x)
 	if fits.is_empty():
 		return
 	var own: Array[int] = fits
-	var reason: String = "budget_fits"
 	var calm: Array[int] = _calm(api, fits)
 	if not calm.is_empty():
 		own = calm
-		reason = "low_hull"
 	var index: int = own[_rng.randi() % own.size()]
 	var site: int = _free_site(api)
 	var used: Array[int] = []
 	while true:
-		_offers.append(
-			{"index": index, "site": site, "reason": reason, "name_key": _site_name(api, site)}
-		)
+		_offers.append({"index": index, "site": site, "name_key": _site_name(api, site)})
 		used.append(site)
 		var id: StringName = _metas[index].id
 		fits.assign(fits.filter(func(i: int) -> bool: return _metas[i].id != id))
@@ -536,14 +538,9 @@ func _make_offers(api: ScenarioApi, ship: int, regular: Vector2i) -> void:
 	api.set_flag(pick_flag(_faction), 0)
 
 
-## The gap is over: begins the offer the crew picked (pick_flag), or the first with no valid
-## pick, at its site, or at another free one when it was taken or closed meanwhile.
-func _pick_offer(api: ScenarioApi, now: int, ship: int) -> void:
-	var k: int = api.flag(pick_flag(_faction)) - 1
-	var reason: String = "crew_pick"
-	if k < 0 or k >= _offers.size():
-		k = 0
-		reason = _offers[0]["reason"]
+## The gap is over: begins offer `k`, the crew's pick (pick_flag), at its site, or at another
+## free one when it was taken or closed meanwhile.
+func _pick_offer(api: ScenarioApi, now: int, ship: int, k: int) -> void:
 	var offer: Dictionary = _offers[k]
 	var site: int = offer["site"]
 	if site < 0 or _taken.has(site) or _site_name(api, site) == "":
@@ -552,13 +549,14 @@ func _pick_offer(api: ScenarioApi, now: int, ship: int) -> void:
 	for o: Dictionary in _offers:
 		ids.append(String(_metas[o["index"]].id))
 	_offers.clear()
-	_place(api, now, ship, offer["index"], site, reason, {"offers": ids, "pick": k})
+	_place(api, now, ship, offer["index"], site, "crew_pick", {"offers": ids, "pick": k})
 
 
-## The current gap's offers (E2, w-bzx) for this director's own faction.
+## The current gap's offers (E2, w-bzx) for this director's own faction, as
+## RunDriver.site_offers.
 func site_offers(faction: int) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	if faction != _faction or not _gap_from.has(_faction):
+	if faction != _faction:
 		return out
 	for o: Dictionary in _offers:
 		var meta: ScenarioMeta = _metas[o["index"]]
@@ -568,7 +566,6 @@ func site_offers(faction: int) -> Array[Dictionary]:
 				{
 					"site": o["site"],
 					"name_key": o["name_key"],
-					"scenario": meta.id,
 					"risk": _def.offer_risk.get(meta.id, 2 if meta.tags.has("hostile") else 0),
 					"reward": _def.offer_reward.get(meta.id, 1),
 				}
@@ -767,7 +764,7 @@ func _begin(
 	index: int,
 	site: int,
 	reason: String,
-	extra: Dictionary = {}
+	args: Dictionary = {}
 ) -> void:
 	var meta: ScenarioMeta = _metas[index]
 	var finale: bool = index == _finale_ix
@@ -790,13 +787,13 @@ func _begin(
 		_announce_site(api, s, site)
 	_spent[ship] = _spent.get(ship, 0) + cost
 	_last_pick[ship] = meta.id
-	var args: Dictionary = {
+	var logged: Dictionary = {
 		"cost": cost,
 		"left": _left(ship),
 		"ramp": _ramp_at(api, _done.get(ship, 0), finale),
 		"try": _finale_tries.get(ship, 0) if finale else 0,
 	}
-	args.merge(extra)
+	logged.merge(args)
 	_log(
 		now,
 		ship,
@@ -808,7 +805,7 @@ func _begin(
 			"budget_before": before,
 			"budget_after": _left(ship),
 			"reason": reason,
-			"args": args,
+			"args": logged,
 		}
 	)
 
