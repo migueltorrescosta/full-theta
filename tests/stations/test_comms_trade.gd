@@ -69,9 +69,7 @@ func test_goods_are_bought_and_sold_by_key() -> void:
 	var panel: CommsPanel = s.panels[0] as CommsPanel
 	var parts: int = _row(panel, "buy", "item", "parts")
 	assert_int(parts).is_greater_equal(0)
-	assert_str(panel.overlay.rows()[parts].text()).is_equal(
-		"Parts: buy 25  sell 12  stock 20"
-	)
+	assert_str(panel.overlay.rows()[parts].text()).is_equal("Parts: buy 25  sell 12  stock 20")
 	var fuel: int = _row(panel, "buy", "item", "propellant")
 	assert_str(panel.overlay.rows()[fuel].text()).contains("x100 per press")
 	panel.overlay.focus = parts
@@ -146,9 +144,7 @@ func test_the_module_line_shows_the_trade_in() -> void:
 	)
 	var sell: int = _row(panel, "sell_module", "slot", 0)
 	assert_int(sell).is_greater_equal(0)
-	assert_str(panel.overlay.rows()[sell].text()).is_equal(
-		"Sell BX-3 Reactor (slot 1)  for 450"
-	)
+	assert_str(panel.overlay.rows()[sell].text()).is_equal("Sell BX-3 Reactor (slot 1)  for 450")
 	# The empty slot has nothing to sell.
 	assert_int(_row(panel, "sell_module", "slot", 1)).is_equal(-1)
 	panel.overlay.focus = sell

@@ -152,7 +152,8 @@ class SellModule:
 
 	func text() -> String:
 		var t: String = (
-			TranslationServer.translate("comms.sell_module") % [CommsData.module_text(module), slot + 1]
+			TranslationServer.translate("comms.sell_module")
+			% [CommsData.module_text(module), slot + 1]
 		)
 		if pay > 0:
 			t += "  " + TranslationServer.translate("comms.sells_for") % pay
