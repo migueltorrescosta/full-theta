@@ -101,3 +101,37 @@ func _buffer(data: PackedByteArray) -> StreamPeerBuffer:
 	var b: StreamPeerBuffer = StreamPeerBuffer.new()
 	b.data_array = data
 	return b
+
+
+# FT: FT-RLY-012
+# gp-16: a site of the faction's pending encounter is marked pending only from
+# site_marker_delay after the encounter opened, for that faction, and no longer once it
+# starts; the flag survives the wire (SitesSection to SnapshotReader).
+func test_a_pending_site_is_flagged_after_the_delay_until_it_starts() -> void:
+	var server: NetServer = h.server()
+	var w: SimWorld = server.world
+	var faction: int = w.faction_of(PLAYER)
+	var site: int = w.add_site(_site("vesper", Vector3(50000, 0, 0)), 1 << faction)
+	var row: int = w.encounters.add_encounter(PLAYER, faction, 0, site, 1, 0, w.tick - 100_000)
+	# Without a RunDef (the M1 encounter) no site is ever pending.
+	assert_bool(SitesSection.pending_sites(w, faction).is_empty()).is_true()
+	w.run_def = load("res://content/runs/m3_run.tres") as RunDef
+	var delay: int = SimRate.ticks(w.run_def.site_marker_delay)
+	w.encounters.open_tick[row] = w.tick - delay + 1
+	var section: SitesSection = SitesSection.new(faction)
+	assert_bool(_pending_on_wire(section.update(w), site)).is_false()
+	w.encounters.open_tick[row] = w.tick - delay
+	assert_bool(_pending_on_wire(section.update(w), site)).is_true()
+	assert_bool(SitesSection.pending_sites(w, w.faction_of(ENEMY)).has(site)).is_false()
+	w.encounters.result[row] = EncounterTable.Result.ACTIVE
+	assert_bool(_pending_on_wire(section.update(w), site)).is_false()
+
+
+## Whether the decoded SITES bytes flag `site` pending.
+func _pending_on_wire(bytes: PackedByteArray, site: int) -> bool:
+	var buf: StreamPeerBuffer = StreamPeerBuffer.new()
+	buf.data_array = bytes
+	for r: Dictionary in SnapshotReader.read_sites(buf):
+		if r["id"] == site:
+			return r["pending"]
+	return false

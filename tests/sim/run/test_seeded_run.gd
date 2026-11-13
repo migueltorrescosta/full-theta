@@ -3,8 +3,9 @@ extends GdUnitTestSuite
 ## run on the M3 map: four to six encounters (Q4) at named sites of the one cube, reached by
 ## impulse flight and by the jump drive, the same run for the same seed.
 
-## Seed 1 wins this run (measured 2026-11-08; the earlier search over seeds 1 to 8 stopped there).
-const WINNING_SEED: int = 1
+## Seed 2 wins this run (measured 2026-11-12 with the finale, gp-06: its first finale timed
+## out, the second was won; a search from seed 1 stopped there).
+const WINNING_SEED: int = 2
 
 
 # FT: FT-MIS-001, FT-MIS-024, FT-MIS-025, FT-MIS-026, FT-MIS-027

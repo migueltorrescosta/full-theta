@@ -270,6 +270,12 @@ func rand(stream: StringName) -> float:
 	return _world.script_rng.stream(stream).randf()
 
 
+## The run modifier's enemy strength multiplier (gp-11, RunModifierDef.strength; 1 for none):
+## the director multiplies the encounters' strength by it.
+func modifier_strength() -> float:
+	return _world.modifier.strength
+
+
 # --- writes (each one queued SERVER command) ---
 
 
@@ -449,6 +455,14 @@ func commands_this_tick(ship_id: int) -> Array[ApiEvent]:
 				d.tag = StringName("%s:%s" % [c.kind(), detail])
 				out.append(d)
 	return out
+
+
+## Sets a story flag (SetFlagCommand): the director's quiet-gap flags (Director.gap_flag).
+func set_flag(name: StringName, value: int) -> void:
+	var cmd: SetFlagCommand = SetFlagCommand.new()
+	cmd.flag_name = name
+	cmd.value = value
+	_world.submit(cmd)
 
 
 ## Sets the relation between two factions (a SimWorld.Relation value).

@@ -1,7 +1,7 @@
 class_name CommsPhone
 extends RefCounted
 ## Comms on a phone (#28 follow-up, D287, design 2.6): the layout half of CommsPanel. On its
-## side the five buttons move to a docked left rail and the board's rows sit beside it;
+## side the buttons move to a docked left rail and the board's rows sit beside it;
 ## upright they stay in the bar under the board, touch-sized on two rows. On a phone either
 ## way up two spacers keep the rows under the view-top row and above the gesture band, and
 ## the conversation (CommsOverlay) becomes a top-level control placed over the board.
@@ -10,7 +10,7 @@ extends RefCounted
 ## and the page and mode switching; this only moves and sizes the panel's widgets.
 
 var panel: CommsPanel
-## The phone-landscape arrangement (#28, docked rails like Weapons B): the five buttons in a
+## The phone-landscape arrangement (#28, docked rails like Weapons B): the buttons in a
 ## docked rail at the screen's left edge, the board beside it. Made on first use.
 var layout: RailLayout = null
 ## A phone's spacers: under the view-top row, and above the gesture band.
@@ -43,7 +43,7 @@ func paged() -> bool:
 	)
 
 
-## A phone's width (under NARROW_BAR px) keeps the five buttons on one row: smaller text and
+## A phone's width (under NARROW_BAR px) keeps the buttons on one row: smaller text and
 ## gaps, so Hold fire doesn't drop to a row of its own.
 func fit_bar() -> void:
 	var rails: bool = layout != null and layout.visible
@@ -111,7 +111,7 @@ func arrange_rails() -> void:
 	if rails == (layout != null and layout.visible):
 		return
 	var rows: VBoxContainer = panel._rows
-	var order: Array[String] = ["hail", "accept", "decline", "claim", "hold_fire"]
+	var order: Array[String] = ["hail", "accept", "decline", "claim", "hold_fire", "help"]
 	if rails:
 		if layout == null:
 			layout = RailLayout.new()

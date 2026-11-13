@@ -25,7 +25,10 @@ extends RefCounted
 ## - RETREAT: hull below retreat_hull_fraction: face a point straight away from the
 ##   threat and run at full throttle; with no threat detected, keep running on the same
 ##   bearing. The cube wraps (FT-SIM-035, D229), so there is no edge: the ship runs straight
-##   on across the seams until hostiles no longer detect it (D120).
+##   on across the seams until it is gone (OutcomeSystem: it jumps out, or leaves every
+##   hostile ship behind, gp-17).
+## - A hostile decoy within its decoy_range (ProbeSystem.decoy_near, gp-13): while the ship
+##   has a target it attacks the decoy as above instead of the target.
 ## Mode changes emit &"ai_mode": ship_id the AI ship, other_id its target (or -1),
 ## value the AiTable.Mode, tag its name in AiTable.MODE_NAMES.
 
@@ -108,12 +111,19 @@ static func _choose_mode(world: SimWorld, id: int, target: int, rel: Vector3) ->
 
 static func _think(world: SimWorld, id: int, candidates: PackedInt32Array) -> void:
 	var target: int = world.kin.nearest(id, candidates)
+	# A ship with a target goes for a hostile decoy near it instead (gp-13): it closes on
+	# and shoots at the decoy, ai.target keeping the ship it would fight.
+	var decoy: int = ProbeSystem.decoy_near(world, id) if target >= 0 else -1
 	# The target's offset once per tick (the AI changes no positions while it thinks).
 	var rel: Vector3 = world.kin.relative(id, target) if target >= 0 else Vector3.ZERO
+	if decoy >= 0:
+		var p: ProbeTable = world.probes
+		rel = world.kin.relative_to_column(id, p.pos_x, p.pos_y, p.pos_z, decoy)
 	var mode: AiTable.Mode = _choose_mode(world, id, target, rel)
 	var ai: AiTable = world.ai
 	if mode != ai.mode[id]:
 		ai.mode[id] = mode
+		ai.retreat_tick[id] = world.tick if mode == AiTable.Mode.RETREAT else -1
 		world.emit(&"ai_mode", id, target, mode, Vector3.ZERO, AiTable.MODE_NAMES[mode])
 	ai.target[id] = target
 	match mode:
@@ -122,7 +132,7 @@ static func _think(world: SimWorld, id: int, candidates: PackedInt32Array) -> vo
 		AiTable.Mode.RETREAT:
 			_retreat(world, id, target)
 		_:
-			_engage(world, id, target, rel)
+			_engage(world, id, target, rel, decoy)
 
 
 ## No target: drop the selection and the inputs, and all-stop if moving.
@@ -141,16 +151,17 @@ static func _hold(world: SimWorld, id: int) -> void:
 
 
 ## ATTACK and KEEP_RANGE: face the lead point, hold the middle of the engage band, shoot.
-## rel is the target's offset (m, kin.relative). Each mount's muzzle and lead point are
-## computed once per tick, the first mount's shared by the face point and its aim.
-static func _engage(world: SimWorld, id: int, target: int, rel: Vector3) -> void:
+## rel is the target's offset (m, kin.relative), or the decoy's when decoy (a probe row)
+## is not -1. Each mount's muzzle and lead point are computed once per tick, the first
+## mount's shared by the face point and its aim.
+static func _engage(world: SimWorld, id: int, target: int, rel: Vector3, decoy: int) -> void:
 	var kin: Kinematics = world.kin
 	var ai: AiTable = world.ai
 	var def: ShipDef = world.defs[id]
 	var mounts: Array[MountDef] = def.mounts
 	var q: Quaternion = kin.rot[id]
 	var own_vel: Vector3 = kin.vel[id]
-	var target_vel: Vector3 = kin.vel[target]
+	var target_vel: Vector3 = ProbeSystem.velocity(world, decoy) if decoy >= 0 else kin.vel[target]
 	var rel_vel: Vector3 = target_vel - own_vel
 	# Each mount's muzzle (world frame, from the centre) and lead point one tick ahead
 	# (lead_aim), Vector3.INF without a solution.
@@ -197,7 +208,7 @@ static func _engage(world: SimWorld, id: int, target: int, rel: Vector3) -> void
 			c.aim_z = p[2]
 			_submit(world, id, c)
 		var shot: Vector3 = aim - muzzles[m]
-		if _shot_good(world, id, m, target, dist, shot, shot.length()):
+		if _shot_good(world, id, m, target, dist, shot, shot.length(), decoy >= 0):
 			var fire: FireCommand = FireCommand.new()
 			fire.mount_index = m
 			_submit(world, id, fire)
@@ -233,7 +244,7 @@ static func _off(latched: Vector3, wanted: Vector3) -> bool:
 ## RETREAT: face a point RETREAT_POINT_DISTANCE straight away from the threat (on along
 ## the current retreat point's bearing when no threat is detected; nothing without one)
 ## and run at full throttle. The cube wraps, so the ship crosses the seams and keeps going
-## (FT-SIM-035, D124) until hostiles lose it (D120).
+## (FT-SIM-035, D124) until it is gone (gp-17).
 static func _retreat(world: SimWorld, id: int, threat: int) -> void:
 	var kin: Kinematics = world.kin
 	var helm: HelmTable = world.helm
@@ -346,9 +357,17 @@ static func _lead_point(
 ## reach, the intercept inside fire_cone and the mount's arc, the barrel on the aim,
 ## and the mount ready next tick (no shot pending, cooldown, ammunition, heat,
 ## subsystem). The cooldown
-## falls once more this tick and once next tick before the shot is tried.
+## falls once more this tick and once next tick before the shot is tried. At a decoy
+## (gp-13) the target need not be identified: the decoy is a hostile lure.
 static func _shot_good(
-	world: SimWorld, id: int, m: int, target: int, dist: float, aim_dir: Vector3, reach: float
+	world: SimWorld,
+	id: int,
+	m: int,
+	target: int,
+	dist: float,
+	aim_dir: Vector3,
+	reach: float,
+	at_decoy: bool = false
 ) -> bool:
 	var kin: Kinematics = world.kin
 	var mounts: MountTable = world.mounts
@@ -369,8 +388,13 @@ static func _shot_good(
 	var faction: int = world.faction_of(id)
 	var local: Vector3 = kin.to_local(id, aim_dir).normalized()
 	return (
-		KnowledgeSystem.is_identified(world, faction, target)
-		and world.is_hostile(faction, world.faction_of(target))
+		(
+			at_decoy
+			or (
+				KnowledgeSystem.is_identified(world, faction, target)
+				and world.is_hostile(faction, world.faction_of(target))
+			)
+		)
 		and kin.forward(id).angle_to(aim_dir) <= world.ai.fire_cone[id]
 		and WeaponSystem.in_arc(mount, local)
 		and mounts.barrel[row].angle_to(local) <= AIM_TOLERANCE

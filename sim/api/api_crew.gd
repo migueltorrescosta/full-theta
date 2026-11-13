@@ -1,3 +1,4 @@
+# gdlint: disable=max-public-methods
 class_name ApiCrew
 extends RefCounted
 ## What a scripted crewman may do, as verbs (F10, FT-TST-022, D303): the seam the solo-lesson
@@ -31,7 +32,7 @@ func alive(ship: int) -> bool:
 ## The nearest living hostile of the ship's faction that it detects within `reach` (any, or
 ## only armed ones), or -1.
 func nearest_hostile(ship: int, reach: float, armed_only: bool = false) -> int:
-	return CrewMoves.nearest_hostile(_world, ship, reach, armed_only)
+	return KnowledgeSystem.nearest_hostile(_world, ship, reach, armed_only)
 
 
 ## Whether the ship's Science has no minigame open.
@@ -53,14 +54,50 @@ func helm_settle(ship: int, rest_ms: float) -> bool:
 	return false
 
 
+## The site of the ship's current encounter (pending or active), or -1.
+func encounter_site(ship: int) -> int:
+	var enc: int = _world.ships.encounter[ship]
+	return _world.encounters.site[enc] if enc >= 0 else -1
+
+
+## Whether the ship is at the site.
+func at_site(ship: int, site: int) -> bool:
+	return SiteTable.at_site(_world, ship) == site
+
+
+## Selects the site and holds the ship facing it.
+func face_site(ship: int, site: int) -> bool:
+	var select: HelmSelectCommand = HelmSelectCommand.new()
+	select.site_id = site
+	_send(ship, select)
+	var f: HelmInputCommand = HelmInputCommand.new()
+	f.face = true
+	return _send(ship, f)
+
+
+## Jumps to the site once the drive is free and the bow is within `share` of the ship's jump
+## tolerance; false (nothing sent) before then.
+func jump_to(ship: int, site: int, share: float) -> bool:
+	var offset: Vector3 = SiteTable.offset_to(_world, ship, site)
+	if _world.helm.jump_left[ship] > 0 or not offset.is_finite():
+		return false
+	if _world.kin.forward(ship).angle_to(offset) > _world.defs[ship].jump_face_tolerance * share:
+		return false
+	var jump: JumpCommand = JumpCommand.new()
+	jump.target_kind = HelmTable.JumpKind.SITE
+	jump.target_id = site
+	return _send(ship, jump)
+
+
 func helm_speed(ship: int, throttle: float) -> bool:
 	var h: HelmInputCommand = HelmInputCommand.new()
 	h.throttle = throttle
 	return _send(ship, h)
 
 
-## Selects `target` (when 0 or more) and holds the ship facing it, or approaching it.
-func helm_face(ship: int, target: int, approach: bool) -> bool:
+## Selects `target` (when 0 or more) and holds the ship facing it, or approaching it, at
+## `throttle` (0 holds the speed).
+func helm_face(ship: int, target: int, approach: bool, throttle: float = 0.0) -> bool:
 	if target >= 0:
 		var select: HelmSelectCommand = HelmSelectCommand.new()
 		select.contact = target
@@ -68,15 +105,41 @@ func helm_face(ship: int, target: int, approach: bool) -> bool:
 	var f: HelmInputCommand = HelmInputCommand.new()
 	f.face = true
 	f.approach = approach
+	f.throttle = throttle
 	return _send(ship, f)
+
+
+## The ship's speed (m/s).
+func speed(ship: int) -> float:
+	return _world.kin.vel[ship].length()
 
 
 # --- weapons ---
 
 
-## Aims mount 0 at the target's lead point.
-func aim_at(ship: int, target: int) -> bool:
-	return _send(ship, CrewMoves.aim(_world, ship, target))
+## Aims the mount (0, the bow, by default) at the target's lead point, off by `error` rad in
+## a direction drawn from `rng` (a stand-in's loose aim, StandInCrew); 0 is a perfect lead.
+func aim_at(
+	ship: int, target: int, error: float = 0.0, rng: RandomNumberGenerator = null, mount: int = 0
+) -> bool:
+	return _send(ship, CrewMoves.aim(_world, ship, target, error, rng, mount))
+
+
+## The first mount whose arc holds the target, else 0 (CrewMoves.mount_for, gp-12).
+func mount_for(ship: int, target: int) -> int:
+	return CrewMoves.mount_for(_world, ship, target)
+
+
+## Asks the mount (0 by default) for one shot (WeaponSystem fires it or says why not).
+func fire(ship: int, mount: int = 0) -> bool:
+	var c: FireCommand = FireCommand.new()
+	c.mount_index = mount
+	return _send(ship, c)
+
+
+## The distance from the ship to another (m).
+func range_to(ship: int, other: int) -> float:
+	return _world.kin.relative(ship, other).length()
 
 
 # --- engineering ---

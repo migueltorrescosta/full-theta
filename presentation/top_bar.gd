@@ -57,6 +57,13 @@ var watching: String = "":
 		_raw = []
 		_shown = []
 
+## The bots on this ship, after the station names (#40 D1: "Weapons: Bot (for Ana)"), or "".
+var bots: String = "":
+	set(value):
+		bots = value
+		_raw = []
+		_shown = []
+
 var _row: HBoxContainer
 ## The rows' box: 8 px in from each edge; a phone's row starts at the top edge, so its
 ## 48 px targets keep UiTheme.TOUCH_GAP above the content under the bar.
@@ -107,7 +114,13 @@ func _init() -> void:
 	chip.pressed.connect(open_alert_picker)
 	chip.draw.connect(_draw_chip)
 	var spacer: Control = Control.new()
+	# (the station names take the free room and trim with an ellipsis when it runs out, so the
+	# timer and the sound button stay on screen; the spacer only pushes them right)
 	spacer.size_flags_horizontal = SIZE_EXPAND_FILL
+	spacer.size_flags_stretch_ratio = 0.0
+	_stations.size_flags_horizontal = SIZE_EXPAND_FILL
+	_stations.clip_text = true
+	_stations.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	var keyed: Dictionary = {_hull: "hull", _shields: "shields", _pips: "pips_used"}
 	for c: Control in [
 		_name, _hull, _shields, _pips, chip, _stations, spacer, _timer, sound, fullscreen
@@ -326,7 +339,7 @@ func show_state(
 	for s: Variant in stations:
 		var star: bool = stations.size() > 1 and str(s) == focused
 		names.append(tr(StationCatalogue.name_key(str(s))) + ("*" if star else ""))
-	_stations.text = " + ".join(names)
+	_stations.text = " + ".join(names) + ("   ·   " + bots if bots != "" else "")
 	var secs: int = int(mission_time)
 	_timer.text = "%02d:%02d" % [secs / 60, secs % 60]
 	var second: String = _second_line()

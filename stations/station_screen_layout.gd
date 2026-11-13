@@ -326,11 +326,15 @@ func _on_crew_changed(_what: StringName) -> void:
 
 
 ## The top bar names the watched ship while the player's own ship is out (a handover to
-## another ship, D91, R24-18).
+## another ship, D91, R24-18) and they watch it; a guest seated at one of its stations is
+## crew there, so the bar names the ship as its own (#40 D10).
 func show_watching() -> void:
 	var h: Dictionary = s.ctx.crew.handover
 	var to: int = int(h.get("to_ship", FleetMessages.TO_SCOREBOARD))
-	s.top_bar.watching = "" if to == FleetMessages.TO_SCOREBOARD else s.ctx.crew.ship_name(to)
+	var watching: bool = to != FleetMessages.TO_SCOREBOARD
+	watching = watching and s.ctx.crew.seat == StationCatalogue.VIEWER
+	s.top_bar.watching = s.ctx.crew.ship_name(to) if watching else ""
+	s.top_bar.bots = LobbySeatGrid.bots_line(s.ctx)  # the ship's bots (#40 D1)
 
 
 ## P28-Band: on a phone on its side a panel in the frame (StationPanel.in_frame) draws into

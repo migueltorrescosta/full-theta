@@ -6,6 +6,8 @@ extends Control
 ## the read-out lines (WeaponsReadout). Covers the turret view; reads the panel.
 
 const FONT_SIZE: int = 15
+## The least text size of the docked read-out lines (they shrink to fit their panel).
+const MIN_DOCKED_FONT: int = 12
 const RETICLE_R: float = 18.0
 const BRACKET: float = 10.0
 
@@ -13,6 +15,8 @@ const BRACKET: float = 10.0
 ## (ContactPicture's), "pos", "callout", "callout_at" (its top left), "rect" (bracket and chip)}.
 var targets: Array[Dictionary] = []
 var _p: WeaponsPanel
+## The read-out lines' text size this frame: FONT_SIZE, less when docked and short of room.
+var _fs: int = FONT_SIZE
 
 
 func _init(panel: WeaponsPanel) -> void:
@@ -119,28 +123,40 @@ func _draw() -> void:
 			_draw_arc_warning(font, arc)
 	elif arc != "":
 		lines.append(arc)
-	var line_h: float = FONT_SIZE + 6.0
 	# A line longer than the view wraps (the docked column is narrow), so none is cut at the
-	# screen's edge (D319).
+	# screen's edge (D319). Docked, the text shrinks until every mount row is one line and all
+	# lines fit the panel, so nothing below the rows is cut at the panel's end.
 	var width: float = maxf(size.x - 24.0, 40.0)
 	var counts: Array[int] = []
 	var widths: Array[float] = []
 	var total: int = 0
-	# (a held mount's row wraps short of its "You" chip, so the chip never runs off the edge)
-	var chip_width: float = _mine_chip_width(font)
-	for k: int in lines.size():
-		var text: String = lines[k]
-		var w_k: float = width
-		if k < rows.size() and _p.is_mine(k):
-			w_k = maxf(width - chip_width, 40.0)
-		widths.append(w_k)
-		var wrapped: float = (
-			font.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, w_k, FONT_SIZE).y
-		)
-		var rows_n: int = maxi(roundi(wrapped / font.get_height(FONT_SIZE)), 1)
-		counts.append(rows_n)
-		total += rows_n
-	var y0: float = 12.0 + FONT_SIZE if _p.docked else size.y - 12.0 - line_h * (total - 1)
+	var line_h: float = 0.0
+	_fs = FONT_SIZE
+	while true:
+		line_h = _fs + 6.0
+		counts.clear()
+		widths.clear()
+		total = 0
+		# (a held mount's row wraps short of its "You" chip, so the chip never runs off the edge)
+		var chip_width: float = _mine_chip_width(font)
+		var rows_wrap: bool = false
+		for k: int in lines.size():
+			var w_k: float = width
+			if k < rows.size() and _p.is_mine(k):
+				w_k = maxf(width - chip_width, 40.0)
+			widths.append(w_k)
+			var wrapped: float = (
+				font.get_multiline_string_size(lines[k], HORIZONTAL_ALIGNMENT_LEFT, w_k, _fs).y
+			)
+			var rows_n: int = maxi(roundi(wrapped / font.get_height(_fs)), 1)
+			counts.append(rows_n)
+			total += rows_n
+			rows_wrap = rows_wrap or (k < rows.size() and rows_n > 1)
+		var fits: bool = not rows_wrap and line_h * total <= size.y - 24.0
+		if not _p.docked or fits or _fs <= MIN_DOCKED_FONT:
+			break
+		_fs -= 1
+	var y0: float = 12.0 + _fs if _p.docked else size.y - 12.0 - line_h * (total - 1)
 	var y: float = y0
 	for k: int in lines.size():
 		var col: Color = Palette.color("text") if k == _p.mount else Palette.color("text_dim")
@@ -152,11 +168,9 @@ func _draw() -> void:
 		if k < rows.size() and k == _p.mount:
 			_draw_row_bar(font, at, lines[k], w_k, line_h)
 		draw_multiline_string_outline(
-			font, at, lines[k], HORIZONTAL_ALIGNMENT_LEFT, w_k, FONT_SIZE, -1, 4, bg
+			font, at, lines[k], HORIZONTAL_ALIGNMENT_LEFT, w_k, _fs, -1, 4, bg
 		)
-		draw_multiline_string(
-			font, at, lines[k], HORIZONTAL_ALIGNMENT_LEFT, w_k, FONT_SIZE, -1, col
-		)
+		draw_multiline_string(font, at, lines[k], HORIZONTAL_ALIGNMENT_LEFT, w_k, _fs, -1, col)
 		if k < rows.size() and _p.is_mine(k):
 			_draw_mine_chip(font, at, lines[k], w_k, line_h)
 		y += line_h * counts[k]
@@ -168,8 +182,8 @@ func _draw_row_bar(font: Font, at: Vector2, text: String, width: float, line_h: 
 	var w: float = 0.0
 	for i: int in para.get_line_count():
 		w = maxf(w, para.get_line_width(i))
-	var top: float = at.y - font.get_ascent(FONT_SIZE) - 3.0
-	var h: float = line_h * (para.get_line_count() - 1) + FONT_SIZE + 8.0
+	var top: float = at.y - font.get_ascent(_fs) - 3.0
+	var h: float = line_h * (para.get_line_count() - 1) + _fs + 8.0
 	var bar: Rect2 = Rect2(at.x - 6.0, top, w + 12.0, h)
 	draw_rect(bar, Color(Palette.color("accent"), 0.3))
 	draw_rect(Rect2(bar.position, Vector2(3.0, bar.size.y)), Palette.color("accent"))
@@ -180,7 +194,7 @@ func _draw_mine_chip(font: Font, at: Vector2, text: String, width: float, line_h
 	var para: TextParagraph = _para(font, text, width)
 	var last: int = para.get_line_count() - 1
 	var chip: String = WeaponsReadout.mine_chip(_p)
-	var fs: int = FONT_SIZE - 2
+	var fs: int = _fs - 2
 	var sz: Vector2 = font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
 	var base: Vector2 = at + Vector2(para.get_line_width(last) + 12.0, line_h * last)
 	var box: Rect2 = Rect2(
@@ -195,13 +209,13 @@ func _draw_mine_chip(font: Font, at: Vector2, text: String, width: float, line_h
 ## The room (px) a "You" chip takes after its row: the gap, the chip and its padding.
 func _mine_chip_width(font: Font) -> float:
 	var chip: String = WeaponsReadout.mine_chip(_p)
-	return font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE - 2).x + 24.0
+	return font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, _fs - 2).x + 24.0
 
 
 ## `text` broken into lines of `width` px, as draw_multiline_string breaks it.
-static func _para(font: Font, text: String, width: float) -> TextParagraph:
+func _para(font: Font, text: String, width: float) -> TextParagraph:
 	var para: TextParagraph = TextParagraph.new()
-	para.add_string(text, font, FONT_SIZE)
+	para.add_string(text, font, _fs)
 	para.width = width
 	para.break_flags = TextServer.BREAK_MANDATORY | TextServer.BREAK_WORD_BOUND
 	return para
@@ -357,6 +371,8 @@ func _draw_item(font: Font, t: Dictionary) -> void:
 	else:
 		TargetBracket.draw(self, p, BRACKET, 5.0, col, 2.0 if sel else 1.5)
 	_text(font, (t["callout_at"] as Vector2) + Vector2(0.0, FONT_SIZE), t["callout"], col)
+	if it.get("priority", false):
+		ItemGlyph.draw_priority(self, p, BRACKET)
 	var pulse: float = float(it.get("pulse", 0.0))
 	if pulse > 0.0:
 		ItemGlyph.ping_ring(

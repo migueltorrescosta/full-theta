@@ -108,6 +108,8 @@ static func _encounter_line(n: int, row: Dictionary) -> String:
 		how = "lost"
 	elif row.get("fled", false):
 		how = "fled"
+	elif row.get("limped", false):
+		how = "limped"
 	else:
 		how = str(row.get("result", "won"))
 	var where: String = ""

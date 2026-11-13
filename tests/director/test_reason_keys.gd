@@ -16,7 +16,7 @@ func test_every_reason_key_the_director_can_log_resolves() -> void:
 	)
 	var pattern: String = (
 		'"reason": "([a-z_]+)"|reason: String = "([a-z_]+)"'
-		+ '|"(site_pool|periodic|rejected|run_length|budget_spent)"'
+		+ '|"(site_pool|periodic|rejected|run_length|budget_spent|finale|finale_won|finale_out)"'
 		+ '|"director\\.reason\\.([a-z_]+)"'
 	)
 	var found: RegEx = RegEx.create_from_string(pattern)

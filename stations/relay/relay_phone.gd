@@ -3,7 +3,8 @@ extends Control
 ## Relay on a phone (#28 follow-up, design 2.5, owner picks P28-Tabs, P28-Common, P28-S2;
 ## D287-D289). Landscape: the map fills the panel under two translucent rails, and the
 ## pages swap what the rails hold:
-##   Map (rest): Launch probe, Hazard, Route, Flag lanes | Accept, Decline, Send ▸, Centre
+##   Map (rest): Launch probe, Hazard, Route, Flag lanes | Accept, Decline, Send ▸, Centre,
+##   Launch decoy (in a fight)
 ##   Marks: the marks list | Rename, Delete, Attach, Centre, Send ▸
 ##   Contacts: the nearest contacts | Route, Centre
 ##   Log: the ship's log and the inbox (a wider left panel) | the main-screen views
@@ -41,7 +42,7 @@ var layout: RailLayout
 ## Map, Marks, Contacts, Log, Crew (set on the panel as its `pages`).
 var pages: PageHost = PageHost.new()
 var crew: CrewPage
-## Every page button by name: launch, hazard, route, lanes, accept, decline, send, centre
+## Every page button by name: launch, decoy, hazard, route, lanes, accept, decline, send, centre
 ## (Map); rename, delete, attach, centre_mark, send_mark (Marks); route_contact,
 ## centre_contact (Contacts); view_1 to view_5 (Log).
 var buttons: Dictionary[String, RailButton] = {}
@@ -73,7 +74,14 @@ func build(p: RelayPanel, phone_form: LayoutMode.Form) -> void:
 	var page_parts: Array = [
 		[
 			[buttons["launch"], buttons["hazard"], buttons["route"], buttons["lanes"]],
-			[buttons["accept"], buttons["decline"], buttons["send"], buttons["centre"]]
+			# The decoy last, on a row of its own upright, which goes while it can't act.
+			[
+				buttons["accept"],
+				buttons["decline"],
+				buttons["send"],
+				buttons["centre"],
+				buttons["decoy"]
+			]
 		],
 		[
 			[_scrolled(_marks_box)],
@@ -109,6 +117,7 @@ func build(p: RelayPanel, phone_form: LayoutMode.Form) -> void:
 func _make_controls() -> void:
 	var specs: Array = [
 		["launch", tr("relay.launch"), "probe_launch"],
+		["decoy", tr("relay.decoy"), "decoy_launch"],
 		["hazard", tr("relay.hazard"), "hazard_add"],
 		["route", tr("intent.route"), "route"],
 		["lanes", tr("relay.lanes_off"), "flag_lanes"],
@@ -316,6 +325,7 @@ func update() -> void:
 	# Launch, Accept, Decline and Send show as the HUD's do (C3: hidden while they can't
 	# act, the probe and inbox lines saying why); a row left empty upright goes too.
 	buttons["launch"].visible = hud.launch.visible
+	buttons["decoy"].visible = hud.decoy.visible
 	buttons["lanes"].text = hud.lanes.text
 	var holder: String = crew_state.claimer(StationCatalogue.CLAIM_PROBE)
 	if holder != "" and holder != panel.ctx.settings.player_name:

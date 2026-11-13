@@ -23,8 +23,13 @@ var engage_range_max: PackedFloat64Array = PackedFloat64Array()
 var retreat_hull_fraction: PackedFloat64Array = PackedFloat64Array()
 ## NpcDef.fire_cone (rad).
 var fire_cone: PackedFloat64Array = PackedFloat64Array()
+## NpcDef.retreat_jump_after (s) and NpcDef.retreat_gone_factor (dimensionless, gp-17).
+var retreat_jump_after: PackedFloat64Array = PackedFloat64Array()
+var retreat_gone_factor: PackedFloat64Array = PackedFloat64Array()
 ## Current Mode.
 var mode: PackedByteArray = PackedByteArray()
+## The tick the current RETREAT began, -1 outside one (NpcAi sets it; OutcomeSystem reads it).
+var retreat_tick: PackedInt32Array = PackedInt32Array()
 ## Ship id of the current target (a detected hostile contact), or -1.
 var target: PackedInt32Array = PackedInt32Array()
 
@@ -36,7 +41,10 @@ func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	engage_range_max.append(0.0)
 	retreat_hull_fraction.append(0.0)
 	fire_cone.append(0.0)
+	retreat_jump_after.append(0.0)
+	retreat_gone_factor.append(0.0)
 	mode.append(Mode.HOLD)
+	retreat_tick.append(-1)
 	target.append(-1)
 
 
@@ -47,6 +55,8 @@ func enable(ship_id: int, npc: NpcDef) -> void:
 	engage_range_max[ship_id] = npc.engage_range_max
 	retreat_hull_fraction[ship_id] = npc.retreat_hull_fraction
 	fire_cone[ship_id] = npc.fire_cone
+	retreat_jump_after[ship_id] = npc.retreat_jump_after
+	retreat_gone_factor[ship_id] = npc.retreat_gone_factor
 
 
 func is_enabled(ship_id: int) -> bool:
@@ -57,4 +67,5 @@ func is_enabled(ship_id: int) -> bool:
 ## numbers, which came from the NpcDef rather than the ShipDef, and clears the rest.
 func reset_ship(ship_id: int, _def: ShipDef) -> void:
 	mode[ship_id] = Mode.HOLD
+	retreat_tick[ship_id] = -1
 	target[ship_id] = -1

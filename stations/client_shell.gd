@@ -58,6 +58,8 @@ var outcome_card: OutcomeCard
 var settings_screen: SettingsScreen
 var scoreboard: ScoreboardScreen
 var handover_notice: HandoverNotice
+## A guest's Help out and Back to watching (#40 D10).
+var guest_bar: GuestBar
 var forfeit_prompt: VotePrompt
 var relaunch_prompt: VotePrompt
 
@@ -547,6 +549,9 @@ func _build_fleet_overlays() -> void:
 	relaunch_prompt = VotePrompt.new()
 	add_child(relaunch_prompt)
 	relaunch_prompt.setup(ctx, VotePrompt.Kind.RELAUNCH)
+	guest_bar = GuestBar.new()
+	add_child(guest_bar)
+	guest_bar.setup(ctx)
 
 
 func _build_link_banner() -> void:

@@ -16,6 +16,8 @@ extends Resource
 @export var repairs: Dictionary[StringName, int] = {}
 ## ModuleDef ids on offer.
 @export var modules: Array[StringName] = []
+## How many of `modules` one dock's OFFER card offers, drawn per dock (count, gp-11; 0 all).
+@export var modules_per_dock: int = 0
 ## Share of a price paid when the crew sells to the market (dimensionless, 0..1).
 @export var sell_ratio: float = 0.5
 
@@ -24,6 +26,7 @@ func validate() -> Array[String]:
 	var errors: Array[String] = []
 	DefCheck.id(errors, "id", id)
 	DefCheck.in_range(errors, "sell_ratio", sell_ratio, 0.0, 1.0)
+	DefCheck.non_negative(errors, "modules_per_dock", modules_per_dock)
 	for item: StringName in prices:
 		if prices[item] < 1:
 			errors.append("prices.%s: must be >= 1, got %d" % [item, prices[item]])

@@ -14,6 +14,8 @@ extends RefCounted
 ##                        variable (what HostLauncher passes; D127); the host client
 ##                        presents it in Hello. None by default.
 ##   --grace-s S          reconnect grace (s) [15] (FT-NET-033; T045 owns the rules).
+##   --drop-pause         start with the host's "Pause when someone drops" on (D430), so a
+##                        dropped crew player pauses the game instead of getting a stand-in.
 ##   --idle-exit-min M    exit after M minutes without connected players (connections
 ##                        with a session), wall clock (FT-NET-003); 0 never [0].
 ##   --pid-file PATH      write the pid file there while running (FT-NET-003).
@@ -86,6 +88,7 @@ const DEV_ENV: String = "FT_DEV"
 ## The Shakedown's drone answers a training hail so Comms can do that step (review 2, H2).
 const HAIL_CONVERSATIONS: Dictionary[StringName, StringName] = {
 	&"m1_raider": &"conv.surrender_demand",
+	&"heavy_raider": &"conv.surrender_demand",
 	&"drone": &"conv.training_hail",
 	&"m3_stranded": &"conv.trader_bluff"
 }
@@ -98,6 +101,8 @@ var dev_all_stations: bool = false
 var seed_value: int = 1
 var host_secret: String = ""
 var grace: float = DEFAULT_GRACE
+## The lobby's "Pause when someone drops" at start (`--drop-pause`, D430).
+var drop_pause: bool = false
 var idle_exit_min: float = 0.0
 var pid_file: String = ""
 var run_for: float = 0.0
@@ -140,6 +145,8 @@ func parse_args(args: PackedStringArray) -> bool:
 			dev_all_stations = true
 		elif flag == "--no-beacon":
 			beacon = false
+		elif flag == "--drop-pause":
+			drop_pause = true
 		elif flag == "--host-secret-env":
 			host_secret = OS.get_environment(HostLauncher.SECRET_ENV)
 			# Children of this process (none yet) shouldn't inherit it.
@@ -351,6 +358,9 @@ func make_server() -> NetServer:
 			return null
 	var server: NetServer = NetServer.new()
 	server.transport.tls = tls
+	var stand_in: StandInDef = defs.get_def(&"StandInDef", &"stand_in") as StandInDef
+	if stand_in != null:
+		server.stand_in_def = stand_in
 	if run != null:
 		server.driver_factory = (
 			_training_factory() if encounter_name == "shakedown" else _director_factory(run)
@@ -371,7 +381,12 @@ func make_server() -> NetServer:
 		server.free()
 		return null
 	server.game.training.solo_on_join = solo_station
+	var modifiers: Array[StringName] = []
+	for m: RunModifierDef in defs.run_modifiers():
+		modifiers.append(m.id)
+	server.game.fleet.roll_modifiers(modifiers, seed_value)
 	server.game.sessions.grace_us = int(grace * 1_000_000.0)
+	server.game.lobby.drop_pause = drop_pause
 	server.game.language = language
 	server.game.tls = tls != null
 	if http_root != "":
@@ -452,6 +467,8 @@ func run_setup(defs: DefLibrary, which: String = encounter_name) -> RunSetup:
 		if sites[i].market != &"":
 			setup.site_markets[i] = sites[i].market
 	setup.hail_conversations = HAIL_CONVERSATIONS
+	for modifier: RunModifierDef in defs.run_modifiers():
+		setup.modifiers[modifier.id] = modifier
 	return setup
 
 

@@ -6,7 +6,11 @@ extends RefCounted
 ## is deterministic for a seed. What it does, in order of priority:
 ## - fights: the nearest armed hostile within ENGAGE_REACH (unarmed debris within DEBRIS_REACH when
 ##   the profile shoots it), with the pips on the weapons, Face held, the lead aimed and shots
-##   at the profile's cadence;
+##   at the profile's cadence, from the mount whose arc holds the target (one Weapons player);
+## - Relay: a decoy when a hostile targets the ship and the hull is under the profile's
+##   decoy_hull; Comms: a call for help once the profile's help_hostiles are in play;
+## - limps home: crippled in an active encounter (gp-09), with the propellant for a jump and
+##   the profile willing, it jumps to the nearest dock, stops and docks within the time;
 ## - flees: below the profile's hull fraction, in an active encounter with a hostile in
 ##   sight, it faces Kestrel Yard and jumps (the sim then counts the encounter as fled);
 ## - travels: to the site of its pending encounter (the yard on a debris leg) by jump or by
@@ -35,6 +39,8 @@ var _decided: Dictionary[int, bool] = {}
 var _hail_stage: Dictionary[int, int] = {}
 var _hail_at: Dictionary[int, int] = {}
 var _moving: bool = false
+## The mount the last aim went to; the shots follow it.
+var _mount: int = 0
 
 
 func _init(crew_profile: BotProfiles.Profile, ship_id: int, seed_value: int) -> void:
@@ -52,7 +58,10 @@ func act(world: SimWorld) -> void:
 	if profile.repairs and world.tick % profile.repair_every < profile.think_ticks:
 		_repair(world)
 	var target: int = _pick_target(world)
-	if target >= 0 and _wants_flee(world):
+	var dock: int = _limp_site(world)
+	if dock >= 0:
+		_limp_home(world, dock)
+	elif target >= 0 and _wants_flee(world):
 		_flee(world)
 	elif target >= 0:
 		_going = NONE
@@ -62,6 +71,9 @@ func act(world: SimWorld) -> void:
 		_stand_down(world)
 		_travel(world)
 	_comms(world)
+	if target >= 0:
+		_decoy(world)
+		_call_help(world)
 
 
 # --- fighting ---
@@ -69,10 +81,10 @@ func act(world: SimWorld) -> void:
 
 ## The nearest hostile worth shooting that the crew's faction detects, or -1.
 func _pick_target(world: SimWorld) -> int:
-	var armed: int = CrewMoves.nearest_hostile(world, ship, ENGAGE_REACH, true)
+	var armed: int = KnowledgeSystem.nearest_hostile(world, ship, ENGAGE_REACH, true)
 	if not profile.shoots_debris:
 		return armed
-	var any: int = CrewMoves.nearest_hostile(world, ship, DEBRIS_REACH)
+	var any: int = KnowledgeSystem.nearest_hostile(world, ship, DEBRIS_REACH)
 	if armed < 0:
 		return any
 	if any < 0:
@@ -105,11 +117,53 @@ func _fight(world: SimWorld, target: int) -> void:
 	if t % profile.fire_every < profile.think_ticks:
 		var d: float = world.kin.relative(ship, target).length()
 		if d <= SHOOT_REACH and _rng.randf() >= profile.fire_skip:
-			_submit(world, FireCommand.new())
+			var fire: FireCommand = FireCommand.new()
+			fire.mount_index = _mount
+			_submit(world, fire)
 
 
+## Aims the mount whose arc holds the target; the shots follow it.
 func _aim(world: SimWorld, target: int) -> void:
-	_submit(world, CrewMoves.aim(world, ship, target, profile.aim_error, _rng))
+	_mount = CrewMoves.mount_for(world, ship, target)
+	_submit(world, CrewMoves.aim(world, ship, target, profile.aim_error, _rng, _mount))
+
+
+## Relay's decoy: a hostile AI targets the ship, the hull is low and no decoy of the ship
+## is out.
+func _decoy(world: SimWorld) -> void:
+	if DamageSystem.hull_fraction(world, ship) >= profile.decoy_hull:
+		return
+	if not ProbeSystem.can_decoy(world, ship) or _decoy_out(world):
+		return
+	for id: int in world.ship_count():
+		if world.ai.is_enabled(id) and world.kin.is_alive(id) and world.ai.target[id] == ship:
+			_submit(world, LaunchDecoyCommand.new())
+			return
+
+
+func _decoy_out(world: SimWorld) -> bool:
+	var t: ProbeTable = world.probes
+	for r: int in t.rows_of(ship):
+		if t.decoy_left[r] > 0.0:
+			return true
+	return false
+
+
+## Comms calls for help once enough hostiles are in play (CallHelp refuses a second call).
+func _call_help(world: SimWorld) -> void:
+	if profile.help_hostiles <= 0 or not CallHelp.can_call(world, ship):
+		return
+	var faction: int = world.faction_of(ship)
+	var hostiles: int = 0
+	for id: int in KnowledgeSystem.contacts(world, faction):
+		if (
+			world.kin.is_alive(id)
+			and world.ai.is_enabled(id)
+			and world.is_hostile(faction, world.faction_of(id))
+		):
+			hostiles += 1
+	if hostiles >= profile.help_hostiles:
+		_submit(world, CallHelpCommand.new())
 
 
 ## Lets go of the target: Face off, and stop if the crew has nothing else to fly to.
@@ -145,6 +199,58 @@ func _wants_flee(world: SimWorld) -> bool:
 func _flee(world: SimWorld) -> void:
 	_target = -1
 	_go(world, HOME, true)
+
+
+## The nearest dock a crippled crew can limp home to in time (gp-09), or -1: crippled in its
+## active encounter less than RunDef.limp_home_time ago, with the propellant for one jump.
+func _limp_site(world: SimWorld) -> int:
+	var at: int = world.ships.crippled_tick[ship]
+	if not profile.limps_home or at < 0 or world.run_def == null:
+		return -1
+	if world.tick > at + SimRate.ticks(world.run_def.limp_home_time):
+		return -1
+	if world.kin.propellant[ship] < world.defs[ship].jump_propellant:
+		return -1
+	var best: int = -1
+	var best_d: float = INF
+	for site: int in world.sites.size():
+		if (
+			not world.sites.dockable_of(site)
+			or not world.sites.is_known(site, world.faction_of(ship))
+		):
+			continue
+		var d: float = SiteTable.offset_to(world, ship, site).length()
+		if d < best_d:
+			best_d = d
+			best = site
+	return best
+
+
+## Jumps to the dock when it is farther than a jump's standoff, flies the rest by impulse,
+## then stops and docks.
+func _limp_home(world: SimWorld, site: int) -> void:
+	_target = -1
+	var d: float = SiteTable.offset_to(world, ship, site).length()
+	var near: float = world.sites.dock_range[site]
+	if d > near:
+		var far: bool = d > world.defs[ship].jump_standoff + near
+		if _going == site and _by_jump == far:
+			_go(world, site, far)
+		else:
+			# (a new plan, or the jump landed short: the last stretch by impulse)
+			_going = NONE
+			_go(world, site, far)
+			_by_jump = far
+			_helm(world, true, not far)
+		return
+	if _moving:
+		_moving = false
+		_helm(world, false, false)
+		_submit(world, AllStopCommand.new())
+	if world.kin.vel[ship].length() <= world.sites.dock_max_speed[site]:
+		var dock: DockCommand = DockCommand.new()
+		dock.site_id = site
+		_submit(world, dock)
 
 
 func _travel(world: SimWorld) -> void:

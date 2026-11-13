@@ -153,8 +153,10 @@ func markers() -> Array[Dictionary]:
 		if e["on_screen"]:
 			e["pos"] = clear_of_readout(e["pos"])
 		e["selected"] = panel.ctx.crew.is_selected(e["kind"], e["id"])
-		# Off-screen arrows for the selection and pinged items (FT-HLM-004).
-		e["arrow"] = not e["on_screen"] and (e["selected"] or float(e["pulse"]) > 0.0)
+		# Off-screen arrows for the selection, pinged items and the priority target
+		# (FT-HLM-004, gp-15).
+		var lit: bool = e["selected"] or float(e["pulse"]) > 0.0 or e.get("priority", false)
+		e["arrow"] = not e["on_screen"] and lit
 		out.append(e)
 	return out
 
@@ -517,6 +519,8 @@ func _draw_marker(font: Font, e: Dictionary, selected: bool) -> void:
 	var pulse: float = float(e["pulse"])
 	if pulse > 0.0:
 		ItemGlyph.ping_ring(self, p, r + 4.0, 10.0, pulse, col, 2.0, 24, false)
+	if e.get("priority", false):
+		ItemGlyph.draw_priority(self, p, r)
 	var text: String = "%s %s" % [e["label"], _range(e["world"].length())]
 	var at: Rect2 = label_rect(font, text, p, r)
 	if _covers_something(at):

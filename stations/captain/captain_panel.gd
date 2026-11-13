@@ -4,8 +4,11 @@ extends StationPanel
 ## (a ViewerPanel on the same state, taking clicks), buttons or keys 1 to 5 for its view,
 ## pings and marks, and a right column with the read-only list of open request chips
 ## (ChipList) and Comms' mission and contract cards (CardList, the COMMS block).
-## Information only: the only things it sends are the main-screen view (MainView), pings
-## and marks into empty slots (the server refuses anything else, FT-SPA-013, FT-CPT-003).
+## Information only: the only things it sends are the main-screen view (MainView), pings,
+## marks into empty slots and the priority target (the server refuses anything else,
+## FT-SPA-013, FT-CPT-003). "Priority" shows while a contact other than the priority target
+## is selected and "Clear priority" while one is set (gp-15, D412): beside the view buttons,
+## and on a phone on the selection sheet.
 ## A ping on a card shows it on the main screen for 10 s or until the next ping.
 
 const SIDE_WIDTH: float = 330.0
@@ -21,6 +24,9 @@ var chips: ChipList
 var cards: CardList
 ## One button per MainScreen.View, in order.
 var buttons: Array[Button] = []
+## Set the selected contact as the priority target, and clear it (gp-15).
+var priority_button: Button
+var clear_priority_button: Button
 
 ## The phone arrangement (#28 follow-up, design 2.7): CaptainPhone, made for the phone's
 ## orientation and remade when it turns; null on a tablet or a desktop.
@@ -84,6 +90,8 @@ func _setup() -> void:
 		b.pressed.connect(set_view.bind(i))
 		_row.add_child(b)
 		buttons.append(b)
+	priority_button = _action_button(tr("captain.priority"), set_priority)
+	clear_priority_button = _action_button(tr("captain.clear_priority"), clear_priority)
 	var side: VBoxContainer = VBoxContainer.new()
 	side.custom_minimum_size = Vector2(SIDE_WIDTH, 0)
 	side.add_theme_constant_override("separation", 12)
@@ -96,6 +104,18 @@ func _setup() -> void:
 	side.add_child(cards)
 	resized.connect(_stack)
 	_stack()
+
+
+func _action_button(label: String, act: Callable) -> Button:
+	var b: Button = Button.new()
+	b.text = label
+	b.focus_mode = Control.FOCUS_NONE
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.custom_minimum_size = Vector2(88, 0)
+	b.visible = false
+	b.pressed.connect(act)
+	_row.add_child(b)
+	return b
 
 
 ## The phone arrangement is built before the screen lays out (its _ready and its
@@ -235,6 +255,7 @@ func _process(_delta: float) -> void:
 	var view: int = ctx.crew.main_view
 	for i: int in buttons.size():
 		buttons[i].set_pressed_no_signal(i == view)
+	_show_priority()
 	if phone != null:
 		phone.show_view(view)
 		phone.place(top_reserve)
@@ -251,6 +272,37 @@ func _process(_delta: float) -> void:
 		ctx.crew, CardList.rows(ctx.snap, [CardList.MISSION, CardList.CONTRACT])
 	)
 	cards.queue_redraw()
+
+
+## The selected contact, when it can become the priority target (it isn't already), else -1.
+func priority_candidate() -> int:
+	var sel: Dictionary = ctx.crew.selection
+	if sel.get("kind", "") != "contact" or int(sel["id"]) == ctx.crew.priority:
+		return -1
+	return int(sel["id"])
+
+
+## Shows Priority and Clear priority only when they act (D412), beside the view buttons and
+## on the phone's selection sheet.
+func _show_priority() -> void:
+	priority_button.visible = priority_candidate() >= 0
+	clear_priority_button.visible = ctx.crew.priority >= 0
+	selection_extras = []
+	if priority_button.visible:
+		selection_extras.append([priority_button.text, set_priority])
+	if clear_priority_button.visible:
+		selection_extras.append([clear_priority_button.text, clear_priority])
+
+
+## Makes the selected contact the ship's priority target (gp-15).
+func set_priority() -> void:
+	var contact: int = priority_candidate()
+	if contact >= 0:
+		ctx.intents.set_priority(contact)
+
+
+func clear_priority() -> void:
+	ctx.intents.set_priority(-1)
 
 
 ## Asks the server to switch the main screen's view (MainScreen.View).

@@ -27,6 +27,23 @@ static func market(world: SimWorld, ship: int, card: int, why: Array[StringName]
 	return null
 
 
+## The modules an OFFER card's market offers on it, in the market's order (gp-11: the dock's
+## drawn subset, StoryTable.module_mask).
+static func modules_on_offer(world: SimWorld, card: int, m: MarketDef) -> Array[StringName]:
+	var mask: int = world.story.module_mask[card]
+	var out: Array[StringName] = []
+	for i: int in m.modules.size():
+		if mask < 0 or (mask >> i) & 1 == 1:
+			out.append(m.modules[i])
+	return out
+
+
+## A module's price in this run: ModuleDef.price times the run modifier's prices, rounded up
+## like the markets' (RunSetup._priced, gp-11).
+static func module_price(world: SimWorld, module: ModuleDef) -> int:
+	return ceili(module.price * world.modifier.prices - 1e-6)
+
+
 ## What the market pays for a module or an item priced at `price`.
 ## Rounded down, with a hair of slack so that a ratio like 0.7 does not lose a credit to
 ## floating point (0.7 * 90 is 62.99999999999999).

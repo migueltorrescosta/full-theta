@@ -79,7 +79,8 @@ func test_engineering_and_comms_return_to_the_desktop_arrangement() -> void:
 func test_comms_buttons_sit_in_the_left_rail() -> void:
 	var s: StationScreen = await _screen(Vector2i(844, 390), "comms", LANDSCAPE)
 	var p: CommsPanel = s.focused_panel()
-	assert_int(p.touch_layout.left.box.get_child_count()).is_equal(5)
+	# Six with Call for help (gp-14), hidden until Comms may call.
+	assert_int(p.touch_layout.left.box.get_child_count()).is_equal(6)
 	for b: Button in p.touch_layout.left.box.get_children():
 		assert_float(b.size.y).is_greater_equal(UiTheme.TOUCH_PRIMARY)
 	_drop(s)

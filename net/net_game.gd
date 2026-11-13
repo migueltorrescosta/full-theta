@@ -92,6 +92,7 @@ var host_pause: NetHostPause
 ## The multi-ship lobby and PvP rules (#11).
 var fleet: NetFleet
 var training: NetTraining  # solo lessons (D303)
+var skip_gap: NetSkipGap  # gp-07
 
 var _next_id: int = 1
 ## Submitted commands awaiting the sim's verdict: [session id, seq, SimCommand, tick].
@@ -125,6 +126,7 @@ func _init(net: NetTransport, sim_world: SimWorld) -> void:
 	host_pause = NetHostPause.new(self)
 	fleet = NetFleet.new(self)
 	training = NetTraining.new(self)
+	skip_gap = NetSkipGap.new(self)
 
 
 ## Registers the handler of a message type: Callable(NetSession, msg, now_us), or
@@ -168,6 +170,7 @@ func process(now_us: int) -> void:
 	chips.step()
 	shares.step()
 	coop.step()
+	skip_gap.step()
 	publish()
 
 
@@ -346,6 +349,7 @@ func restart(sim_world: SimWorld) -> void:
 		_ownership_dirty[ship["id"]] = true
 	coop.reset()
 	first_use.reset()
+	skip_gap.reset()
 	publish()
 
 
@@ -709,22 +713,26 @@ func reject_command(session_id: int, seq: int, reason: String) -> void:
 
 
 ## The grace ran out (FT-NET-033, FT-NET-024): pick and claims are released and
-## remembered for a rejoin; the session leaves the live set; coverage may now fail and
-## pause the universe (FT-NET-034).
+## remembered for a rejoin; the session leaves the live set. A crew player's stations on a
+## ship in play go to a stand-in bot (gp-01); with the host's "Pause when someone drops"
+## (gp-02) coverage may fail instead and pause the universe (FT-NET-034).
 func _lapse(s: NetSession) -> void:
 	s.lapsed = true
 	s.last_ship = s.ship
 	s.last_seat = s.seat
 	s.last_claims = claims.items_of(s.ship, s.id)
+	if not lobby.drop_pause and s.is_crew() and s.guest_from < 0 and lobby.in_play(s.ship):
+		lobby.stand_in_for(s)
 	by_id.erase(s.id)
 	lobby.set_pick(s, -1, "")
 	if s.is_host:
 		host_pause.set_paused(false)  # Q19: the host did not return within the grace
-	lobby.refresh_pause(true)
+	lobby.refresh_pause(lobby.drop_pause)
 
 
 ## A lapsed session rejoins (FT-NET-026): it gets its ship back, and its pick and claims
-## where still free; otherwise it is on that ship's pick screen (seat "").
+## where still free (its stand-in leaves, gp-02); otherwise it is on that ship's pick screen
+## (seat "").
 func _restore(s: NetSession) -> void:
 	s.lapsed = false
 	by_id[s.id] = s

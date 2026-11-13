@@ -204,6 +204,11 @@ func host_pause(on: bool) -> void:
 	_send(NetProtocol.Type.HOST_PAUSE, {"on": on})
 
 
+## Ready (or not) to skip the quiet gap (gp-07).
+func skip_gap(ready: bool) -> void:
+	_send(NetProtocol.Type.SKIP_GAP, {"ready": ready})
+
+
 func vote_abandon(ship: int, vote: bool) -> void:
 	_send(NetProtocol.Type.ABANDON_VOTE, {"ship": ship, "vote": vote})
 
@@ -244,8 +249,23 @@ func set_team(ship: int, team: int) -> void:
 	_send(NetProtocol.Type.SHIP_TEAM, {"ship": ship, "team": team})
 
 
-func set_mode(mode: String, team_win: String, lives: int = -1) -> void:
-	_send(NetProtocol.Type.GAME_MODE, {"mode": mode, "team_win": team_win, "lives": lives})
+## GameMode with the host's two options (#40 D1, D2): pause when someone drops, fill light
+## stations with bots.
+func set_mode(
+	mode: String,
+	team_win: String,
+	lives: int = -1,
+	drop_pause: bool = false,
+	fill_bots: bool = false
+) -> void:
+	var msg: Dictionary = {"mode": mode, "team_win": team_win, "lives": lives}
+	msg.merge({"drop_pause": drop_pause, "fill_bots": fill_bots})
+	_send(NetProtocol.Type.GAME_MODE, msg)
+
+
+## The host rolls another run modifier (gp-11).
+func reroll_modifier() -> void:
+	_send(NetProtocol.Type.REROLL_MODIFIER, {})
 
 
 func vote_relaunch(ship: int, vote: bool) -> void:
@@ -309,6 +329,11 @@ func ping(kind: String, id: int, pos: Vector3) -> void:
 ## no Captain seated (FT-MSC-005).
 func set_main_view(view: int) -> void:
 	_send(NetProtocol.Type.MAIN_VIEW, {"view": view})
+
+
+## The Captain sets the ship's priority target, -1 clears it (gp-15).
+func set_priority(contact: int) -> void:
+	_send(NetProtocol.Type.PRIORITY_TARGET, {"contact": contact})
 
 
 ## Relay. Sends one of the ship's marks to an allied ship's Relay inbox

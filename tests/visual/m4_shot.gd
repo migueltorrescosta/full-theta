@@ -9,8 +9,17 @@
 ## - "takeover": Helm of Osprey over its ally Kestrel's pause, offering Kestrel's stations.
 ## - "outcome", "debrief": Helm with the end card of a won run, its summary with three
 ##   highlights, or its Details (the full debrief, ux-20);
+## - "outcome_partial": the end card with encounters that limped home or ran out of time
+##   (gp-09); "relaunch_paid": a co-op ship's paid relaunch prompt over a friendly ship's main
+##   screen (gp-10); "crippled": Helm with the crippled countdown banner (gp-09);
 ## - "pause": the host's own ship paused under a host pause (`host` false: a crew player's);
-## - "menu_web": the web main menu.
+## - "menu_web": the web main menu;
+## - "bots": Helm with stand-in and fill bots on the ship, named in the top bar (#40 D1);
+## - "guest_relay": a guest of Heron seated at its Relay, with Back to watching (#40 D10).
+## `gp` on "handover" makes the player a guest of Heron with its Help out bar (#40 D10); on
+## lobby and mode it adds the gameplay options (#40 D1, D2, D10, gp-11): the host's two
+## options on and a run modifier in the sheet, a stand-in bot, a fill bot and a guest in the
+## cells.
 ## `insets` simulates a phone's safe-area insets [left, top, right, bottom] in device-
 ## independent px (#28), drawn in translucent red; `lang` the language (I18n.LANGUAGES),
 ## `ships` the fleet's size (up to 6), `fullscreen` FullscreenButton.forced (-1 as found),
@@ -26,6 +35,7 @@ var lang: String = "en"
 var ships: int = 4
 var fullscreen: int = -1
 var host: bool = true
+var gp: bool = false
 
 var _ctx: StationContext
 
@@ -37,8 +47,9 @@ func _ready() -> void:
 	I18n.apply(lang)
 	LayoutMode.apply(get_tree().root)
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var seat: String = {"handover": "viewer", "lobby": "systems", "mode": "systems"}.get(
-		view, "helm"
+	var seat: String = (
+		{"handover": "viewer", "lobby": "systems", "mode": "systems", "guest_relay": "relay"}
+		. get(view, "helm")
 	)
 	_ctx = StationFixture.context(seat, "user://l5_m4_shot.cfg")
 	CommsFixture.install(_ctx)
@@ -61,6 +72,8 @@ func _ready() -> void:
 			n.position.y += 64
 			add_child(n)
 			n.setup(_ctx)
+			if gp:
+				_guest("viewer")
 		"forfeit":
 			_fleet("race", true)
 			_event("abandon_votes", {"ship": 0, "voters": ["Bo"], "sessions": [9], "needed": 2})
@@ -76,8 +89,38 @@ func _ready() -> void:
 			var o: PauseOverlay = PauseOverlay.new()
 			_centred(o)
 			o.setup(_ctx)
-		"outcome", "debrief", "pause", "menu_web":
+		"outcome", "debrief", "outcome_partial", "pause", "menu_web":
 			_own_view()
+		"guest_relay":
+			_fleet("teams", true)
+			_event("picked", {"ship": 1, "seat": "relay"})
+			_event("eliminated", FleetMessages.eliminated(0, "destroyed", 0))
+			_event("handover", FleetMessages.handover(0, 1))
+			_station()
+			_guest("relay")
+		"bots":
+			_fleet("coop", true)
+			_ctx.crew.lobby[0]["bots"] = [
+				{"seat": "weapons", "for": "Ana"},
+				{"seat": "relay", "for": ""},
+				{"seat": "comms", "for": ""},
+			]
+			_station()
+		"relaunch_paid":
+			_fleet("coop", true)
+			_event("picked", {"ship": 1, "seat": "viewer"})
+			_event("eliminated", FleetMessages.eliminated(0, "destroyed", 1, 800))
+			_event("handover", FleetMessages.handover(0, 1))
+			_event("relaunch_votes", {"ship": 0, "voters": ["Bo"], "sessions": [], "needed": 2})
+			_station()
+			var p: VotePrompt = VotePrompt.new()
+			add_child(p)
+			p.setup(_ctx, VotePrompt.Kind.RELAUNCH)
+		"crippled":
+			_station()
+			var e: Dictionary = {"ship": 0, "faction": 0, "other": 0, "value": 120.0}
+			e.merge({"vector": Vector3.ZERO, "tag": "rescue"})
+			_event("crippled", e)
 	if not insets.is_empty():
 		var shade: Control = StationShot.InsetShade.new()
 		shade.set("insets", insets)
@@ -115,11 +158,44 @@ func _lobby() -> void:
 		{"seat": "systems", "name": "Cy", "session": StationFixture.SESSION, "ready": true},
 	]
 	_fleet("teams", false)
+	if gp:
+		_gameplay_options()
 	var l: LobbyScreen = LobbyScreen.new()
 	l.setup(_ctx)
 	add_child(l)
 	if view == "mode":
 		l.find_child("GameSetup", true, false).pressed.emit()
+
+
+## The gameplay options of the `gp` shots: Ana dropped (a bot holds Helm for her), a fill bot
+## on Comms, Di a guest on Relay; the host's options on and a run modifier rolled.
+func _gameplay_options() -> void:
+	var state: Dictionary = _ctx.crew.lobby[0]
+	state["seats"] = (state["seats"] as Array).slice(1)
+	state["seats"].append(
+		{"seat": "relay", "name": "Di", "session": 9, "ready": true, "guest": true}
+	)
+	state["bots"] = [{"seat": "helm", "for": "Ana"}, {"seat": "comms", "for": ""}]
+	var options: Dictionary = {
+		"drop_pause": true, "fill_bots": true, "modifier": "rich_pickings", "rerollable": true
+	}
+	_ctx.crew.fleet.merge(options, true)
+	_ctx.crew.changed.emit(&"fleet")
+
+
+## The player a guest of Heron at `seat`, Bo on its Tactical and a fill bot on Comms, with the
+## client shell's GuestBar.
+func _guest(seat: String) -> void:
+	var guest: Dictionary = {
+		"seat": seat, "name": "Cy", "session": StationFixture.SESSION, "ready": true, "guest": true
+	}
+	var state: Dictionary = {"ship": 1, "started": true, "covered": true, "crew": 1}
+	state["seats"] = [guest, {"seat": "tactical", "name": "Bo", "session": 8, "ready": true}]
+	state["bots"] = [{"seat": "comms", "for": ""}, {"seat": "science", "for": "Di"}]
+	_event("lobby", state)
+	var bar: GuestBar = GuestBar.new()
+	add_child(bar)
+	bar.setup(_ctx)
 
 
 func _scoreboard() -> void:
@@ -185,7 +261,14 @@ func _own_view() -> void:
 			card.setup(_ctx)
 			_event("ship_outcome", {"ship": 0, "outcome": "win", "time": 412.0, "hull": 0.58})
 			_event("run_votes", {"ship": 0, "voters": ["Bo"], "needed": 2})
-			_event("debrief", debrief_record())
+			var record: Dictionary = debrief_record()
+			if view == "outcome_partial":
+				record["encounters"] = [
+					{"scenario": "enemy_wave", "time": 140.0, "result": "won"},
+					{"scenario": "rescue", "time": 95.0, "result": "partial", "limped": true},
+					{"scenario": "enemy_wave", "time": 240.0, "result": "partial"},
+				]
+			_event("debrief", record)
 			if view == "debrief":
 				card.show_details(true)
 

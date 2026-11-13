@@ -25,6 +25,8 @@ var rep_dists: Dictionary[StringName, RepDistDef] = {}
 var markets: Dictionary[StringName, MarketDef] = {}
 var site_markets: Dictionary[int, StringName] = {}
 var hail_conversations: Dictionary[StringName, StringName] = {}
+## The run modifiers by id (gp-11); build() applies the one GameRules.modifier_id names.
+var modifiers: Dictionary[StringName, RunModifierDef] = {}
 ## Scenario ids beyond the run's own: the content packs' encounters (FT-DAT-015).
 var extra_scenarios: PackedStringArray = PackedStringArray()
 ## The session built from the multi-ship lobby (#11, FT-GEN-001, M4-Q3): one crewed ship per
@@ -88,12 +90,18 @@ func build() -> SimWorld:
 	world.conversations = conversations
 	world.module_defs = module_defs
 	world.rep_dists = rep_dists
-	world.markets = markets
+	var modifier: RunModifierDef = modifiers.get(rules.modifier_id, null)
+	if modifier != null:
+		world.modifier = modifier
+	world.markets = _priced(markets, world.modifier.prices)
 	world.site_markets = site_markets
 	world.hail_conversations = hail_conversations
 	if run_def.map != null:
 		world.sites.load_map(world, run_def.map)
 	world.rules = rules
+	# Co-op relaunches are the run's (gp-10, #38 D4 amending D259): once per ship, paid.
+	if rules.mode == GameRules.Mode.COOP and run_def.coop_relaunches > 0:
+		rules.default_relaunch = RelaunchPolicy.of_lives(run_def.coop_relaunches)
 	# Crew factions of different sides are hostile by SimWorld's default (PvP); allies share one.
 	var starts: PackedInt32Array = start_sites(world)
 	for i: int in crew_count():
@@ -109,6 +117,26 @@ func build() -> SimWorld:
 		# A ship reset sets credits to 0, so the run's starting purse is set here (FT-MIS-018).
 		Economy.add_credits(world, id, run_def.start_credits)
 	return world
+
+
+## The markets with every price and repair times `factor` (the run modifier, gp-11), rounded
+## up so nothing becomes free; the same markets when it is 1. Copies: defs stay read-only.
+static func _priced(
+	by_id: Dictionary[StringName, MarketDef], factor: float
+) -> Dictionary[StringName, MarketDef]:
+	if is_equal_approx(factor, 1.0):
+		return by_id
+	var out: Dictionary[StringName, MarketDef] = {}
+	for id: StringName in by_id:
+		var m: MarketDef = by_id[id].duplicate()
+		m.prices = m.prices.duplicate()
+		m.repairs = m.repairs.duplicate()
+		for item: StringName in m.prices:
+			m.prices[item] = ceili(m.prices[item] * factor - 1e-6)
+		for sub: StringName in m.repairs:
+			m.repairs[sub] = ceili(m.repairs[sub] * factor - 1e-6)
+		out[id] = m
+	return out
 
 
 ## The faction of the crewed ship of slot `i`: its team mapped by rules.faction_for, the

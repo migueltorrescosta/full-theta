@@ -141,15 +141,46 @@ func seat_for(stations: Array[String]) -> String:
 
 
 ## The names of the crewmates who picked a station (a joint view covers both of its
-## stations), from the `lobby` event's seats; a tick before each one who is Ready (#37 C1).
+## stations), from the `lobby` event's seats; a tick before each one who is Ready (#37 C1), a
+## guest marked as one (gp-04), and the station's bot last ("Bot (for Ana)", gp-01).
 func crew_at(station: String) -> PackedStringArray:
 	var names: PackedStringArray = []
-	for seat: Variant in _ctx.crew.ship_state(ship).get("seats", []):
+	var state: Dictionary = _ctx.crew.ship_state(ship)
+	for seat: Variant in state.get("seats", []):
 		var covered: Array = _ctx.crew.def_of(str(seat["seat"])).get("stations", [])
 		if station in covered:
 			var ready: bool = bool((seat as Dictionary).get("ready", false))
-			names.append(("✓ " if ready else "") + str(seat["name"]))
+			var who: String = str(seat["name"])
+			if bool((seat as Dictionary).get("guest", false)):
+				who = tr("lobby.guest") % who
+			names.append(("✓ " if ready else "") + who)
+	for bot: Variant in state.get("bots", []):
+		if str((bot as Dictionary).get("seat", "")) == station:
+			names.append(bot_label(bot))
 	return names
+
+
+## A bot's name (gp-01, gp-03): "Bot (for Ana)" for a dropped player's stand-in, "Bot" for
+## one filling a light station.
+static func bot_label(bot: Dictionary) -> String:
+	var who: String = str(bot.get("for", ""))
+	if who == "":
+		return TranslationServer.translate("lobby.bot")
+	return TranslationServer.translate("lobby.bot_for") % who
+
+
+## The HUD's line of the bots on the player's ship, grouped by name: "Weapons: Bot (for Ana)
+## · Relay, Comms: Bot"; "" without bots.
+static func bots_line(ctx: StationContext) -> String:
+	var by_label: Dictionary = {}
+	for bot: Variant in ctx.crew.ship_state(ctx.crew.ship).get("bots", []):
+		var stations: PackedStringArray = by_label.get_or_add(bot_label(bot), PackedStringArray())
+		stations.append(TranslationServer.translate(StationCatalogue.name_key(str(bot["seat"]))))
+		by_label[bot_label(bot)] = stations
+	var parts: PackedStringArray = []
+	for label: String in by_label:
+		parts.append("%s: %s" % [", ".join(by_label[label]), label])
+	return " · ".join(parts)
 
 
 ## A tap on a station cell: adds it to the picks (up to two), or takes it out; the pick

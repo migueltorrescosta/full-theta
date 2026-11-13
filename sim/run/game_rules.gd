@@ -56,8 +56,12 @@ var mode: Mode = Mode.COOP
 ## Read in TEAMS only.
 var team_win: TeamWin = TeamWin.LAST_TEAM_STANDING
 var eliminated_to: Destination = Destination.FRIENDLY_VIEWER
-## Faction -> its relaunch policy; a faction missing here uses default_relaunch.
+## Faction -> its relaunch policy; a faction missing here uses default_relaunch. Co-op's is
+## RunDef.coop_relaunches lives, paid (RunSetup.build sets it, gp-10); none without a run.
 var relaunch: Dictionary[int, RelaunchPolicy] = {}
+## The run modifier the host rolled in the lobby (gp-11, #38 D7): a RunModifierDef id, or
+## empty for none. The lobby sets it; the run setup applies the def.
+var modifier_id: StringName = &""
 var default_relaunch: RelaunchPolicy = RelaunchPolicy.none()
 
 

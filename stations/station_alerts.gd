@@ -24,9 +24,20 @@ const ROUTES: Dictionary = {
 	&"missile_lock": [[], "danger", &"alert_red"],
 	&"shield_low": [["helm", "engineering"], "danger"],
 	&"fault": [["engineering"], "danger"],
+	# Fail-forward and the economy (gp-09, gp-11): Helm and the Captain see a crippled ship's
+	# countdown and its limp home; Comms and the Captain the bounties and salvage.
+	&"crippled": [["helm", "captain"], "danger", &"alert_red"],
+	&"limped_home": [["helm", "captain"], "ok"],
+	&"bounty": [["comms", "captain"], "ok"],
+	&"salvage": [["comms", "captain"], "ok"],
 }
 ## The critical tier: banner and edge flash (ux-12).
-const CRITICAL: Array[StringName] = [&"hull_critical", &"missile_lock", &"shield_low", &"fault"]
+const CRITICAL: Array[StringName] = [
+	&"hull_critical", &"missile_lock", &"shield_low", &"fault", &"crippled"
+]
+## The own ship's events that end its crippled countdown (gp-09): it limped home, fled or was
+## destroyed, or its encounter ended (encounter_end names the encounter's first ship).
+const COUNTDOWN_ENDS: Array[StringName] = [&"limped_home", &"fled", &"destroyed", &"encounter_end"]
 ## Fault tag (the subsystem id, content/ships/) -> stations that depend on it and see
 ## its fault (FT-SIM-032). PROVISIONAL.
 const DEPENDS: Dictionary = {
@@ -78,7 +89,11 @@ func setup(
 ## A sim event (docs/protocol.md "Events": payload {ship, faction, other, value, vector,
 ## tag}); only the own ship's count.
 func on_sim_event(kind: StringName, p: Dictionary) -> void:
-	if not ROUTES.has(kind) or int(p.get("ship", -1)) != ctx.crew.ship:
+	if int(p.get("ship", -1)) != ctx.crew.ship:
+		return
+	if kind in COUNTDOWN_ENDS:
+		banner.stop_countdown()
+	if not ROUTES.has(kind):
 		return
 	var route: Array = ROUTES[kind]
 	var audible: bool = _covers(route[0])
@@ -89,7 +104,12 @@ func on_sim_event(kind: StringName, p: Dictionary) -> void:
 		return
 	var now: int = ctx.now_ms()
 	var role: String = route[1]
-	if CRITICAL.has(kind):
+	if kind == &"crippled":
+		# The banner counts the limp-home time down until the ship docks (gp-09).
+		flash.flash(Palette.color(role), now)
+		var until: int = now + int(float(p.get("value", 0)) * 1000.0)
+		banner.show_countdown(tr("alerts.crippled"), now, until)
+	elif CRITICAL.has(kind):
 		flash.flash(Palette.color(role), now)
 		banner.show_text(_text(kind, p), now)
 	elif now - int(_toast_ms.get(kind, -TOAST_GAP_MS)) >= TOAST_GAP_MS:
@@ -102,6 +122,7 @@ func on_sim_event(kind: StringName, p: Dictionary) -> void:
 func _on_crew_changed(what: StringName) -> void:
 	if what == &"reset":
 		_level = ctx.crew.alert
+		banner.stop_countdown()
 	if what != &"alert" or ctx.crew.alert == _level:
 		return
 	_level = ctx.crew.alert
@@ -137,4 +158,6 @@ func _text(kind: StringName, p: Dictionary) -> String:
 		&"fault":
 			var tag: String = str(p.get("tag", ""))
 			return tr("alerts.fault." + tag if FAULT_KEYS.has(tag) else "alerts.fault")
+		&"bounty", &"salvage":
+			return tr("alerts." + String(kind)).format({"n": int(p.get("value", 0))})
 	return tr("alerts." + String(kind))

@@ -106,7 +106,8 @@ func finished(_api: ScenarioApi) -> int:
 
 
 ## A leg ended by a flee or a loss (not by itself) fails an accepted clearance, so a later dock
-## in its lane pays no fee, and withdraws one nobody accepted (A8).
+## in its lane pays no fee, and withdraws one nobody accepted (A8). A crippled ship that limped
+## home (PARTIAL, gp-09) settles it partial instead: half the fee.
 func end(api: ScenarioApi, result: int) -> void:
 	if _clearance == null or _clearance.id() < 0:
 		return
@@ -115,7 +116,8 @@ func end(api: ScenarioApi, result: int) -> void:
 		if c.id == _clearance.id():
 			state = c.state
 	if state == CardInfo.State.ACCEPTED and _result == Result.ACTIVE:
-		api.settle_card(_clearance.id(), false)
+		var limped: bool = result == Result.PARTIAL
+		api.settle_card(_clearance.id(), limped, limped)
 	elif state == CardInfo.State.OPEN:
 		api.decline_card(_clearance.id())
 	if _result == Result.ACTIVE:

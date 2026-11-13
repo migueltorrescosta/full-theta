@@ -2,8 +2,9 @@ class_name ViewerPanel
 extends StationPanel
 ## The main screen (§5.8, FT-MSC-001, FT-MSC-003, FT-MSC-004): the forward view, a wide
 ## disc radar along the bottom and a callsign rail with clock and range band between
-## them; pings and marks drawn large. Read-only: viewers only watch (the server
-## refuses their pings, marks and commands).
+## them; pings and marks drawn large. Viewers change nothing, with one light job: a click
+## or tap on a contact pings it for the crew (gp-15, FT-MSC-004; the server allows a Viewer
+## contact pings only, on a slower limit, and refuses its marks and commands).
 ##
 ## The forward camera sits at the bow and rolls with the deck plane, or, with comfort
 ## on, keeps the selected contact's deck or the player's cosmetic reference plane
@@ -19,8 +20,8 @@ extends StationPanel
 ## it. A card the Captain pinged shows over every view for CARD_MS (FT-CPT-005).
 ##
 ## On a phone the Viewer stays out of the phone frame (`in_frame` false, #28 follow-up,
-## design 2.8): it pings nothing (the server refuses a viewer's pings, FT-MSC-004), so it
-## gets no view-top row and no long-press. The Captain's mirror keeps its top read-outs (the
+## design 2.8): its one action is a tap on a contact, so it gets no view-top row and no
+## long-press. The Captain's mirror keeps its top read-outs (the
 ## close-up caption, the pinged card, the status sheet) under `top_reserve`, which the
 ## Captain sets to the part of the view-top row over it.
 
@@ -288,13 +289,13 @@ func _close_up_item() -> Dictionary:
 
 
 ## Clicks on the mirror: the item under `pos` (panel coordinates) for select, ping and
-## mark; {} on a plain viewer (read-only) and over empty space.
+## mark; on a plain viewer only a contact, which its click pings (gp-15); {} over empty space.
 func item_at(pos: Vector2) -> Dictionary:
-	if not interactive:
-		return {}
+	var kinds: Array = ["contact", "mark"] if interactive else ["contact"]
 	var local: Vector2 = pos - radar.position
 	if radar.is_visible_in_tree() and Rect2(Vector2.ZERO, radar.size).has_point(local):
-		return radar.item_at(local)
+		var hit: Dictionary = radar.item_at(local)
+		return hit if interactive or hit.get("kind", "") == "contact" else {}
 	if not _view_box.visible:
 		return {}
 	var at: Vector2 = pos - _view_box.position
@@ -302,7 +303,7 @@ func item_at(pos: Vector2) -> Dictionary:
 	var best_d: float = ITEM_REACH_PX
 	for it: Dictionary in _items:
 		var world: Vector3 = it["world"]
-		if camera.is_position_behind(world) or str(it["kind"]) not in ["contact", "mark"]:
+		if camera.is_position_behind(world) or str(it["kind"]) not in kinds:
 			continue
 		var d: float = camera.unproject_position(world).distance_to(at)
 		if d < best_d:

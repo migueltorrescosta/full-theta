@@ -6,30 +6,19 @@ extends RefCounted
 ## there is nothing to do. Reads true state, as a crew with a radar lock would.
 
 
-## The nearest living hostile of the ship's faction that it detects within `reach`
-## (any, or only armed ones), or -1.
-static func nearest_hostile(
-	world: SimWorld, ship: int, reach: float, armed_only: bool = false
-) -> int:
-	var faction: int = world.faction_of(ship)
-	var best: int = -1
-	var best_d: float = INF
-	for id: int in world.ship_count():
-		if id == ship or not world.ai.is_enabled(id) or not world.kin.is_alive(id):
-			continue
-		if world.ships.status[id] != ShipStateTable.Status.IN_PLAY:
-			continue
-		if world.relation(faction, world.faction_of(id)) != SimWorld.Relation.HOSTILE:
-			continue
-		if not KnowledgeSystem.is_detected(world, faction, id):
-			continue
-		if armed_only and world.defs[id].mounts.is_empty():
-			continue
-		var d: float = world.kin.relative(ship, id).length()
-		if d <= reach and d < best_d:
-			best = id
-			best_d = d
-	return best
+## The first mount whose arc holds the target's lead (or bearing, with no lead), else
+## mount 0: the one a lone Weapons player fires (gp-12).
+static func mount_for(world: SimWorld, ship: int, target: int) -> int:
+	var kin: Kinematics = world.kin
+	var mounts: Array[MountDef] = world.defs[ship].mounts
+	for m: int in mounts.size():
+		var lead: Vector3 = NpcAi.lead_aim(world, ship, m, target, 0)
+		if not lead.is_finite():
+			lead = kin.relative(ship, target)
+		var muzzle: Vector3 = kin.to_world(ship, mounts[m].position)
+		if WeaponSystem.in_arc(mounts[m], kin.to_local(ship, lead - muzzle).normalized()):
+			return m
+	return 0
 
 
 ## Engineering: sends the first idle repair crew to the most damaged subsystem no crew is
@@ -59,17 +48,18 @@ static func repair(world: SimWorld, ship: int) -> DispatchRepairCommand:
 	return null
 
 
-## Weapons: aims mount 0 at the target's lead point. `aim_error` (rad, a random direction
-## drawn from `rng`) spoils the aim; 0 is a perfect lead.
+## Weapons: aims the mount (0, the bow, by default) at the target's lead point. `aim_error`
+## (rad, a random direction drawn from `rng`) spoils the aim; 0 is a perfect lead.
 static func aim(
 	world: SimWorld,
 	ship: int,
 	target: int,
 	aim_error: float = 0.0,
-	rng: RandomNumberGenerator = null
+	rng: RandomNumberGenerator = null,
+	mount: int = 0
 ) -> AimMountCommand:
 	var kin: Kinematics = world.kin
-	var lead: Vector3 = NpcAi.lead_aim(world, ship, 0, target, 0)
+	var lead: Vector3 = NpcAi.lead_aim(world, ship, mount, target, 0)
 	if not lead.is_finite():
 		lead = kin.relative(ship, target)
 	if aim_error > 0.0 and rng != null:
@@ -78,6 +68,7 @@ static func aim(
 		)
 		lead += miss * (aim_error * lead.length())
 	var c: AimMountCommand = AimMountCommand.new()
+	c.mount_index = mount
 	var at: PackedFloat64Array = kin.point_at(ship, lead)
 	c.aim_x = at[0]
 	c.aim_y = at[1]

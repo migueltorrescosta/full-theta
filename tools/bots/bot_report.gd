@@ -4,8 +4,9 @@ extends RefCounted
 ## difficulty and crew profile, the per-encounter ship-loss rate (fled encounters counted
 ## apart), per scenario too, the encounters per run (the director picks 4 to 6, Q4), the run
 ## length in minutes over all runs and over the won and the lost ones apart, and the share of
-## runs that survive at least 60 % of their encounters. Built from BotRun records only, with
-## no clock or path in it, so the same runs give the same text.
+## runs that survive at least 60 % of their encounters, and the run-loss line (the share of
+## runs that lose the ship, against D31's 23 to 41 % band, gp-18). Built from BotRun records
+## only, with no clock or path in it, so the same runs give the same text.
 
 ## The targets the figures are read against.
 const LOSS_LO: float = 0.05
@@ -15,6 +16,10 @@ const RUN_MIN_HI: float = 40.0
 ## A run counts as survived when the ship came through at least this share of its encounters
 ## (FT-MIS-037 with a variable run length, Q4 owner 2026-10-26).
 const SURVIVE_SHARE: float = 0.6
+## D31's band for the share of runs that lose the ship, for an average crew on Normal
+## (gp-18: the average profile stands for Normal).
+const RUN_LOSS_LO: float = 0.23
+const RUN_LOSS_HI: float = 0.41
 
 
 ## `results` are BotRun.play records.
@@ -48,9 +53,41 @@ static func markdown(results: Array[Dictionary]) -> String:
 		+ "(FT-MIS-010).\n"
 	)
 	out.append(targets % [LOSS_LO * 100, LOSS_HI * 100, RUN_MIN_LO, RUN_MIN_HI])
+	out.append(_run_loss(keys, groups))
 	for key: String in keys:
 		out.append(_by_scenario(key, groups[key]))
 	return "\n".join(out) + "\n"
+
+
+## The run-loss line (gp-18): per difficulty and crew, the share of runs that lost the ship,
+## read against D31's band (an average crew on Normal; stalled runs count as not lost).
+static func _run_loss(keys: Array, groups: Dictionary) -> String:
+	var out: PackedStringArray = PackedStringArray(
+		[
+			"## Run loss\n",
+			(
+				"Target: %d to %d %% of runs lose the ship for an average crew on Normal (D31).\n"
+				% [roundi(RUN_LOSS_LO * 100), roundi(RUN_LOSS_HI * 100)]
+			),
+			"| difficulty / crew | runs | lost runs | run loss | in D31 band |",
+			"|---|---|---|---|---|",
+		]
+	)
+	for key: String in keys:
+		var runs: Array = groups[key]
+		var lost: int = 0
+		for r: Dictionary in runs:
+			lost += 1 if r["outcome"] == "loss" else 0
+		var share: float = float(lost) / maxi(runs.size(), 1)
+		var inside: bool = share >= RUN_LOSS_LO and share <= RUN_LOSS_HI
+		out.append(
+			(
+				"| %s | %d | %d | %s | %s |"
+				% [key, runs.size(), lost, _pct(lost, runs.size()), "yes" if inside else "no"]
+			)
+		)
+	out.append("")
+	return "\n".join(out)
 
 
 ## Encounters of the records, with the run's profile and difficulty.

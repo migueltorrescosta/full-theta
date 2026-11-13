@@ -4,9 +4,11 @@ extends RefCounted
 ## after damage, and writes only ShipStateTable. In ship id order:
 ## 1. A ship in play whose kin.alive is 0 becomes DESTROYED (DamageSystem already
 ##    emitted &"destroyed").
-## 2. A live AI ship in RETREAT mode that no live ship of a faction hostile to it
-##    detects any more has escaped: RETREATED, and &"retreated" (ship_id the ship).
-##    Retreat means leaving every hostile sensor range (D120).
+## 2. A live AI ship in RETREAT mode is gone (gp-17, D9, amending D120): RETREATED, and
+##    &"retreated" (ship_id the ship), once it has been retreating for its
+##    retreat_jump_after (it jumps out), or once every live ship of a faction hostile to it
+##    is farther than retreat_gone_factor x its engage_range_max. Sensors play no part, so a
+##    blinded crew does not let it go at once (R10-13); neither way counts as a kill.
 ## 3. Each crewed ship (not AI-flown) without an outcome gets one: LOSS when it is
 ##    destroyed or abandoned (per-ship elimination, D30: the other ships carry on);
 ##    WIN when it is in play and every ship of a faction hostile to it is destroyed or
@@ -40,14 +42,17 @@ static func step(world: SimWorld) -> void:
 			if _training_reset(world, id):
 				continue
 			status[id] = ShipStateTable.Status.DESTROYED
-			if enabled[id] == 0:
+			if enabled[id] == 1:
+				_pay_bounty(world, id)
+				SalvageSystem.drop_wreck(world, id)
+			else:
 				_count_kill(world, id)
 				# A ship that won and was then destroyed is out of play too: it has no
 				# LOSS to emit the elimination from (R17-5).
 				if outcome[id] == ShipStateTable.ShipOutcome.WIN:
 					_emit_eliminated(world, id)
 		elif enabled[id] == 1 and mode[id] == AiTable.Mode.RETREAT and _escaped(world, id):
-			status[id] = ShipStateTable.Status.RETREATED
+			leave_world(world, id)
 			world.emit(&"retreated", id)
 	for id: int in n:
 		if enabled[id] == 1 or outcome[id] != ShipStateTable.ShipOutcome.NONE:
@@ -93,7 +98,10 @@ static func game_outcome(world: SimWorld) -> GameOutcome:
 		var o: int = world.ships.ship_outcome[id]
 		won = won or o == ShipStateTable.ShipOutcome.WIN
 		# in play counts, not "no loss": a ship that won and was then destroyed does not stand.
-		if world.ships.status[id] == ShipStateTable.Status.IN_PLAY or _may_relaunch(world, id):
+		if (
+			world.ships.status[id] == ShipStateTable.Status.IN_PLAY
+			or RelaunchShipCommand.allowed(world, id)
+		):
 			standing.append(id)
 			playing = playing or o == ShipStateTable.ShipOutcome.NONE
 	if crew.is_empty():
@@ -124,11 +132,6 @@ static func game_outcome(world: SimWorld) -> GameOutcome:
 	if not out.over() and standing.is_empty():
 		out.reason = GameOutcome.Reason.ALL_LOST
 	return out
-
-
-## Whether a crewed ship that lost may still relaunch under its side's policy.
-static func _may_relaunch(world: SimWorld, id: int) -> bool:
-	return world.rules.relaunch_for(world.faction_of(id)).allows(world.ships.relaunches[id])
 
 
 ## FIRST_TO_FINISH: the crewed ships that won on the earliest finish tick; with teams, every
@@ -223,33 +226,63 @@ static func _holdout(
 ## A crewed ship destroyed this tick by a crewed ship of another side: one kill for that ship
 ## (the &"destroyed" event names the source, DamageSystem).
 static func _count_kill(world: SimWorld, id: int) -> void:
+	var killer: int = _killer(world, id)
+	if killer < 0 or not world.is_crew(killer) or world.faction_of(killer) == world.faction_of(id):
+		return
+	world.ships.kills[killer] += 1
+
+
+## A raider (an armed AI ship of a faction hostile to its killer's) destroyed this tick by a crewed
+## ship pays that ship RunDef.bounty times the run modifier (gp-11, #38 D7); a retreat pays
+## nothing. &"bounty" is emitted (ship_id the killer, other_id the raider, value the credits).
+static func _pay_bounty(world: SimWorld, id: int) -> void:
+	if world.run_def == null:
+		return
+	var credits: int = SalvageSystem.scaled(world.run_def.bounty, world.modifier.bounty)
+	var killer: int = _killer(world, id)
+	if credits <= 0 or killer < 0 or not world.is_crew(killer) or world.defs[id].mounts.is_empty():
+		return
+	if not world.is_hostile(world.faction_of(killer), world.faction_of(id)):
+		return
+	Economy.add_credits(world, killer, credits)
+	world.emit(&"bounty", killer, id, credits)
+
+
+## The ship that destroyed `id` this tick (the &"destroyed" event's source), or -1.
+static func _killer(world: SimWorld, id: int) -> int:
 	var events: Array[SimEvent] = world.events
 	var i: int = events.size() - 1
 	while i >= 0 and events[i].tick == world.tick:
 		var e: SimEvent = events[i]
 		i -= 1
-		if e.kind != &"destroyed" or e.ship_id != id:
-			continue
-		var killer: int = e.other_id
-		if killer == id or not world.has_ship(killer):
-			return
-		if not world.is_crew(killer) or world.faction_of(killer) == world.faction_of(id):
-			return
-		world.ships.kills[killer] += 1
-		return
+		if e.kind == &"destroyed" and e.ship_id == id:
+			return e.other_id if e.other_id != id and world.has_ship(e.other_id) else -1
+	return -1
 
 
-## An AI ship in RETREAT that no live ship of a hostile faction detects.
+## An AI ship leaves the world without being destroyed (a retreat that is gone, gp-17; a
+## patrol that leaves, CallHelp): RETREATED and no longer alive, so no AI steers it, no sensor
+## sees it and it can never be killed (nor leave a wreck) later.
+static func leave_world(world: SimWorld, id: int) -> void:
+	world.ships.status[id] = ShipStateTable.Status.RETREATED
+	world.kin.alive[id] = 0
+
+
+## An AI ship in RETREAT that has jumped out (retreating retreat_jump_after or longer) or left
+## every live ship of a hostile faction beyond retreat_gone_factor x engage_range_max (gp-17).
 static func _escaped(world: SimWorld, id: int) -> bool:
-	if not world.ai.is_enabled(id) or world.ai.mode[id] != AiTable.Mode.RETREAT:
+	var ai: AiTable = world.ai
+	if not ai.is_enabled(id) or ai.mode[id] != AiTable.Mode.RETREAT:
 		return false
+	if world.tick - ai.retreat_tick[id] >= SimRate.ticks(ai.retreat_jump_after[id]):
+		return true
+	var reach: float = ai.retreat_gone_factor[id] * ai.engage_range_max[id]
 	var faction: int = world.faction_of(id)
 	for o: int in world.ship_count():
-		if not world.kin.is_alive(o):
+		if o == id or not world.kin.is_alive(o):
 			continue
-		var f: int = world.faction_of(o)
-		if world.is_hostile(faction, f):
-			if KnowledgeSystem.is_detected(world, f, id):
+		if world.is_hostile(faction, world.faction_of(o)):
+			if world.kin.relative(id, o).length() <= reach:
 				return false
 	return true
 
@@ -304,12 +337,9 @@ static func _emit_eliminated(world: SimWorld, id: int) -> void:
 	var tag: StringName = &"destroyed"
 	if world.ships.status[id] == ShipStateTable.Status.ABANDONED:
 		tag = &"forfeit" if world.rules.is_pvp() else &"abandoned"
+	# A relaunch the purse can't pay for is none left (gp-10): the crew is not offered the vote.
 	var policy: RelaunchPolicy = world.rules.relaunch_for(world.faction_of(id))
-	world.emit(
-		GameOutcome.EVENT_ELIMINATED,
-		id,
-		-1,
-		policy.left(world.ships.relaunches[id]),
-		Vector3.ZERO,
-		tag
-	)
+	var left: int = policy.left(world.ships.relaunches[id])
+	if not RelaunchShipCommand.allowed(world, id):
+		left = 0
+	world.emit(GameOutcome.EVENT_ELIMINATED, id, -1, left, Vector3.ZERO, tag)

@@ -87,14 +87,29 @@ static func arc_arrow_dir(p: WeaponsPanel) -> Vector2:
 
 
 ## Mount i for the phone's mount button: "1 bow · ready", "heat 15% cool", "380/400 rounds"
-## on a line each; `wide` joins the last two (the mount list).
-static func mount_text(p: WeaponsPanel, i: int, wide: bool = false) -> String:
+## on a line each; `wide` joins the last two (the mount list); `compact` is two short lines,
+## "1 bow · ready" and "15% cool · 380" (the cards of a row, which must not wrap).
+static func mount_text(
+	p: WeaponsPanel, i: int, wide: bool = false, compact: bool = false
+) -> String:
 	if i < 0 or i >= p.mount_count():
 		return ""
 	var w: WeaponDef = p.weapon_of(i)
 	var ammo: int = int(p.mount_row(i).get("ammo", w.ammo_capacity))
 	var rounds: String = "∞" if ammo < 0 else p.tr("weapons.rounds") % [ammo, w.ammo_capacity]
 	var heat: String = p.tr("weapons.heat") % roundi(heat_share(p, i) * 100.0)
+	if compact:
+		return (
+			"%d %s · %s\n%d%% %s · %s"
+			% [
+				i + 1,
+				p.ship_def.mounts[i].id,
+				p.tr("weapons." + WeaponsReadout.mount_state(p, i)),
+				roundi(heat_share(p, i) * 100.0),
+				heat_word(p, i),
+				"∞" if ammo < 0 else str(ammo),
+			]
+		)
 	return (
 		"%d %s · %s\n%s %s%s%s"
 		% [

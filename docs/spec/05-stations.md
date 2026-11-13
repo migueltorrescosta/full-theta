@@ -110,6 +110,7 @@ Full-screen view from one claimed mount with lead reticle, arc edge and radar in
 - **FT-WPN-007** On Easy, shared weak points and ammunition effectiveness shall appear in the turret view. (D69, P7, D214)
 - **FT-WPN-008** Weapons shall fire guided ordnance at a mark attached to a tracked contact. (P8, D209)
 - **FT-WPN-009** A mount shall hold its aim point in world space while the ship rotates, slewing at its traverse rate, and the turret camera shall roll with the ship's deck plane, keeping the ship's up at the top of the view. (plan review NAV-6, D124)
+- **FT-WPN-010** The run's corvette shall carry three mounts, bow, port and starboard, each claimable on its own; the side arcs shall overlap the bow arc a little. (D436)
 
 ## 5.3 Engineering (E-A cutaway + pips; D50)
 
@@ -233,6 +234,8 @@ Centre: the world map, a freely rotatable 3D map of the wrapping cube, centred o
 - **FT-RLY-009** Relay shall list received marks in an inbox and accept or decline each; only an accepted mark is shared with its crew. (D82, D221)
 - **FT-RLY-010** With no Captain seated, Relay shall switch the main-screen view. (D88)
 - **FT-RLY-011** Relay shall flag lanes crossing friendlies, and Weapons shall get a warning before a shot along a flagged lane. (P8, D37)
+- **FT-RLY-012** Relay's map shall show the site of an encounter waiting for the ship as a dashed "?" marker from 30 s (`RunDef.site_marker_delay`) after the encounter opened until it starts or ends; Helm's view is unchanged and Comms' INFO card still names the site first. (D250, D440)
+- **FT-RLY-013** While a hostile is in play, Relay shall launch a decoy that uses one probe from stock and, for a while, draws the hostile NPCs near it to target the decoy instead of the ship. (D437)
 
 ## 5.6 Comms (new station; D53)
 
@@ -276,6 +279,7 @@ Comms holds all NPC text and replies, contracts, priorities, missions, opportuni
 - **FT-COM-007** Dialogue replies shall be structured choices; free text input shall not be required. (v0.3 §8)
 - **FT-COM-008** Comms shall show missions, contracts, offers and hails as cards on a board, and shall open a card's conversation as an overlay above the board. (D87)
 - **FT-COM-009** While the ship is docked, Comms shall buy and sell slot modules among the station's offers; docking at a site with a market puts that market's offer card on the ship's own board until it undocks. (D86, D339)
+- **FT-COM-010** Once per encounter, while the encounter is active and a hostile is in play, Comms shall call for help: a civil patrol arrives after a delay near the ship, fights its hostiles and leaves when the encounter ends, at a reputation cost with the patrol's faction. (D438)
 
 ## 5.7 Captain (C-B main-screen director; D54)
 
@@ -298,6 +302,7 @@ The Captain's device mirrors the main screen, with view buttons, pings and read-
 - **FT-CPT-003** The Captain shall have no command that changes ship mechanics. (D15, D23)
 - **FT-CPT-004** The Captain shall see read-only lists of open request chips (each with its time left as a bar, and briefly "Answered" or "Expired" once it goes) and of Comms' mission and contract cards. (D15, plan review COOP-10, STN-7, D414)
 - **FT-CPT-005** A Captain ping on a mission or contract card shall show that card on the main screen for 10 s or until the next ping. (D15, plan review COOP-10, D215)
+- **FT-CPT-006** The Captain shall set one contact the faction detects as the ship's priority target, and clear it; Helm and Weapons shall draw a ring on it and show a short toast when it is set, and it shall clear when the contact leaves play or is lost. (D15, D439)
 
 ## 5.8 Main screen (M-A; D60)
 
@@ -317,7 +322,7 @@ Forward (or chase) view, wide disc radar along the bottom, and a callsign rail w
 - **FT-MSC-001** The main screen shall default to the forward view with a wide disc radar and a callsign rail showing clock and range; the forward camera shall be stabilised on the ship's deck plane or the selected target (or a per-client cosmetic reference plane, never spoken or used by rules) and switch to chase while the ship is decoupled or rolls faster than 45°/s, and back to forward after 1.5 s below 30°/s. (D60, plan review NAV-9, D124, D173)
 - **FT-MSC-002** The main screen shall offer forward, chase, tactical, close-up and status views. (D60)
 - **FT-MSC-003** The main screen shall draw pings and marks. (D60, D61)
-- **FT-MSC-004** Any number of viewers shall display the main screen read-only, within the 64-connection cap. (D10, D22)
+- **FT-MSC-004** Any number of viewers shall display the main screen within the 64-connection cap; a viewer changes nothing, except that a click or tap on a contact pings it for the crew, named as a viewer and limited to one ping per 10 s (burst 2). (D10, D22, D439)
 - **FT-MSC-005** The main-screen view shall be switched only by the Captain when one is seated, counting the Captain's reconnect grace as seated, and only by Relay otherwise. (D54, D88, plan review STN-7)
 - **FT-MSC-006** The status view shall show hull, shields, subsystem health, active objectives and alert level. (D15, D60, plan review STN-7)
 

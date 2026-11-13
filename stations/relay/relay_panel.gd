@@ -92,6 +92,7 @@ func _setup() -> void:
 			_arrange()
 	)
 	hud.launch_pressed.connect(func() -> void: _arm("probe"))
+	hud.decoy_pressed.connect(_launch_decoy)
 	hud.hazard_pressed.connect(func() -> void: _arm("hazard"))
 	hud.lanes_pressed.connect(_toggle_lanes)
 	hud.accept_pressed.connect(_accept)
@@ -261,6 +262,8 @@ func handle_intent(ev: Dictionary) -> bool:
 			_to_selection_or_arm("probe")
 		"hazard_add":
 			_to_selection_or_arm("hazard")
+		"decoy_launch":
+			_launch_decoy()
 		"route":
 			handled = _route_to_selection()
 		"route_clear":
@@ -366,6 +369,14 @@ func _route_to_selection() -> bool:
 		return false
 	ctx.intents.route_add(0, at)
 	return true
+
+
+## Shift+L or the decoy button (gp-13): a decoy goes out while it can (the block says so);
+## else nothing.
+func _launch_decoy() -> void:
+	var blk: Dictionary = ctx.snap.blocks.get(StationCatalogue.Section.RELAY, {})
+	if bool(blk.get("decoy", false)):
+		ctx.intents.command({"kind": "launch_decoy"})
 
 
 func _toggle_lanes() -> void:

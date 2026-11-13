@@ -5,7 +5,8 @@ extends PanelContainer
 ##   the ship's crew see the vote with its voters and the votes needed, and cast or take
 ##   back theirs; the host gives up at once. In a pause the pause overlay holds the vote.
 ## - RELAUNCH (M4-Q2, D259 proposed): when this session's ship is out and its side may
-##   relaunch, its crew vote for a fresh ship (lives left shown, unlimited or a count).
+##   relaunch, its crew vote for a fresh ship (lives left shown, unlimited or a count, and the
+##   price of a paid co-op relaunch, gp-10).
 
 enum Kind { FORFEIT, RELAUNCH }
 
@@ -172,13 +173,14 @@ func _refresh_relaunch() -> void:
 	var crew: CrewState = ctx.crew
 	var id: int = crew.home_ship()
 	var lives: int = crew.lives_left()
-	_title.text = (
-		tr("relaunch.title")
-		% [
-			crew.ship_name(id),
-			tr("relaunch.unlimited") if lives < 0 else tr("relaunch.lives") % lives,
-		]
-	)
+	var left: String = tr("relaunch.unlimited") if lives < 0 else tr("relaunch.lives") % lives
+	if lives == 1:
+		left = tr("relaunch.life")
+	# A paid relaunch (gp-10) says its price; the server offers it only when the purse covers it.
+	var cost: int = int(crew.eliminated.get(id, {}).get("cost", 0))
+	if cost > 0:
+		left += " " + tr("relaunch.cost") % cost
+	_title.text = tr("relaunch.title") % [crew.ship_name(id), left]
 	var v: Dictionary = crew.relaunch_votes.get(id, {})
 	var voters: Array = v.get("voters", [])
 	_votes.text = tr("relaunch.votes") % [voters.size(), int(v.get("needed", 0)), ", ".join(voters)]

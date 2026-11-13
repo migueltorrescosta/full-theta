@@ -73,14 +73,15 @@ static func get_gone(buf: StreamPeerBuffer, from: Dictionary) -> PackedInt32Arra
 	return out
 
 
-## SITES: [{"id", "name_key", "kind" (StringName), "dockable", "radius" (m), "pos" (Vector3,
-## m in the cube)}].
+## SITES: [{"id", "name_key", "kind" (StringName), "dockable", "pending" (Relay's "?",
+## gp-16), "radius" (m), "pos" (Vector3, m in the cube)}].
 static func read_sites(buf: StreamPeerBuffer) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for i: int in range(buf.get_u8()):
 		var id: int = buf.get_u16()
 		var kind: int = buf.get_u8()
 		var dockable: bool = buf.get_u8() != 0
+		var pending: bool = buf.get_u8() != 0
 		var radius: float = buf.get_float()
 		var pos: Vector3 = NetCodec.pos_of(NetCodec.get3_32(buf))
 		var name_key: String = buf.get_data(buf.get_u8())[1].get_string_from_utf8()
@@ -89,6 +90,7 @@ static func read_sites(buf: StreamPeerBuffer) -> Array[Dictionary]:
 			"name_key": name_key,
 			"kind": SiteDef.KINDS[clampi(kind, 0, SiteDef.KINDS.size() - 1)],
 			"dockable": dockable,
+			"pending": pending,
 			"radius": radius,
 			"pos": pos,
 		}

@@ -408,6 +408,8 @@ func _draw_item(e: Dictionary, is_sel: bool) -> void:
 		draw_polyline(ring, col * Color(1, 1, 1, 0.5), 1.0, true)
 	if is_sel:
 		ItemGlyph.draw_select_box(self, pos)
+	if it.get("priority", false) and not e["beyond"]:
+		ItemGlyph.draw_priority(self, pos, ItemGlyph.SELECT_HALF)
 	_draw_pulse(pos, float(it.get("pulse", 0.0)), it.get("copies", []))
 
 

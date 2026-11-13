@@ -3,7 +3,8 @@
 # Join and coverage, claims on a shared station, reconnect after a SIGKILL within the
 # grace, then a crew client killed past the grace: the universe pauses until it rejoins.
 # Sourced by tools/l4/run.sh (helpers: server, client, await, kill9, signal).
-server
+# The coverage pause (FT-NET-034) is the host's option since the stand-in bots (D430).
+server --drop-pause
 client c1 c1.intent    # Tactical; claims mount 0; killed and relaunched within the grace
 client c2 c2.intent    # Tactical, then Ops; its command on c1's mount is rejected
 client c3 c3.intent    # Systems; killed past the grace, relaunched after the pause

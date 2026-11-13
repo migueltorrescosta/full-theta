@@ -67,6 +67,10 @@ var training_driver: Callable
 var training_active: bool = false
 ## The bots of a solo lesson, new with every world.
 var partners: TrainingPartners = TrainingPartners.new()
+## The stand-in crews' numbers (content/runs/stand_in.tres, set by ServerMain before start()),
+## and each ship's crew of bots (NetLobby.bots), new with every world (#40 D1, D2).
+var stand_in_def: StandInDef = StandInDef.new()
+var stand_ins: Dictionary[int, StandInCrew] = {}
 var _home_encounter: M1Encounter
 var _home_driver: Callable
 
@@ -96,6 +100,7 @@ func start(
 	game = NetGame.new(transport, world)
 	game.dev_all = dev_all
 	game.host_secret = host_secret
+	game.lobby.stand_in = stand_in_def
 	transport.probe = probe != null
 	run_reset = NetRunReset.new(game, restart_run)
 	run_reset.decisions = _director_decisions
@@ -109,8 +114,17 @@ func start(
 	return OK
 
 
-## The driver's turn before each tick; in a solo lesson the bots' presses come first.
+## Before each tick: the stand-in bots act (on every run), then the driver's turn; in a solo
+## lesson the lesson bots' presses come first.
 func _before_tick(api: ScenarioApi) -> void:
+	for ship: int in game.lobby.bots:
+		var stations: Array = game.lobby.active_bots(ship)
+		if not stations.is_empty():
+			if not stand_ins.has(ship):
+				stand_ins[ship] = StandInCrew.new(stand_in_def, ship, world.seed_value)
+			stand_ins[ship].act(api, stations)
+	if driver == null:
+		return
 	if driver.solo_station() != &"":
 		partners.act(api, driver as TrainingDriver)
 	driver.before_tick(api)
@@ -217,6 +231,7 @@ func restart_run() -> void:
 	host = ScenarioHost.new(world)
 	driver = null
 	partners = TrainingPartners.new(world.seed_value)
+	stand_ins.clear()
 	transport.reset_snapshots()
 	game.restart(world)
 	_next_snapshot_tick = world.tick
@@ -344,7 +359,7 @@ func _process(delta: float) -> void:
 		_idle_state_posted = false
 		if driver == null and driver_factory.is_valid():
 			driver = driver_factory.call(StringName(game.lobby.toggles.preset))
-		ticks = host.advance(delta, _before_tick if driver != null else Callable())
+		ticks = host.advance(delta, _before_tick)
 		t[2] = Time.get_ticks_usec()
 		t[3] = t[2]
 		t[4] = t[2]

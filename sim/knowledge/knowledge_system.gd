@@ -115,6 +115,36 @@ static func is_identified(world: SimWorld, faction: int, ship_id: int) -> bool:
 	return row >= 0 and world.knowledge.identified[row] == 1
 
 
+## The nearest live NPC (AI-flown) ship of a faction hostile to the ship's that its faction
+## detects within `reach` (m), or -1; `armed_only` keeps ships with a mount, `identified_only`
+## the ones the faction has identified (an H contact). The one helper the crews' bots, the
+## decoy and the call for help share (a RETREATED raider is out of every hostile's sensors).
+static func nearest_hostile(
+	world: SimWorld,
+	ship: int,
+	reach: float = INF,
+	armed_only: bool = false,
+	identified_only: bool = false
+) -> int:
+	var faction: int = world.faction_of(ship)
+	var best: int = -1
+	var best_d: float = INF
+	for id: int in contacts(world, faction):
+		if not world.ai.is_enabled(id) or not world.kin.is_alive(id):
+			continue
+		if not world.is_hostile(faction, world.faction_of(id)):
+			continue
+		if armed_only and world.defs[id].mounts.is_empty():
+			continue
+		if identified_only and not is_identified(world, faction, id):
+			continue
+		var d: float = world.kin.relative(ship, id).length()
+		if d <= reach and d < best_d:
+			best = id
+			best_d = d
+	return best
+
+
 ## Ships the faction currently detects, other than its own, in id order.
 static func contacts(world: SimWorld, faction: int) -> PackedInt32Array:
 	return world.knowledge.detected_ships(faction, world.kin.owner_faction)

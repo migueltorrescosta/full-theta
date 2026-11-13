@@ -20,6 +20,26 @@ var reason_key: String = ""
 var reason_args: Dictionary = {}
 
 
+## A decision at `tick` about `ship`, from the fields in `f` (scenario_id, site, cost,
+## budget_before, budget_after, args) and its reason "director.reason.<f.reason>" (R04-11: the
+## Director's log and FleetDirector's raider waves share it).
+static func make(
+	tick_value: int, ship_id: int, kind_value: Kind, f: Dictionary
+) -> DirectorDecision:
+	var d: DirectorDecision = DirectorDecision.new()
+	d.tick = tick_value
+	d.ship = ship_id
+	d.kind = kind_value
+	d.scenario_id = f.get("scenario_id", &"")
+	d.site = f.get("site", -1)
+	d.cost = f.get("cost", 0)
+	d.budget_before = f.get("budget_before", 0)
+	d.budget_after = f.get("budget_after", 0)
+	d.reason_key = "director.reason.%s" % f["reason"]
+	d.reason_args = f.get("args", {})
+	return d
+
+
 func to_dict() -> Dictionary:
 	return {
 		"tick": tick,

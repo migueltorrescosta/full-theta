@@ -11,6 +11,13 @@ extends RefCounted
 ##   (FT-NET-034, FT-NET-035): NetServer steps the sim only while NetGame.sim_running();
 ## - the abandon vote (D128, D241) and the takeover of an uncovered station (FT-NET-041,
 ##   FT-NET-042).
+## - the bots (#40 D1, D2): a dropped crew player's stations go to a stand-in bot when the
+##   grace ends, unless the host ticked "Pause when someone drops" (drop_pause, gp-02); with
+##   "Fill light stations with bots" (fill_bots, gp-03) the light stations no player holds get
+##   bots at Start, so two players may start a ship. Bots count for coverage; a player who
+##   takes a bot's station sends it away (StandInCrew acts for the rest, NetServer);
+## - guests (#40 D10, gp-04): an eliminated crew handed over to a friendly ship in co-op or
+##   TEAMS may take its free light stations; guests never count for coverage.
 ## Messages: Pick, Release, Ready, Start, Toggles, Abandon, AbandonVote, Takeover.
 
 ## Ships that started (FT-NET-019). Read it through is_launched, launched_ships
@@ -28,6 +35,16 @@ var votes: Dictionary[int, NetVote] = {}
 ## The data-shortcut toggle set of the session, one for every ship (FT-PAIR-017): the host
 ## changes it in the lobby until a ship starts; sessions' stream keys follow.
 var toggles: DataToggles = DataToggles.of_preset(StationCatalogue.DEFAULT_TOGGLES)
+## The host's options (GameMode, the Game setup sheet): a dropped player's grace ends in the
+## coverage pause (FT-NET-034) rather than a stand-in (gp-02); fill light stations with bots
+## at Start (gp-03). Both off by default.
+var drop_pause: bool = false
+var fill_bots: bool = false
+## Ship -> station -> [session id, name]: the bots holding the ship's stations, a stand-in for
+## a dropped player (its session and name) or a fill bot (-1, "").
+var bots: Dictionary[int, Dictionary] = {}
+## The stand-in numbers (StandInDef.fill_min_players); NetServer sets the loaded one.
+var stand_in: StandInDef = StandInDef.new()
 
 var game: NetGame:
 	get:
@@ -89,24 +106,84 @@ func _in_run(ship: int) -> bool:
 	)
 
 
-## Crew players a ship needs: 3, or 1 with --dev-all-stations (FT-NET-029).
+## Crew players a ship needs: 3, 2 when the host fills light stations with bots (gp-03), or
+## 1 with --dev-all-stations (FT-NET-029).
 func min_crew() -> int:
-	return 1 if game.dev_all else NetCoverage.MIN_CREW
+	if game.dev_all:
+		return 1
+	return stand_in.fill_min_players if fill_bots else NetCoverage.MIN_CREW
 
 
-## The seats held on a ship by its live sessions (connected or within grace), and a solo
-## lesson's bots.
+## The seats held on a ship by its live sessions (connected or within grace), guests aside,
+## and its bots: a solo lesson's, the stand-ins and the fill bots.
 func seats_of(ship: int) -> Array:
 	var out: Array = game.training.bot_seats() if game.crewable(ship) else []
+	out.append_array(bots.get(ship, {}).keys())
 	for s: NetSession in game.by_id.values():
-		if s.ship == ship and s.seat != "":
+		if s.ship == ship and s.seat != "" and s.guest_from < 0:
 			out.append(s.seat)
 	return out
 
 
-## Whether the ship's seats pass the coverage check (FT-NET-019).
+## The light stations bots will fill at Start (gp-03): before the ship starts, with the
+## option on, those no seat covers.
+func fill_stations(ship: int) -> Array[String]:
+	var out: Array[String] = []
+	if not fill_bots or launched.has(ship):
+		return out
+	var open: Array[String] = NetCoverage.uncovered(seats_of(ship))
+	for station: String in StationCatalogue.LIGHT_STATIONS:
+		if open.has(station):
+			out.append(station)
+	return out
+
+
+## The functional stations neither a seat nor a bot to come covers.
+func open_stations(ship: int) -> Array[String]:
+	var seats: Array = seats_of(ship)
+	seats.append_array(fill_stations(ship))
+	return NetCoverage.uncovered(seats)
+
+
+## Whether the ship passes the coverage check (FT-NET-019): min_crew crew seats, the fill
+## bots to come aside, and every station covered.
 func covered(ship: int) -> bool:
-	return NetCoverage.passes(seats_of(ship), min_crew())
+	return NetCoverage.crew_count(seats_of(ship)) >= min_crew() and open_stations(ship).is_empty()
+
+
+## The ship's bot stations no session on it covers now (a guest's makes a fill bot give way):
+## the ones its StandInCrew acts for.
+func active_bots(ship: int) -> Array:
+	var out: Array = bots.get(ship, {}).keys()
+	for s: NetSession in game.by_id.values():
+		if s.ship == ship:
+			for station: String in StationCatalogue.stations_of(s.seat):
+				out.erase(station)
+	return out
+
+
+## The bot rows of a ship's `lobby` state, in station order: {seat, for}: `for` names the
+## dropped player a stand-in holds the station for, "" for a fill bot (also the ones to come
+## before Start).
+func bot_rows(ship: int) -> Array:
+	var held: Dictionary = bots.get(ship, {})
+	var to_fill: Array[String] = fill_stations(ship)
+	var out: Array = []
+	for station: String in StationCatalogue.CREW:
+		if held.has(station):
+			out.append({"seat": station, "for": held[station][1]})
+		elif to_fill.has(station):
+			out.append({"seat": station, "for": ""})
+	return out
+
+
+## The grace of a crew player of a ship in play ended (gp-01): each station of its seat goes
+## to a stand-in bot that holds it for them.
+func stand_in_for(s: NetSession) -> void:
+	var held: Dictionary = bots.get_or_add(s.ship, {})
+	for station: String in StationCatalogue.stations_of(s.seat):
+		held[station] = [s.id, s.name]
+	_dirty = true
 
 
 ## Whether a host client is connected (D127). Without one (a dedicated server, or the host
@@ -141,19 +218,31 @@ func lobby_state(ship: int) -> Dictionary:
 	var holders: Array = []
 	for s: NetSession in game.by_id.values():
 		if s.ship == ship and s.seat != "":
-			holders.append({"name": s.name, "seat": s.seat, "session": s.id, "ready": is_ready(s)})
+			(
+				holders
+				. append(
+					{
+						"name": s.name,
+						"seat": s.seat,
+						"session": s.id,
+						"ready": is_ready(s),
+						"guest": s.guest_from >= 0,
+					}
+				)
+			)
 		if s.ship == ship and s.seat == StationCatalogue.CAPTAIN:
 			captain = s.name
 	return {
 		"ship": ship,
 		"crew": NetCoverage.crew_count(held),
 		"min_crew": min_crew(),
-		"uncovered": NetCoverage.uncovered(held),
-		"covered": NetCoverage.passes(held, min_crew()),
+		"uncovered": open_stations(ship),
+		"covered": covered(ship),
 		"started": launched.has(ship),
 		"in_play": _in_run(ship),
 		"captain": captain,
 		"seats": holders,
+		"bots": bot_rows(ship),
 		"toggles": toggles.encode(),
 	}
 
@@ -175,6 +264,10 @@ func pick_rule(s: NetSession, ship: int, seat: String) -> String:
 		and world.faction_of(home) != world.faction_of(ship)
 	):
 		return FleetMessages.ENEMY_SHIP
+	if s.guest_from >= 0 and ship >= 0 and ship != s.guest_from:
+		var why: String = _guest_rule(s, ship, seat)
+		if why != "":
+			return why
 	if seat == StationCatalogue.CAPTAIN:
 		for o: NetSession in game.by_id.values():
 			if o != s and o.ship == ship and o.seat == StationCatalogue.CAPTAIN:
@@ -197,8 +290,11 @@ func mark_dirty() -> void:
 	_dirty = true
 
 
-## Starts a ship's run (Start, or a test fixture): the sim steps from now on.
+## Starts a ship's run (Start, or a test fixture): the sim steps from now on; with the host's
+## option the light stations nobody holds get fill bots (gp-03).
 func launch(ship: int) -> void:
+	for station: String in fill_stations(ship):
+		(bots.get_or_add(ship, {}) as Dictionary)[station] = [-1, ""]
 	launched[ship] = true
 	_dirty = true
 
@@ -213,8 +309,10 @@ func clear_abandoned(ship: int) -> void:
 func reset() -> void:
 	for s: NetSession in game.by_id.values():
 		s.ready = false
+		s.guest_from = -1
 	launched.clear()
 	abandoned.clear()
+	bots.clear()
 	refresh_pause()
 	for ship: Dictionary in game.crew_ships():
 		_sync_captain_seat(ship["id"])
@@ -249,8 +347,7 @@ func start_refusal(s: NetSession, by_server: bool = false) -> Array:
 	var names: Array[String] = []
 	for ship: int in ships:
 		if not covered(ship):
-			var open: Array = NetCoverage.uncovered(seats_of(ship))
-			return [NetGame.NOT_COVERED, {"ship": ship, "uncovered": open}]
+			return [NetGame.NOT_COVERED, {"ship": ship, "uncovered": open_stations(ship)}]
 		names.append_array(unready(ship))
 	if not names.is_empty():
 		return [NetGame.NOT_READY, {"waiting": Array(names)}]
@@ -302,6 +399,10 @@ func set_pick(s: NetSession, ship: int, seat: String) -> void:
 	game.release_claims(s, keep)
 	s.ship = ship
 	s.seat = seat
+	# A player (not a guest) who takes a bot's station sends the bot away (gp-01, gp-03).
+	if ship >= 0 and s.guest_from < 0 and bots.has(ship):
+		for station: String in StationCatalogue.stations_of(seat):
+			bots[ship].erase(station)
 	if ship >= 0:
 		s.home_ship = ship
 	s.shares = game.shares.active_of(ship)
@@ -515,11 +616,29 @@ func _on_takeover(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	if game.refuse(s, NetProtocol.Type.TAKEOVER, reason, {"ship": ship, "seat": seat}):
 		return
 	var from_ship: int = s.ship
+	s.guest_from = -1  # a takeover is a crew seat that counts, a guest's too (D96)
 	_answer_pick(s, ship, seat, "")
 	game.fleet.took_over(s, ship, seat, from_ship)
 
 
 # --- Internals. ---
+
+
+## Why a guest may not take `seat` on a friendly `ship` (#40 D10, gp-04), or "": only the
+## Viewer or one light station that no other player and no stand-in holds (a fill bot gives
+## way).
+func _guest_rule(s: NetSession, ship: int, seat: String) -> String:
+	if seat == StationCatalogue.VIEWER:
+		return ""
+	if not StationCatalogue.LIGHT_STATIONS.has(seat):
+		return CommandGate.NOT_ALLOWED
+	var held: Array = bots.get(ship, {}).get(seat, [-1, ""])
+	if int(held[0]) >= 0:
+		return FleetMessages.TAKEN
+	for o: NetSession in game.by_id.values():
+		if o != s and o.ship == ship and StationCatalogue.stations_of(o.seat).has(seat):
+			return FleetMessages.TAKEN
+	return ""
 
 
 ## Applies an accepted pick, or reports why not: a `picked` event, plus CommandRejected

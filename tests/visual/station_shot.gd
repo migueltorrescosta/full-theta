@@ -15,7 +15,8 @@
 ## `science` (a Science block with the cards, a scan or a hack open) and `touch` (the touch
 ## layout whatever the pointer; a viewport under 600 px is a phone anyway, D195) and `comms`
 ## (CommsFixture's COMMS block is on every shot; "trade" also opens Kappa's offer card,
-## "conversation" the hail, "off" leaves the block out). Phones (#28): `insets` simulates a
+## "conversation" the hail, "dock2" Kappa's offer with two modules (gp-11), "off" leaves the
+## block out). Phones (#28): `insets` simulates a
 ## device's safe-area insets [left, top, right, bottom] in px (SafeArea.simulate; the
 ## mockups' iPhone: [47, 0, 47, 21] in landscape, [0, 47, 0, 34] upright) and draws them
 ## with the gesture band in translucent red; `fullscreen` forces the fullscreen button
@@ -27,6 +28,9 @@
 ## scrolls the menu's tab to a node (e.g. "ChangeKeys").
 ## `eng_rare` shows Engineering's rare rail actions (C3): a fault of unknown cause on the
 ## engines and a second player at Engineering, so Guess cause and Take crew show.
+## `decoy` gives Relay a RELAY block in a fight (2 probes, a decoy out, Launch decoy shown,
+## gp-13); `help` sets the COMMS block's call for help (BlockSchema.HELP_*, gp-14) with
+## `help_eta` its countdown.
 ## The "touch_kit" view shows the shared touch widgets (presentation/touch/) on a radar:
 ## overlay rails with a throttle, sticks, tabs and an open drawer; `docked` docks them.
 extends Control
@@ -74,6 +78,11 @@ var audit: String = ""
 var docked: bool = false
 ## Engineering's rare rail actions show (a fault of unknown cause, two players there).
 var eng_rare: bool = false
+## Relay in a fight with a decoy out (gp-13).
+var decoy: bool = false
+## The COMMS block's call for help (BlockSchema.HELP_*) and its seconds left (gp-14).
+var help: int = 0
+var help_eta: float = 0.0
 
 ## The game was started with --dev (ClientSettings.dev_flag): the menu's Dev checkbox and the
 ## lobby's dev seat show (#35 A7).
@@ -84,6 +93,10 @@ var host_bind: String = ""
 var player: String = "Ana"
 ## The lobby's seats whose holders said Ready (#37 C1).
 var ready_seats: Array = []
+
+## A site of an encounter waiting for the ship, 4.3 km off, flagged pending: Relay's map draws
+## its "?" (gp-16).
+var pending_site: bool = false
 
 ## A Shakedown step on the focused station's banner (a solo lesson step, D303).
 var lesson: bool = false
@@ -133,8 +146,33 @@ func _ready() -> void:
 		_ctx.matcher.device = device
 	if science != "":
 		_ctx.snap.blocks[StationCatalogue.Section.SCIENCE] = ScienceShotBlocks.block(science)
-	if comms != "off":
+	if comms == "dock2":
+		CommsFixture.install(_ctx, CommsFixture.block_two_modules())
+	elif comms != "off":
 		CommsFixture.install(_ctx)
+		_ctx.snap.blocks[StationCatalogue.Section.COMMS].merge(
+			{"help": help, "help_eta": help_eta}, true
+		)
+	if decoy:
+		var rows: Array = [
+			{
+				"serial": 0,
+				"deployed": true,
+				"pos": Vector3(0, 0, -3000),
+				"range": 8000.0,
+				"decoy": 0.0
+			},
+			{
+				"serial": 1,
+				"deployed": true,
+				"pos": Vector3(3000, 0, 0),
+				"range": 0.0,
+				"decoy": 14.0
+			},
+		]
+		_ctx.snap.blocks[StationCatalogue.Section.RELAY] = {
+			"stock": 1, "fab_left": 0.0, "lanes": false, "decoy": true, "probes": rows
+		}
 	if tooltip:
 		_ctx.settings.reset_hints()
 	if claim != "":
@@ -149,6 +187,11 @@ func _ready() -> void:
 		for i: int in crew_seats.size():
 			seats.append({"name": ["Ana", "Bo", "Cy", "Di"][i % 4], "seat": str(crew_seats[i])})
 		_ctx.crew.lobby[StationFixture.SHIP]["seats"] = seats
+	if pending_site:
+		var row: Dictionary = {"id": 5, "name_key": "site.kestrel_yard", "kind": &"station"}
+		row.merge({"dockable": false, "pending": true, "radius": 3000.0})
+		row["pos"] = StationFixture.OWN_POS + Vector3(-4000.0, 600.0, 1500.0)
+		_ctx.snap.sites.append(row)
 	if selected >= 0:
 		_ctx.crew.select("contact", selected)
 	if ping >= 0:
@@ -239,9 +282,11 @@ func _ready() -> void:
 			add_child(s)
 			move_child(menu, -1)
 			s.focus(focus)
-			if comms in ["trade", "conversation"]:
+			if comms in ["trade", "conversation", "dock2"]:
 				var panel: CommsPanel = s.panels[s.stations.find("comms")] as CommsPanel
-				panel.open_card(CommsFixture.OFFER if comms == "trade" else CommsFixture.HAIL)
+				panel.open_card(
+					CommsFixture.HAIL if comms == "conversation" else CommsFixture.OFFER
+				)
 			s.radar.side_strip = strip
 			if overlay:
 				s.help_requested.emit()

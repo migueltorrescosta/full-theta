@@ -22,9 +22,15 @@ var _buckets: Dictionary[int, NetTokenBucket] = {}
 var _recent: Dictionary[int, Dictionary] = {}
 
 
-## Takes a token from the session's ping limit; false when it is empty.
-func take(session: int, now_us: int) -> bool:
-	return _buckets.get_or_add(session, NetTokenBucket.new(RATE, BURST)).take(now_us)
+## Takes a token from the session's ping limit, `rate` a second up to `burst` (a Viewer's
+## are RunDef's, gp-15); false when it is empty. A session whose limit changed (it moved
+## seats) starts a fresh bucket.
+func take(session: int, now_us: int, rate: float = RATE, burst: float = BURST) -> bool:
+	var b: NetTokenBucket = _buckets.get(session)
+	if b == null or b.rate != rate or b.burst != burst:
+		b = NetTokenBucket.new(rate, burst)
+		_buckets[session] = b
+	return b.take(now_us)
 
 
 ## Forgets a session's limit (it was evicted, NetSessions.evict).

@@ -100,6 +100,9 @@ class RecordingClient:
 	func host_pause(on: bool) -> void:
 		sent.append(["host_pause", [on]])
 
+	func skip_gap(ready: bool) -> void:
+		sent.append(["skip_gap", [ready]])
+
 	func takeover(ship: int, seat: String) -> void:
 		sent.append(["takeover", [ship, seat]])
 
@@ -132,6 +135,9 @@ class RecordingClient:
 	func set_main_view(view: int) -> void:
 		sent.append(["set_main_view", [view]])
 
+	func set_priority(contact: int) -> void:
+		sent.append(["set_priority", [contact]])
+
 	func set_toggles(code: String) -> void:
 		sent.append(["set_toggles", [code]])
 
@@ -147,8 +153,13 @@ class RecordingClient:
 	func set_team(ship: int, team: int) -> void:
 		sent.append(["set_team", [ship, team]])
 
-	func set_mode(mode: String, team_win: String, lives: int) -> void:
-		sent.append(["set_mode", [mode, team_win, lives]])
+	func set_mode(
+		mode: String, team_win: String, lives: int, drop_pause: bool, fill_bots: bool
+	) -> void:
+		sent.append(["set_mode", [mode, team_win, lives, drop_pause, fill_bots]])
+
+	func reroll_modifier() -> void:
+		sent.append(["reroll_modifier", []])
 
 	func vote_relaunch(ship: int, vote: bool) -> void:
 		sent.append(["vote_relaunch", [ship, vote]])
@@ -313,11 +324,15 @@ static func snap(seam: bool = false) -> SnapshotState:
 		"thrust_scale": 1.0,
 		"torque_scale": 0.8,
 	}
-	# The corvette's bow mount at rest, loaded and cool.
-	v.blocks[StationCatalogue.Section.MOUNTS] = {
-		"mounts":
-		[{"barrel": Vector3.FORWARD, "cooldown": 0.0, "ammo": 380, "heat": 6.0, "aim_set": false}]
-	}
+	# The corvette's bow, port and starboard mounts (gp-12) at rest, loaded and cool.
+	var mounts: Array = []
+	for barrel: Vector3 in [
+		Vector3.FORWARD, Vector3(-1, 0, -1).normalized(), Vector3(1, 0, -1).normalized()
+	]:
+		mounts.append(
+			{"barrel": barrel, "cooldown": 0.0, "ammo": 380, "heat": 6.0, "aim_set": false}
+		)
+	v.blocks[StationCatalogue.Section.MOUNTS] = {"mounts": mounts}
 	var model: Dictionary = {}
 	var info: Dictionary = {}
 	for c: Array in [[H2, "H2", _at(4, 30.0, 2300.0)], [U3, "U3", _at(11, 20.0, 8000.0)]]:
@@ -439,6 +454,10 @@ static func fleet(
 		"waiting": [],
 		"started": started,
 		"host": host_here,
+		"modifier": "",
+		"drop_pause": false,
+		"fill_bots": false,
+		"rerollable": false,
 	}
 	ctx.crew.handle_event({"type": "fleet", "payload": p}, NOW_MS)
 	# The server's Catalogue lists every crewed ship (NetGame.crew_ships), so a pick

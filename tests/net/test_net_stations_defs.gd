@@ -62,7 +62,9 @@ func test_every_seat_has_a_seat_def_with_its_load_tag() -> void:
 	)
 	assert_array(StationCatalogue.def("science").commands).contains([&"science_scan"])
 	# Relay launches probes and flags lanes (FT-RLY-004, FT-RLY-011).
-	assert_array(StationCatalogue.def("relay").commands).is_equal([&"launch_probe", &"flag_lanes"])
+	assert_array(StationCatalogue.def("relay").commands).is_equal(
+		[&"launch_probe", &"launch_decoy", &"flag_lanes"]
+	)
 	assert_array(StationCatalogue.def("helm").commands).contains([&"helm_align", &"helm_input"])
 	assert_bool(StationCatalogue.def("captain").is_crew()).is_false()
 	assert_bool(StationCatalogue.def("viewer").is_crew()).is_false()

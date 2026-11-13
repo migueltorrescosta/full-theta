@@ -11,13 +11,15 @@ extends RefCounted
 ## {"kind": "contact" | "mark" | "zone" | "point", "id", "label", "allegiance" ("H", "U", "F",
 ## "N", "" own), "world" (Vector3, m), "local" (Vector3, m), "pulse" (0..1)}; "zone" items
 ## also hold "zone" ("hazard" | "scan") and "radius" (m); every item holds "copies", the
-## names of the stations that copied its live ping.
+## names of the stations that copied its live ping; the Captain's priority target (gp-15)
+## holds "priority" true.
 var items: Array[Dictionary] = []
 ## The nearest named site's name as a callout layer on every station (FT-SPA-027, D98,
 ## D229): {"kind": "site", "id", "label", "pulse"}, or {} when the faction knows no site.
 var site: Dictionary = {}
 ## Every named site the faction knows as an item ({"kind": "site", "id", "label",
-## "allegiance" "", "world", "local", "pulse"} plus "radius" and "dockable"): selectable
+## "allegiance" "", "world", "local", "pulse"} plus "radius", "dockable" and "pending", the
+## site of an encounter waiting for the ship that Relay's map marks "?" (gp-16)): selectable
 ## like contacts (FT-SPA-015) but kept out of `items`, which the radars draw.
 var sites: Array[Dictionary] = []
 ## The interpolator the picture was built from: own position and rotation, map period.
@@ -44,6 +46,8 @@ static func build(ctx: StationContext) -> ContactPicture:
 			letter = "F"
 		var pulse: float = ctx.crew.pulse("contact", id, now)
 		pic._add("contact", id, callsign, letter, ctx.interp.contact_position(id), pulse)
+		if id == ctx.crew.priority:
+			pic.items[-1]["priority"] = true
 	for m: Dictionary in ctx.crew.marks:
 		var slot: int = m["slot"]
 		var pulse: float = ctx.crew.pulse("mark", slot, now)
@@ -164,6 +168,7 @@ func _add_sites(ctx: StationContext, now: int) -> void:
 					"pulse": pulse,
 					"radius": row["radius"],
 					"dockable": row["dockable"],
+					"pending": row.get("pending", false),
 				}
 			)
 		)

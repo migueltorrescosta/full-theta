@@ -298,3 +298,25 @@ func _until(cond: Callable, timeout_ms: int = SLOW_MS) -> bool:
 			return false
 		await get_tree().process_frame
 	return true
+
+
+# FT: FT-MIS-050, FT-MIS-006
+# gp-09 (D419: the one card shows partial outcomes): the encounters that limped home and the
+# ones that ran out of time are counted on the card, and the debrief line says "limped home".
+func test_the_card_counts_partial_encounters() -> void:
+	var o: OutcomeCard = _card("tactical")
+	_over(o, "win")
+	var partial: Label = o.find_child("Partial", true, false)
+	assert_bool(partial.visible).is_false()
+	var rows: Array = [
+		{"scenario": "rescue", "result": "partial", "limped": true, "time": 95.0},
+		{"scenario": "enemy_wave", "result": "partial", "time": 240.0},
+		{"scenario": "enemy_wave", "result": "won", "time": 120.0},
+	]
+	var record: Dictionary = {"ship": 0, "result": "win", "encounters": rows}
+	o.ctx.crew.handle_event({"type": "debrief", "payload": record}, 0)
+	assert_bool(partial.visible).is_true()
+	assert_str(partial.text).is_equal("Limped home: 1 · Out of time: 1")
+	assert_str(DebriefCard._encounter_line(1, rows[0])).is_equal(
+		"1. Distress call: limped home, 1:35"
+	)

@@ -83,7 +83,7 @@ static func known_to(world: SimWorld, faction: int, i: int) -> bool:
 			return true
 	var probes: ProbeTable = world.probes
 	for p: int in probes.size():
-		if probes.owner_faction[p] != faction or probes.deployed[p] == 0:
+		if probes.owner_faction[p] != faction or not probes.covers(p):
 			continue
 		var at: Vector3 = kin.delta_column(
 			probes.pos_x, probes.pos_y, probes.pos_z, p, h.center_point

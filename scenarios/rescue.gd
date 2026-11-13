@@ -187,14 +187,16 @@ func finished(_api: ScenarioApi) -> int:
 
 
 ## However it ended, a card still open is withdrawn and an accepted one fails: a flee, a loss
-## or an abandon does not leave a contract to lapse unpaid and unpunished (A8).
+## or an abandon does not leave a contract to lapse unpaid and unpunished (A8). A crippled ship
+## that limped home (PARTIAL, gp-09) settles it partial instead: half pay.
 func end(api: ScenarioApi, result: int) -> void:
 	var ended_by_other: bool = _result == Result.ACTIVE
 	_result = result if ended_by_other else _result
+	var limped: bool = result == Result.PARTIAL
 	for card: ApiHandle in [_escort, _salvage]:
 		var state: int = _state(api, card)
 		if state == CardInfo.State.ACCEPTED and ended_by_other:
-			api.settle_card(card.id(), false)
+			api.settle_card(card.id(), limped, limped)
 		elif state == CardInfo.State.OPEN:
 			api.decline_card(card.id())
 

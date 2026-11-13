@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="ShipDef" format=3]
 
 ; The Shakedown's ship (D321): the corvette with four mounts, so every mount step of the
-; Weapons lesson has a mount to pick. The M3 run keeps the one-mount corvette.
+; Weapons lesson has a mount to pick. The run's corvette has three (gp-12).
 
 [ext_resource type="Resource" path="res://content/ships/m1_corvette/assist.tres" id="1_w8xyr"]
 [ext_resource type="Script" path="res://content/defs/mount_def.gd" id="2_lvnny"]

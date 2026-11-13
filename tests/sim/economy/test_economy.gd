@@ -40,10 +40,11 @@ func test_the_economy_tracks_every_resource() -> void:
 	assert_float(w.kin.propellant[0]).is_equal(w.defs[0].propellant_capacity)
 	assert_int(Economy.held(w, 0, Economy.PARTS)).is_equal(20)
 	assert_int(Economy.held(w, 0, Economy.PROBES)).is_equal(3)
+	# Three mounts (gp-12), each with its own store.
 	var ammo: Dictionary = {}
 	for weapon: StringName in Economy.ammo_types(w, 0):
 		ammo[weapon] = Economy.held(w, 0, StringName(Economy.AMMO_PREFIX + weapon))
-	assert_dict(ammo).is_equal({&"m1_cannon": 400, &"m2_missile": 8, &"m2_torpedo": 3})
+	assert_dict(ammo).is_equal({&"m1_cannon": 1200, &"m2_missile": 24, &"m2_torpedo": 9})
 	assert_array(Array(w.reputation.others_of(StoryFixture.BLUE))).is_equal([StoryFixture.RED])
 	assert_float(w.reputation.value_of(StoryFixture.BLUE, StoryFixture.RED)).is_equal(12.5)
 

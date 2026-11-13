@@ -385,8 +385,26 @@ static func _offer_market(world: SimWorld, ship: int, site: int) -> void:
 	t.title[card] = "comms.card.offer"
 	t.site[card] = site
 	t.requires_docked[card] = 1
+	t.module_mask[card] = _draw_modules(world, world.markets.get(world.site_markets[site]))
 	world.story_ships.dock_offer[ship] = card
 	world.emit(&"card_posted", ship, card, StoryTable.Kind.OFFER)
+
+
+## MarketDef.modules_per_dock of the market's modules, drawn from the &"dock_modules" stream
+## (gp-11, #38 D7), as a mask over MarketDef.modules; -1 (all) when it offers no more than that.
+static func _draw_modules(world: SimWorld, m: MarketDef) -> int:
+	if m == null or m.modules_per_dock <= 0 or m.modules.size() <= m.modules_per_dock:
+		return -1
+	var left: Array[int] = []
+	for i: int in m.modules.size():
+		left.append(i)
+	var rng: RandomNumberGenerator = world.rng.stream(&"dock_modules")
+	var mask: int = 0
+	for k: int in m.modules_per_dock:
+		var pick: int = rng.randi_range(0, left.size() - 1)
+		mask |= 1 << left[pick]
+		left.remove_at(pick)
+	return mask
 
 
 ## The ship undocked: its market card lapses.

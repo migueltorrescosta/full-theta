@@ -65,7 +65,14 @@ static func block(
 		"offers": [],
 		"modules": [],
 		"fitted": [],
+		"help": BlockSchema.HELP_NONE,
+		# Whole seconds, so the block changes once a second, not every tick.
+		"help_eta": ceilf(world.help.left[ship]),
 	}
+	if world.help.left[ship] > 0.0:
+		out["help"] = BlockSchema.HELP_COMING
+	elif CallHelp.can_call(world, ship):
+		out["help"] = BlockSchema.HELP_READY
 	var site: int = Story.docked_site(world, ship)
 	out["docked"] = site >= 0
 	out["site"] = site
@@ -208,7 +215,7 @@ static func _offer_rows(world: SimWorld, ship: int, card: int, out: Dictionary) 
 				)
 			)
 	var modules: Array = out["modules"]
-	for key: StringName in m.modules:
+	for key: StringName in Trade.modules_on_offer(world, card, m):
 		var ix: int = ModuleSystem.index_of(world, key)
 		if ix < 0:
 			continue
@@ -226,9 +233,10 @@ static func _offer_rows(world: SimWorld, ship: int, card: int, out: Dictionary) 
 						"module": key,
 						"name": module.name_key,
 						"slot": slot,
-						"price": module.price,
+						"price": Trade.module_price(world, module),
 						"old": old.id if old != null else &"",
-						"trade_in": Trade.sale_price(m, old.price) if old != null else 0,
+						"trade_in":
+						Trade.sale_price(m, Trade.module_price(world, old)) if old != null else 0,
 					}
 				)
 			)

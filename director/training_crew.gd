@@ -66,19 +66,28 @@ func act(api: ScenarioApi, driver: TrainingDriver, busy: Dictionary[StringName, 
 			continue
 		if (api.tick() + _phase[who]) % LOOK_TICKS != 0:
 			continue
-		match who:
-			&"helm":
-				hands.helm_settle(ship, REST_MS)
-			&"weapons":
-				_weapons(hands, ship)
-			&"engineering":
-				_engineering(hands, ship)
-			&"science":
-				_science(api, hands, ship)
-			&"relay":
-				_relay(api, hands, ship)
-			&"comms":
-				hands.answer_hail(ship)
+		look(api, ship, who)
+
+
+## One look of `who`'s bot at its station (a stand-in reuses the Engineering, Science, Relay
+## and Comms looks, StandInCrew).
+func look(api: ScenarioApi, ship: int, who: StringName) -> void:
+	var hands: ApiCrew = api.crew()
+	if _started_tick < 0:
+		_started_tick = api.tick()
+	match who:
+		&"helm":
+			hands.helm_settle(ship, REST_MS)
+		&"weapons":
+			_weapons(hands, ship)
+		&"engineering":
+			_engineering(hands, ship)
+		&"science":
+			_science(api, hands, ship)
+		&"relay":
+			_relay(api, hands, ship)
+		&"comms":
+			hands.answer_hail(ship)
 
 
 # --- the bots ---

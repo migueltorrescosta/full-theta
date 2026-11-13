@@ -19,7 +19,7 @@ extends StationPanel
 ## change column, tap a reply or a trade line, tap outside or swipe down to close, the
 ## buttons under the board for the rest.
 ##
-## On a phone (#28 follow-up, D287, design 2.6) the five buttons are a persistent rail (on
+## On a phone (#28 follow-up, D287, design 2.6) the buttons are a persistent rail (on
 ## its side a docked left rail, upright a row under the board) and the board's columns are
 ## pages: Missions (rest), Contracts, Hails (a dot on the tab while a hail waits), Rep (the
 ## docked site, credits, hull and reputation, off the board) and Crew. On its side the
@@ -122,6 +122,7 @@ func _setup() -> void:
 		["decline", "comms.decline", func() -> void: _answer_card(false)],
 		["claim", "comms.claim", _claim],
 		["hold_fire", "comms.hold_fire", send_request],
+		["help", "comms.call_help", _call_help],
 	]:
 		var b: Button = Button.new()
 		b.name = "Comms_" + str(spec[0])
@@ -328,6 +329,31 @@ func _refresh_buttons() -> void:
 	)
 	# Hidden, not greyed, while no chip can go (the chips toggle off): no dead button.
 	(_buttons["hold_fire"] as Button).visible = not request_chips().is_empty()
+	_refresh_help()
+
+
+## Call for help (gp-14) shows only while Comms may call; once called it turns into the
+## countdown, a read-out that takes no press, until the patrol arrives.
+func _refresh_help() -> void:
+	var blk: Dictionary = block()
+	var state: int = int(blk.get("help", BlockSchema.HELP_NONE))
+	var b: Button = _buttons["help"]
+	var coming: bool = state == BlockSchema.HELP_COMING
+	b.visible = state != BlockSchema.HELP_NONE or lesson_wants("comms_call_help")
+	b.disabled = coming
+	b.flat = coming
+	b.mouse_filter = Control.MOUSE_FILTER_IGNORE if coming else Control.MOUSE_FILTER_STOP
+	b.text = (
+		tr("comms.help_coming") % ceili(float(blk.get("help_eta", 0.0)))
+		if coming
+		else tr("comms.call_help")
+	)
+
+
+## Calls the civil patrol while Comms may (Shift+H or the button); else nothing.
+func _call_help() -> void:
+	if int(block().get("help", BlockSchema.HELP_NONE)) == BlockSchema.HELP_READY:
+		ctx.intents.command({"kind": "comms_call_help"})
 
 
 ## Controls help on touch (P28-Help): per page, the boxes of its controls in the 844x390
@@ -342,6 +368,7 @@ static func touch_help() -> Array:
 		["claim", "comms.claim", "Take or release the card's conversation"],
 		["hold_fire", "comms.hold_fire", "Ask Weapons to hold fire on the contact"],
 	]
+	# Call for help (gp-14) shows only in a fight, so the help sheet leaves it out.
 	for i: int in rows.size():
 		var r: Array = rows[i]
 		(
@@ -603,6 +630,8 @@ func handle_intent(ev: Dictionary) -> bool:
 				handled = _open_selected()
 			"comms_hail":
 				_hail()
+			"comms_call_help":
+				_call_help()
 			"comms_next_column":
 				board.move(1, 0)
 			"comms_up":

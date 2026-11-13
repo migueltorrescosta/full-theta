@@ -12,7 +12,14 @@ extends RefCounted
 ##    the encounter, and the flee cost is charged. Where the jump started doesn't matter,
 ##    as fights happen at 9 to 12 km and the site is 3 to 5 km wide (review 2 M3). A jump
 ##    that started unseen, or ends at the site, is not fleeing and the ship stays.
-## 3. A ship destroyed or abandoned leaves the encounter as a loss. When every ship has
+## 3. In an ACTIVE encounter, a crewed ship in play is crippled (gp-09, #38 D4) once its hull
+##    fraction is under RunDef.crippled_hull or RunDef.crippled_subsystems of its subsystems
+##    are destroyed: &"crippled" (value RunDef.limp_home_time, other_id the encounter). Docked
+##    anywhere (a dock after the crippling) within limp_home_time of that, it has limped
+##    home, and a jump on the way there is no flee: its bit joins limped_mask,
+##    &"limped_home" is emitted and the encounter ends PARTIAL, so its accepted cards pay
+##    RunDef.partial_pay (the scenarios' end()). Later, docking is nothing special.
+## 4. A ship destroyed or abandoned leaves the encounter as a loss. When every ship has
 ##    left (lost or fled) the encounter ends LOST, or FLED when none was lost.
 ## A scenario ends an encounter itself with EndEncounterCommand (finish()). The run is won
 ## once the director has closed it for a crewed ship (FinishShipCommand, after at least
@@ -25,7 +32,7 @@ static func step(world: SimWorld) -> void:
 	var count: int = table.size()
 	if count == 0:
 		return
-	var jumped: Dictionary[int, bool] = _jumped_this_tick(world)
+	var jumped: Dictionary[int, bool] = _ships_with(world, &"jump_arrive")
 	for id: int in count:
 		var result: int = table.result[id]
 		if result > EncounterTable.Result.ACTIVE:
@@ -34,6 +41,8 @@ static func step(world: SimWorld) -> void:
 			_activate(world, id)
 		elif result == EncounterTable.Result.ACTIVE:
 			_check_flee(world, id, jumped)
+			if _check_limp(world, id):
+				continue
 		_check_losses(world, id)
 
 
@@ -111,7 +120,8 @@ static func _check_flee(world: SimWorld, id: int, jumped: Dictionary[int, bool])
 	for ship: int in _ships(table.ships_mask[id]):
 		if world.ships.encounter[ship] != id or not jumped.has(ship):
 			continue
-		if SiteTable.at_site(world, ship) == site:
+		# A crippled ship jumping to a dock in time is limping home, not fleeing (gp-09).
+		if SiteTable.at_site(world, ship) == site or limping(world, ship):
 			continue
 		var seen_by: int = world.helm.jump_seen_by[ship]
 		if seen_by < 0:
@@ -121,6 +131,61 @@ static func _check_flee(world: SimWorld, id: int, jumped: Dictionary[int, bool])
 		_leave(world, ship)
 		world.emit(&"fled", ship, seen_by, id, Vector3.ZERO, _scenario(world, id))
 		_charge_flee(world, ship, seen_by)
+
+
+## Crippling and limping home (step 3); true when a ship limped home and ended the encounter.
+static func _check_limp(world: SimWorld, id: int) -> bool:
+	var def: RunDef = world.run_def
+	if def == null or def.limp_home_time <= 0.0:
+		return false
+	var ships: ShipStateTable = world.ships
+	var docked: Dictionary[int, bool] = _ships_with(world, &"docked")
+	for ship: int in _ships(world.encounters.ships_mask[id]):
+		if ships.encounter[ship] != id or not world.is_crew_in_play(ship):
+			continue
+		if not world.kin.is_alive(ship):
+			continue
+		var at: int = ships.crippled_tick[ship]
+		if at < 0:
+			if crippled(world, ship):
+				ships.crippled_tick[ship] = world.tick
+				world.emit(
+					&"crippled", ship, id, def.limp_home_time, Vector3.ZERO, _scenario(world, id)
+				)
+			continue
+		# Docked this tick, after it was crippled: a ship already docked does not limp home.
+		if limping(world, ship) and at < world.tick and docked.has(ship):
+			world.encounters.limped_mask[id] |= 1 << ship
+			world.emit(&"limped_home", ship, id, world.helm.docked_site[ship])
+			finish(world, id, EncounterTable.Result.PARTIAL)
+			return true
+	return false
+
+
+## Whether the ship was crippled in its encounter less than RunDef.limp_home_time ago (gp-09).
+static func limping(world: SimWorld, ship: int) -> bool:
+	var at: int = world.ships.crippled_tick[ship]
+	if at < 0 or world.run_def == null:
+		return false
+	return world.tick <= at + SimRate.ticks(world.run_def.limp_home_time)
+
+
+## Whether the ship is crippled by the run's numbers (gp-09): hull fraction under
+## RunDef.crippled_hull, or at least RunDef.crippled_subsystems subsystems at health 0.
+static func crippled(world: SimWorld, ship: int) -> bool:
+	var def: RunDef = world.run_def
+	if def == null:
+		return false
+	if DamageSystem.hull_fraction(world, ship) < def.crippled_hull:
+		return true
+	if def.crippled_subsystems <= 0:
+		return false
+	var dead: int = 0
+	var hull: int = world.damage.hull_row(ship)
+	for r: int in range(hull + 1, hull + 1 + world.defs[ship].subsystems.size()):
+		if world.damage.health[r] <= 0.0:
+			dead += 1
+	return dead >= def.crippled_subsystems
 
 
 static func _check_losses(world: SimWorld, id: int) -> void:
@@ -144,9 +209,10 @@ static func _check_losses(world: SimWorld, id: int) -> void:
 		finish(world, id, EncounterTable.Result.LOST if lost else EncounterTable.Result.FLED)
 
 
-## A ship leaves its encounter: one more done, no longer in one.
+## A ship leaves its encounter: one more done, no longer in one or crippled in one.
 static func _leave(world: SimWorld, ship: int) -> void:
 	world.ships.encounter[ship] = -1
+	world.ships.crippled_tick[ship] = -1
 	world.ships.encounters_done[ship] += 1
 
 
@@ -163,13 +229,13 @@ static func hostile_seeing(world: SimWorld, ship: int) -> int:
 	return -1
 
 
-## Ships that emitted &"jump_arrive" during this tick (events of the tick being stepped).
-static func _jumped_this_tick(world: SimWorld) -> Dictionary[int, bool]:
+## Ships that emitted `kind` during this tick (events of the tick being stepped).
+static func _ships_with(world: SimWorld, kind: StringName) -> Dictionary[int, bool]:
 	var out: Dictionary[int, bool] = {}
 	var events: Array[SimEvent] = world.events
 	var i: int = events.size() - 1
 	while i >= 0 and events[i].tick == world.tick:
-		if events[i].kind == &"jump_arrive":
+		if events[i].kind == kind:
 			out[events[i].ship_id] = true
 		i -= 1
 	return out

@@ -66,9 +66,15 @@ enum Type {
 	# The host starts the game once every crewed ship is covered and every crew player is
 	# Ready; with no host connected, any Ready crew player (#37 C1, version 11).
 	START = 48,
+	# Gameplay (#38, version 12): the host rerolls the run modifier in the Game setup sheet
+	# (gp-11); the Captain sets or clears the priority target (gp-15); a crew member taps
+	# Ready to skip the quiet gap between encounters (gp-07). Schemas: the owning strand.
+	REROLL_MODIFIER = 49,
+	PRIORITY_TARGET = 50,
+	SKIP_GAP = 51,
 }
 
-const PROTOCOL_VERSION: int = 11
+const PROTOCOL_VERSION: int = 12
 ## Default WebSocket port; the HTTP port for web stations is this minus one (D108).
 const DEFAULT_WS_PORT: int = 47801
 
@@ -137,6 +143,9 @@ const EVENT_ROUTES: String = "routes"
 const EVENT_INBOX: String = "inbox"
 const EVENT_RELAY_LOG: String = "relay_log"
 const EVENT_MAIN_VIEW: String = "main_view"
+## The Captain's priority target (gp-15), to every pick on the ship: {ship, contact (-1 none),
+## callsign, by}.
+const EVENT_PRIORITY: String = "priority"
 ## A request chip the session sent was answered (NetChips): {chip, arg, accept, by}.
 const EVENT_CHIP_ANSWER: String = "chip_answer"
 ## The shortcuts shared to the session's ship (NetShares): {ship, left: {feature:
@@ -162,6 +171,9 @@ const EVENT_ELIMINATED: String = "eliminated"
 const EVENT_RELAUNCH_VOTES: String = "relaunch_votes"
 const EVENT_RELAUNCHED: String = "relaunched"
 const EVENT_GAME_OVER: String = "game_over"
+## The director's quiet gap and who is Ready to skip it (NetSkipGap, gp-07): {faction,
+## ends_at (tick, 0: no gap), ready, voters (session ids)}, to the sessions on the faction's ships.
+const EVENT_GAP: String = "gap"
 ## A ship-computer or NPC line to play (VoiceService).
 const EVENT_VOICE_LINE: String = "voice_line"
 
@@ -279,12 +291,25 @@ const MESSAGES: Dictionary = {
 	[RATED, {"sent_us": TYPE_INT, "ua": TYPE_STRING, "pairs": TYPE_PACKED_INT64_ARRAY}],
 	Type.SHIP_ADD: [RATED | NAMED, {"name": TYPE_STRING}],
 	Type.SHIP_TEAM: [RATED, {"ship": TYPE_INT, "team": TYPE_INT}],
-	Type.GAME_MODE: [RATED, {"mode": TYPE_STRING, "team_win": TYPE_STRING, "lives": TYPE_INT}],
+	Type.GAME_MODE:
+	[
+		RATED,
+		{
+			"mode": TYPE_STRING,
+			"team_win": TYPE_STRING,
+			"lives": TYPE_INT,
+			"drop_pause": TYPE_BOOL,
+			"fill_bots": TYPE_BOOL,
+		}
+	],
 	Type.RELAUNCH: [RATED, {"ship": TYPE_INT, "vote": TYPE_BOOL}],
 	Type.CLIENT_FRAME: [RATED, {"ms": TYPE_INT, "what": TYPE_STRING}],
 	Type.TRAINING: [RATED, {"station": TYPE_STRING}],
 	Type.RENAME: [RATED | NAMED, {"name": TYPE_STRING}],
 	Type.START: [RATED, {}],
+	Type.REROLL_MODIFIER: [RATED, {}],
+	Type.PRIORITY_TARGET: [RATED, {"contact": TYPE_INT}],
+	Type.SKIP_GAP: [RATED, {"ready": TYPE_BOOL}],
 }
 
 ## Messages a client may send; the server drops any other type from a client.

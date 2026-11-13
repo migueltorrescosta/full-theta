@@ -8,6 +8,10 @@ extends RefCounted
 ## and a named site one the world has; unknown and undetected ids get the same refusal, so a
 ## client can't count the ships it doesn't see.
 
+## Sim events that end a priority target (gp-15, _clear_priority).
+const PRIORITY_ENDS: Array[StringName] = [
+	&"destroyed", &"retreated", &"patrol_left", &"contact_lost", &"surrender_roll"
+]
 ## Sim events kept in the ship's log: event kind -> log key (i18n relay.log.<key>).
 ## The `by` of the scan position Science's mark creates.
 const SCIENCE_BY: String = "science"
@@ -19,7 +23,12 @@ const LOG_EVENTS: Dictionary = {
 	&"probe_no_stock": "probe_no_stock",
 	&"probe_fabricated": "probe_fabricated",
 	&"lane_warning": "lane_warning",
+	&"decoy_launched": "decoy_launched",
+	&"decoy_spent": "decoy_spent",
 }
+
+## The RunDef defaults, for a world without a run (the M1 encounter).
+static var _no_run: RunDef = RunDef.new()
 
 ## The owning game, held weakly: it owns this object, and a strong reference back
 ## would leak both (and the world they hold) when the server goes.
@@ -32,6 +41,9 @@ var pings: CrewPings = CrewPings.new()
 var relay: CrewRelay = CrewRelay.new()
 ## Ship -> the main screen's view (MainScreen.View; missing: forward).
 var main_views: Dictionary[int, int] = {}
+## Ship -> the Captain's priority target, a contact id (gp-15; missing: none). Crew state
+## like the main view: it changes no ship mechanics (FT-CPT-003).
+var priorities: Dictionary[int, int] = {}
 
 var _game: WeakRef
 
@@ -42,6 +54,7 @@ func _init(net_game: NetGame) -> void:
 	net_game.add_handler(NetProtocol.Type.MARK, on_mark)
 	net_game.add_handler(NetProtocol.Type.PING, on_ping)
 	net_game.add_handler(NetProtocol.Type.MAIN_VIEW, on_main_view)
+	net_game.add_handler(NetProtocol.Type.PRIORITY_TARGET, on_priority)
 	net_game.add_handler(NetProtocol.Type.MARK_SEND, on_mark_send)
 	net_game.add_handler(NetProtocol.Type.MARK_ACCEPT, on_mark_accept)
 
@@ -51,6 +64,7 @@ func send_to(s: NetSession) -> void:
 	game.notify(s, NetProtocol.EVENT_ALERT, _alert_payload(s.ship, ""))
 	game.notify(s, NetProtocol.EVENT_MARKS, _marks_payload(s.ship))
 	game.notify(s, NetProtocol.EVENT_MAIN_VIEW, _main_view_payload(s.ship, ""))
+	game.notify(s, NetProtocol.EVENT_PRIORITY, _priority_payload(s.ship, ""))
 	game.notify(s, NetProtocol.EVENT_ZONES, _zones_payload(s.ship))
 	game.shares.send_to(s)
 	game.notify(s, NetProtocol.EVENT_LANES, _lanes_payload(s))
@@ -69,6 +83,7 @@ func reset(ship: int) -> void:
 	relay.reset(ship)
 	main_views.erase(ship)
 	_to_ship(ship, NetProtocol.EVENT_MAIN_VIEW, _main_view_payload(ship, ""))
+	_set_priority(ship, -1, "")
 	_to_ship(ship, NetProtocol.EVENT_ZONES, _zones_payload(ship))
 	_to_ship(ship, NetProtocol.EVENT_ROUTES, _routes_payload(ship))
 	_to_relay(ship, NetProtocol.EVENT_INBOX, _inbox_payload(ship))
@@ -96,6 +111,46 @@ func on_main_view(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 		return
 	main_views[s.ship] = view
 	_to_ship(s.ship, NetProtocol.EVENT_MAIN_VIEW, _main_view_payload(s.ship, s.name))
+
+
+## PriorityTarget{contact}: the Captain picks a contact as the ship's priority target, or
+## clears it with -1 (gp-15). Only the Captain seat, also with no Captain seated (Relay
+## has its marks and pings). The contact must be one the faction may name, not the own ship.
+func on_priority(s: NetSession, msg: Dictionary, _now_us: int) -> void:
+	var contact: int = msg["contact"]
+	var why: String = ""
+	if not s.has_pick() or s.seat != StationCatalogue.CAPTAIN:
+		why = NetProtocol.REASON_NOT_ALLOWED
+	elif contact != -1 and (contact == s.ship or not _known(s, contact)):
+		why = CrewPings.BAD_PING
+	if game.refuse(s, NetProtocol.Type.PRIORITY_TARGET, why, {"contact": contact}):
+		return
+	_set_priority(s.ship, contact, s.name)
+
+
+## Sets (or with -1 clears) the ship's priority target and tells its picks; nothing when it
+## is already that.
+func _set_priority(ship: int, contact: int, by: String) -> void:
+	if priorities.get(ship, -1) == contact:
+		return
+	if contact < 0:
+		priorities.erase(ship)
+	else:
+		priorities[ship] = contact
+	_to_ship(ship, NetProtocol.EVENT_PRIORITY, _priority_payload(ship, by))
+
+
+## A priority target that left play, stopped being hostile or that the ship's faction no
+## longer detects is cleared (gp-15): `destroyed`, `retreated` and `patrol_left` name the
+## ship that left; `contact_lost` and a yes `surrender_roll` name the contact and a ship
+## of the faction it concerns.
+func _clear_priority(e: SimEvent) -> void:
+	var per_faction: bool = e.kind == &"contact_lost" or e.kind == &"surrender_roll"
+	var gone: int = e.other_id if per_faction else e.ship_id
+	var faction: int = game.world.faction_of(e.ship_id) if per_faction else -1
+	for ship: int in priorities.keys():
+		if priorities[ship] == gone and (faction < 0 or game.world.faction_of(ship) == faction):
+			_set_priority(ship, -1, "")
 
 
 ## Whether the ship has a Captain pick, connected or within reconnect grace.
@@ -211,6 +266,9 @@ func on_sim_event(e: SimEvent) -> void:
 	if e.kind == &"scan_mark":
 		_science_scan_position(e.ship_id)
 		return
+	if PRIORITY_ENDS.has(e.kind) and not priorities.is_empty():
+		if e.kind != &"surrender_roll" or e.tag == &"yes":
+			_clear_priority(e)
 	var key: String = LOG_EVENTS.get(e.kind, "")
 	if key == "" or e.ship_id < 0:
 		return
@@ -218,7 +276,7 @@ func on_sim_event(e: SimEvent) -> void:
 	match e.kind:
 		&"contact_detected", &"contact_lost":
 			args = {"callsign": String(e.tag)}
-		&"probe_launched", &"probe_deployed":
+		&"probe_launched", &"probe_deployed", &"decoy_launched", &"decoy_spent":
 			args = {"n": int(e.value) + 1}
 		&"lane_warning":
 			args = {"callsign": _ship_name(e.other_id)}
@@ -229,15 +287,19 @@ func on_sim_event(e: SimEvent) -> void:
 ## pick on the ship, viewers included (FT-SPA-016, FT-SPA-020; a card only the Captain),
 ## rate-limited per session
 ## (FT-SPA-017); a ping on an item another session pinged within 3 s is a copy naming
-## that first pinger (FT-SPA-031).
+## that first pinger (FT-SPA-031). A Viewer pings contacts only, on its own slower limit,
+## and its ping says so (`viewer`, gp-15, FT-MSC-004).
 func on_ping(s: NetSession, msg: Dictionary, now_us: int) -> void:
 	var kind: String = msg["kind"]
 	var payload: Dictionary = {"ship": s.ship, "kind": kind, "id": -1}
 	payload.merge({"x": 0.0, "y": 0.0, "z": 0.0})
 	var why: String = ""
-	if not s.has_pick() or CrewMarks.role_of(s.seat) == CrewMarks.Role.NONE:
+	var viewer: bool = s.has_pick() and s.seat == StationCatalogue.VIEWER
+	if not s.has_pick() or (CrewMarks.role_of(s.seat) == CrewMarks.Role.NONE and not viewer):
 		why = NetGame.NOT_CREW
-	elif not pings.take(s.id, now_us):
+	elif viewer and kind != "contact":
+		why = CrewPings.BAD_PING
+	elif not _take_ping(s, now_us, viewer):
 		why = CommandGate.RATE_LIMITED
 	else:
 		match kind:
@@ -282,8 +344,19 @@ func on_ping(s: NetSession, msg: Dictionary, now_us: int) -> void:
 	if game.refuse(s, NetProtocol.Type.PING, why, {"kind": kind}):
 		return
 	payload["by"] = s.name
+	if viewer:
+		payload["viewer"] = true
 	payload["copy"] = pings.copy_of(s.ship, kind, payload["id"], s.id, s.name, now_us)
 	_to_ship(s.ship, NetProtocol.EVENT_PING, payload)
+
+
+## Takes a ping token: the crew's limit, or a Viewer's from the RunDef (its defaults
+## without one).
+func _take_ping(s: NetSession, now_us: int, viewer: bool) -> bool:
+	if not viewer:
+		return pings.take(s.id, now_us)
+	var run: RunDef = game.world.run_def if game.world.run_def != null else _no_run
+	return pings.take(s.id, now_us, run.viewer_ping_rate, run.viewer_ping_burst)
 
 
 ## A card of the ship's board as the ping shows it: kind (StoryTable.Kind), the title and
@@ -618,6 +691,14 @@ func _log(ship: int, key: String, args: Dictionary = {}, tick: int = -1) -> void
 
 func _main_view_payload(ship: int, by: String) -> Dictionary:
 	return {"ship": ship, "view": main_views.get(ship, MainScreen.View.FORWARD), "by": by}
+
+
+func _priority_payload(ship: int, by: String) -> Dictionary:
+	var contact: int = priorities.get(ship, -1)
+	var callsign: String = ""
+	if contact >= 0:
+		callsign = KnowledgeSystem.callsign(game.world, game.world.faction_of(ship), contact)
+	return {"ship": ship, "contact": contact, "callsign": callsign, "by": by}
 
 
 func _alert_payload(ship: int, by: String) -> Dictionary:

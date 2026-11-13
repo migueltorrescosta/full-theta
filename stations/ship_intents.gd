@@ -47,6 +47,11 @@ func set_main_view(view: int) -> void:
 	_call(&"set_main_view", [view])
 
 
+## The Captain's priority target, a contact id; -1 clears it (gp-15).
+func set_priority(contact: int) -> void:
+	_call(&"set_priority", [contact])
+
+
 ## kind "contact" | "mark" | "card" | "site" | "point" (FT-SPA-016, FT-CPT-005).
 func ping(kind: String, id: int, pos: Vector3) -> void:
 	_call(&"ping", [kind, id, pos])
@@ -149,6 +154,11 @@ func host_pause(on: bool) -> void:
 	_call(&"host_pause", [on])
 
 
+## Ready (or not) to skip the quiet gap before the next encounter (gp-07).
+func skip_gap(ready: bool) -> void:
+	_call(&"skip_gap", [ready])
+
+
 ## "Run again" after the outcome (D178); the host's vote resets at once.
 func run_again(ship: int, vote: bool) -> void:
 	_call(&"run_again", [ship, vote])
@@ -169,8 +179,20 @@ func set_team(ship: int, team: int) -> void:
 	_call(&"set_team", [ship, team])
 
 
-func set_mode(mode: String, team_win: String, lives: int = -1) -> void:
-	_call(&"set_mode", [mode, team_win, lives])
+## The host's mode and options (#40 D1, D2): pause when someone drops, fill light stations.
+func set_mode(
+	mode: String,
+	team_win: String,
+	lives: int = -1,
+	drop_pause: bool = false,
+	fill_bots: bool = false
+) -> void:
+	_call(&"set_mode", [mode, team_win, lives, drop_pause, fill_bots])
+
+
+## The host rolls another run modifier (gp-11).
+func reroll_modifier() -> void:
+	_call(&"reroll_modifier", [])
 
 
 func vote_relaunch(ship: int, vote: bool) -> void:
