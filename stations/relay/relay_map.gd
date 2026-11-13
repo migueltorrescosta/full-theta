@@ -14,7 +14,7 @@ extends Control
 ## (the same, amber), routes (dashed lines with an arrow), flagged lanes that cross a
 ## friendly (red lines, FT-RLY-011), the site's name as a banner (FT-SPA-027) and the site
 ## of an encounter waiting for the ship as a dashed "?" (gp-16, amends D250: shown
-## RelayMapDef.site_marker_delay after it opened, until it starts) are drawn here from what
+## RunDef.site_marker_delay after it opened, until it starts) are drawn here from what
 ## the panel hands in.
 ##
 ## The panel (RelayPanel) owns input; this control only draws and maps between screen

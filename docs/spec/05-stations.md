@@ -234,7 +234,7 @@ Centre: the world map, a freely rotatable 3D map of the wrapping cube, centred o
 - **FT-RLY-009** Relay shall list received marks in an inbox and accept or decline each; only an accepted mark is shared with its crew. (D82, D221)
 - **FT-RLY-010** With no Captain seated, Relay shall switch the main-screen view. (D88)
 - **FT-RLY-011** Relay shall flag lanes crossing friendlies, and Weapons shall get a warning before a shot along a flagged lane. (P8, D37)
-- **FT-RLY-012** Relay's map shall show the site of an encounter waiting for the ship as a dashed "?" marker from 30 s (`RelayMapDef.site_marker_delay`) after the encounter opened until it starts or ends; Helm's view is unchanged and Comms' INFO card still names the site first. (D250, D440)
+- **FT-RLY-012** Relay's map shall show the site of an encounter waiting for the ship as a dashed "?" marker from 30 s (`RunDef.site_marker_delay`) after the encounter opened until it starts or ends; Helm's view is unchanged and Comms' INFO card still names the site first. (D250, D440)
 - **FT-RLY-013** While a hostile is in play, Relay shall launch a decoy that uses one probe from stock and, for a while, draws the hostile NPCs near it to target the decoy instead of the ship. (D437)
 
 ## 5.6 Comms (new station; D53)

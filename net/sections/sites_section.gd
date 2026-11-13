@@ -9,14 +9,11 @@ extends SnapshotSection
 ## u8 pending, f32 radius (m), the point as 3 x s32 (1/16 m, NetCodec.quant_pos) and u8
 ## length + UTF-8 name key. Sites don't move, so the client keeps them as they come.
 ## `pending` is 1 while an encounter of the faction waits at the site and opened at least
-## RelayMapDef.site_marker_delay ago: Relay's map marks it "?" (gp-16, amends D250). It flips
-## twice per encounter, so the section is resent then.
+## RunDef.site_marker_delay ago (never without a RunDef): Relay's map marks it "?" (gp-16,
+## amends D250). It flips twice per encounter, so the section is resent then.
 
 ## Most rows the section carries (D225: at most 32 rows).
 const MAX_ROWS: int = 32
-
-## Relay's map rules (content/relay/relay_map.tres), loaded once.
-static var _map_def: RelayMapDef = load("res://content/relay/relay_map.tres") as RelayMapDef
 
 
 func _init(faction: int) -> void:
@@ -52,8 +49,10 @@ func update(world: SimWorld) -> PackedByteArray:
 ## The sites of the faction's PENDING encounters opened at least site_marker_delay ago.
 static func pending_sites(world: SimWorld, faction: int) -> Dictionary[int, bool]:
 	var out: Dictionary[int, bool] = {}
+	if world.run_def == null:
+		return out
 	var t: EncounterTable = world.encounters
-	var delay: int = SimRate.ticks(_map_def.site_marker_delay)
+	var delay: int = SimRate.ticks(world.run_def.site_marker_delay)
 	for e: int in t.size():
 		if (
 			t.result[e] == EncounterTable.Result.PENDING

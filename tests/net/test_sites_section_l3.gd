@@ -112,9 +112,12 @@ func test_a_pending_site_is_flagged_after_the_delay_until_it_starts() -> void:
 	var w: SimWorld = server.world
 	var faction: int = w.faction_of(PLAYER)
 	var site: int = w.add_site(_site("vesper", Vector3(50000, 0, 0)), 1 << faction)
-	var def: RelayMapDef = load("res://content/relay/relay_map.tres") as RelayMapDef
-	var delay: int = SimRate.ticks(def.site_marker_delay)
-	var row: int = w.encounters.add_encounter(PLAYER, faction, 0, site, 1, 0, w.tick - delay + 1)
+	var row: int = w.encounters.add_encounter(PLAYER, faction, 0, site, 1, 0, w.tick - 100_000)
+	# Without a RunDef (the M1 encounter) no site is ever pending.
+	assert_bool(SitesSection.pending_sites(w, faction).is_empty()).is_true()
+	w.run_def = load("res://content/runs/m3_run.tres") as RunDef
+	var delay: int = SimRate.ticks(w.run_def.site_marker_delay)
+	w.encounters.open_tick[row] = w.tick - delay + 1
 	var section: SitesSection = SitesSection.new(faction)
 	assert_bool(_pending_on_wire(section.update(w), site)).is_false()
 	w.encounters.open_tick[row] = w.tick - delay

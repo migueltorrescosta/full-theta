@@ -8,6 +8,10 @@ extends RefCounted
 ## and a named site one the world has; unknown and undetected ids get the same refusal, so a
 ## client can't count the ships it doesn't see.
 
+## Sim events that end a priority target (gp-15, _clear_priority).
+const PRIORITY_ENDS: Array[StringName] = [
+	&"destroyed", &"retreated", &"patrol_left", &"contact_lost", &"surrender_roll"
+]
 ## Sim events kept in the ship's log: event kind -> log key (i18n relay.log.<key>).
 ## The `by` of the scan position Science's mark creates.
 const SCIENCE_BY: String = "science"
@@ -22,6 +26,9 @@ const LOG_EVENTS: Dictionary = {
 	&"decoy_launched": "decoy_launched",
 	&"decoy_spent": "decoy_spent",
 }
+
+## The RunDef defaults, for a world without a run (the M1 encounter).
+static var _no_run: RunDef = RunDef.new()
 
 ## The owning game, held weakly: it owns this object, and a strong reference back
 ## would leak both (and the world they hold) when the server goes.
@@ -133,11 +140,14 @@ func _set_priority(ship: int, contact: int, by: String) -> void:
 	_to_ship(ship, NetProtocol.EVENT_PRIORITY, _priority_payload(ship, by))
 
 
-## A priority target that left play or that the ship's faction no longer detects is cleared
-## (gp-15): `destroyed` names the ship, `contact_lost` the contact and an observing ship.
+## A priority target that left play, stopped being hostile or that the ship's faction no
+## longer detects is cleared (gp-15): `destroyed`, `retreated` and `patrol_left` name the
+## ship that left; `contact_lost` and a yes `surrender_roll` name the contact and a ship
+## of the faction it concerns.
 func _clear_priority(e: SimEvent) -> void:
-	var gone: int = e.ship_id if e.kind == &"destroyed" else e.other_id
-	var faction: int = game.world.faction_of(e.ship_id) if e.kind == &"contact_lost" else -1
+	var per_faction: bool = e.kind == &"contact_lost" or e.kind == &"surrender_roll"
+	var gone: int = e.other_id if per_faction else e.ship_id
+	var faction: int = game.world.faction_of(e.ship_id) if per_faction else -1
 	for ship: int in priorities.keys():
 		if priorities[ship] == gone and (faction < 0 or game.world.faction_of(ship) == faction):
 			_set_priority(ship, -1, "")
@@ -256,8 +266,9 @@ func on_sim_event(e: SimEvent) -> void:
 	if e.kind == &"scan_mark":
 		_science_scan_position(e.ship_id)
 		return
-	if (e.kind == &"destroyed" or e.kind == &"contact_lost") and not priorities.is_empty():
-		_clear_priority(e)
+	if PRIORITY_ENDS.has(e.kind) and not priorities.is_empty():
+		if e.kind != &"surrender_roll" or e.tag == &"yes":
+			_clear_priority(e)
 	var key: String = LOG_EVENTS.get(e.kind, "")
 	if key == "" or e.ship_id < 0:
 		return
@@ -288,7 +299,7 @@ func on_ping(s: NetSession, msg: Dictionary, now_us: int) -> void:
 		why = NetGame.NOT_CREW
 	elif viewer and kind != "contact":
 		why = CrewPings.BAD_PING
-	elif not pings.take(s.id, now_us, viewer):
+	elif not _take_ping(s, now_us, viewer):
 		why = CommandGate.RATE_LIMITED
 	else:
 		match kind:
@@ -337,6 +348,15 @@ func on_ping(s: NetSession, msg: Dictionary, now_us: int) -> void:
 		payload["viewer"] = true
 	payload["copy"] = pings.copy_of(s.ship, kind, payload["id"], s.id, s.name, now_us)
 	_to_ship(s.ship, NetProtocol.EVENT_PING, payload)
+
+
+## Takes a ping token: the crew's limit, or a Viewer's from the RunDef (its defaults
+## without one).
+func _take_ping(s: NetSession, now_us: int, viewer: bool) -> bool:
+	if not viewer:
+		return pings.take(s.id, now_us)
+	var run: RunDef = game.world.run_def if game.world.run_def != null else _no_run
+	return pings.take(s.id, now_us, run.viewer_ping_rate, run.viewer_ping_burst)
 
 
 ## A card of the ship's board as the ping shows it: kind (StoryTable.Kind), the title and

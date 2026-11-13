@@ -29,3 +29,6 @@ bounty = 100
 salvage = 150
 salvage_range = 300.0
 salvage_lifetime = 300.0
+site_marker_delay = 30.0
+viewer_ping_rate = 0.1
+viewer_ping_burst = 2.0
