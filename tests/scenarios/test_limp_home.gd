@@ -105,3 +105,53 @@ func test_a_whole_ship_that_docks_has_not_limped_home() -> void:
 	f.run(3)
 	assert_int(f.api.encounter(f.encounter).result).is_equal(Scenario.Result.ACTIVE)
 	assert_int(f.world.ships.crippled_tick[0]).is_equal(-1)
+
+
+## A jump that a hostile saw start lands ship 0 beside the yard (as JumpSystem would: placed,
+## then &"jump_arrive"; the freighter, ship 1, stands in for the hostile that saw it).
+func _seen_jump_to_yard(f: ScenarioFixture) -> void:
+	var w: SimWorld = f.world
+	w.helm.jump_seen_by[0] = 1
+	w.kin.place(0, CubePoint.plus(w.sites.point(0), Vector3(500.0, 0.0, 0.0)))
+	w.kin.vel[0] = Vector3.ZERO
+	w.emit(&"jump_arrive", 0, -1, 0.0, Vector3.ZERO, &"-1")
+	f.tick()
+
+
+# FT: FT-MIS-050, FT-MIS-015
+# Limping home is a jump to a dock: a crippled ship's seen jump in time is no flee, and the
+# dock that follows ends the encounter partial. The same jump by a whole ship is a flee.
+func test_a_crippled_ship_jumps_to_the_yard_and_docks() -> void:
+	var f: ScenarioFixture = ScenarioFixture.make()
+	_rescue(f)
+	var credits: int = Economy.credits(f.world, 0)
+	_hull_to(f, 0.2)
+	assert_array(_step_events(f, &"crippled")).has_size(1)
+	_seen_jump_to_yard(f)
+	assert_int(f.api.encounter(f.encounter).result).is_equal(Scenario.Result.ACTIVE)
+	assert_int(f.world.encounters.fled_mask[f.encounter]).is_equal(0)
+	assert_int(f.world.ships.encounter[0]).is_equal(f.encounter)
+	var dock: DockCommand = DockCommand.new()
+	dock.site_id = 0
+	assert_bool(f.send(dock)).is_true()
+	f.run(3)
+	assert_int(f.api.encounter(f.encounter).result).is_equal(Scenario.Result.PARTIAL)
+	assert_bool(EncounterTable.has_bit(f.world.encounters.limped_mask[f.encounter], 0)).is_true()
+	assert_int(Economy.credits(f.world, 0)).is_equal(credits + 200)
+	var whole: ScenarioFixture = ScenarioFixture.make()
+	_rescue(whole)
+	_seen_jump_to_yard(whole)
+	assert_int(whole.api.encounter(whole.encounter).result).is_equal(Scenario.Result.FLED)
+
+
+# FT: FT-MIS-050
+# A ship crippled while already docked has not limped home: the dock must come after.
+func test_a_ship_crippled_while_docked_does_not_limp_home() -> void:
+	var f: ScenarioFixture = ScenarioFixture.make()
+	_rescue(f)
+	assert_bool(_dock_at_yard(f)).is_true()
+	_hull_to(f, 0.2)
+	assert_array(_step_events(f, &"crippled")).has_size(1)
+	f.run(3)
+	assert_int(f.api.encounter(f.encounter).result).is_equal(Scenario.Result.ACTIVE)
+	assert_int(f.world.encounters.limped_mask[f.encounter]).is_equal(0)

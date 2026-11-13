@@ -63,9 +63,20 @@ func test_the_countdown_runs_out_or_ends_with_the_encounter() -> void:
 	_advance(s, 120_000)
 	assert_str(s.critical.shown()).is_empty()
 	_event(s, "crippled", {"value": 120.0})
-	_event(s, "encounter_end", {"ship": 1})
+	# Another fleet ship's encounter ending leaves it alone; its own encounter's end stops it.
+	_event(s, "encounter_end", {"ship": SHIP + 1})
+	_advance(s, 100)
+	assert_str(s.critical.shown()).starts_with("Crippled")
+	_event(s, "encounter_end", {})
 	_advance(s, 100)
 	assert_str(s.critical.shown()).is_empty()
+	for kind: String in ["fled", "destroyed"]:
+		_event(s, "crippled", {"value": 120.0})
+		_advance(s, 100)
+		assert_str(s.critical.shown()).starts_with("Crippled")
+		_event(s, kind, {})
+		_advance(s, 100)
+		assert_str(s.critical.shown()).override_failure_message(kind).is_empty()
 
 
 # FT: FT-MIS-052

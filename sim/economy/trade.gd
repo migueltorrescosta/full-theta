@@ -38,6 +38,12 @@ static func modules_on_offer(world: SimWorld, card: int, m: MarketDef) -> Array[
 	return out
 
 
+## A module's price in this run: ModuleDef.price times the run modifier's prices, rounded up
+## like the markets' (RunSetup._priced, gp-11).
+static func module_price(world: SimWorld, module: ModuleDef) -> int:
+	return ceili(module.price * world.modifier.prices - 1e-6)
+
+
 ## What the market pays for a module or an item priced at `price`.
 ## Rounded down, with a hair of slack so that a ratio like 0.7 does not lose a credit to
 ## floating point (0.7 * 90 is 62.99999999999999).

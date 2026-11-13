@@ -92,7 +92,14 @@ func test_a_dock_offers_two_of_the_three_modules() -> void:
 			missing = key
 	Economy.add_credits(w, 0, 5000)
 	assert_bool(_buy(f, card, missing)).is_false()
+	var module: ModuleDef = w.module_defs[ModuleSystem.index_of(w, offered[0])]
+	var before: int = Economy.credits(w, 0)
 	assert_bool(_buy(f, card, offered[0])).is_true()
+	for row: Dictionary in CommsSection.block(w, 0)["modules"]:
+		assert_int(row["price"]).is_equal(
+			Trade.module_price(w, f.world.module_defs[ModuleSystem.index_of(w, row["module"])])
+		)
+	assert_int(before - Economy.credits(w, 0)).is_less_equal(Trade.module_price(w, module))
 
 
 func _buy(f: ScenarioFixture, card: int, key: StringName) -> bool:

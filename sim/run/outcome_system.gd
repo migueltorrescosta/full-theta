@@ -44,6 +44,7 @@ static func step(world: SimWorld) -> void:
 			status[id] = ShipStateTable.Status.DESTROYED
 			if enabled[id] == 1:
 				_pay_bounty(world, id)
+				SalvageSystem.drop_wreck(world, id)
 			else:
 				_count_kill(world, id)
 				# A ship that won and was then destroyed is out of play too: it has no
@@ -97,7 +98,10 @@ static func game_outcome(world: SimWorld) -> GameOutcome:
 		var o: int = world.ships.ship_outcome[id]
 		won = won or o == ShipStateTable.ShipOutcome.WIN
 		# in play counts, not "no loss": a ship that won and was then destroyed does not stand.
-		if world.ships.status[id] == ShipStateTable.Status.IN_PLAY or _may_relaunch(world, id):
+		if (
+			world.ships.status[id] == ShipStateTable.Status.IN_PLAY
+			or RelaunchShipCommand.allowed(world, id)
+		):
 			standing.append(id)
 			playing = playing or o == ShipStateTable.ShipOutcome.NONE
 	if crew.is_empty():
@@ -128,11 +132,6 @@ static func game_outcome(world: SimWorld) -> GameOutcome:
 	if not out.over() and standing.is_empty():
 		out.reason = GameOutcome.Reason.ALL_LOST
 	return out
-
-
-## Whether a crewed ship that lost may still relaunch under its side's policy (and pay for it).
-static func _may_relaunch(world: SimWorld, id: int) -> bool:
-	return RelaunchShipCommand.allowed(world, id)
 
 
 ## FIRST_TO_FINISH: the crewed ships that won on the earliest finish tick; with teams, every

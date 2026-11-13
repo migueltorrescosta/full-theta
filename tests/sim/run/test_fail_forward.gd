@@ -167,3 +167,16 @@ func test_no_modifier_changes_nothing() -> void:
 	assert_bool(w.markets[&"kappa"] == setup.markets[&"kappa"]).is_true()
 	for m: RunModifierDef in _defs.run_modifiers():
 		assert_array(m.validate()).is_empty()
+
+
+# FT: FT-MIS-053
+# The prices modifier scales module prices too (buy, trade-in and Comms' rows read one price).
+func test_the_prices_modifier_scales_module_prices() -> void:
+	var main: ServerMain = ServerMain.new()
+	var setup: RunSetup = main.run_setup(_defs)
+	setup.rules.modifier_id = &"lean_times"
+	var w: SimWorld = setup.build()
+	var module: ModuleDef = w.module_defs[ModuleSystem.index_of(w, &"lx1_longscan")]
+	assert_int(Trade.module_price(w, module)).is_equal(750)
+	setup.rules.modifier_id = &""
+	assert_int(Trade.module_price(setup.build(), module)).is_equal(module.price)
