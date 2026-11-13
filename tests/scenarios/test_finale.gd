@@ -24,7 +24,7 @@ func _says(f: ScenarioFixture, line: String) -> bool:
 
 # FT: FT-MIS-003, FT-MIS-041
 # The boss (2 mounts, twice the raider's hull) arrives first and hails, its hail card posted;
-# escorts x strength raiders, rounded (1.5 x 1.3 is 2, Normal's finale), join from 45 s, one
+# escorts x strength raiders, rounded (1.5 x 1.3 is 2), join from 45 s, one
 # every 15 s.
 func test_a_heavy_raider_and_escorts_arrive_and_hail() -> void:
 	var f: ScenarioFixture = _finale(1.5, 1.3)

@@ -48,7 +48,8 @@ extends Resource
 ## Finale attempts before the run closes anyway (count).
 @export var finale_tries: int = 1
 ## Raider escorts of the heavy raider at strength 1 (count), scaled like a wave and rounded
-## (at least one); a fraction tunes between presets (1.5: 1 on Easy, 2 on Normal, 3 on Hard).
+## (at least one); a fraction tunes between presets (1.15: 1 on Normal, 2 on Hard;
+## none on Easy, finale_escorts_from).
 @export var finale_escorts: float = 0.0
 ## The finale's strength under which the heavy raider comes alone (w-4cm: no escorts on Easy;
 ## dimensionless, the strength the finale is played at, preset x ramp_end x fleet; 0: always).
