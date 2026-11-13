@@ -162,7 +162,7 @@ Active ids per area: FT-GEN 14, FT-ARC 23, FT-NET 51, FT-SIM 37, FT-STN 17, FT-H
 | FT-HLM-010 | tests | `tests/stations/helm/test_helm_tablet.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_controls.gd` |
 | FT-HLM-011 | tests | `tests/net/test_shortcut_filter.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_shield_ring.gd` |
 | FT-HLM-012 | tests | `tests/net/test_shortcut_filter.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_station_alerts.gd` |
-| FT-HLM-013 | tests | `tests/sim/combat/test_ram_and_dock.gd`, `tests/sim/flight/test_dock.gd`, `tests/stations/helm/test_helm_tablet.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_controls.gd`, `tests/stations/test_helm_jump_dock.gd` |
+| FT-HLM-013 | tests | `tests/sim/combat/test_ram_and_dock.gd`, `tests/sim/flight/test_dock.gd`, `tests/sim/run/test_out_of_fight.gd`, `tests/stations/helm/test_helm_tablet.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_controls.gd`, `tests/stations/test_helm_jump_dock.gd` |
 | FT-HLM-014 | tests | `tests/stations/helm/test_helm_reach.gd`, `tests/stations/helm/test_helm_tablet.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_controls.gd` |
 | FT-HLM-015 | tests | `tests/stations/helm/test_helm_reach.gd`, `tests/stations/helm/test_helm_tablet.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_controls.gd` |
 | FT-HLM-016 | tests | `tests/sim/flight/test_jump.gd`, `tests/sim/run/test_map_def.gd`, `tests/stations/helm/test_helm_tablet.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_jump_dock.gd` |
@@ -308,7 +308,7 @@ Active ids per area: FT-GEN 14, FT-ARC 23, FT-NET 51, FT-SIM 37, FT-STN 17, FT-H
 | FT-MIS-012 | tests | `tests/sim/run/test_game_modes.gd`, `tests/sim/run/test_relaunch.gd` |
 | FT-MIS-013 | tests | `tests/director/test_fleet_director.gd`, `tests/net/test_net_fleet_teams.gd`, `tests/sim/run/test_game_modes.gd` |
 | FT-MIS-014 | tests | `tests/net/test_fleet_lobby_l3.gd`, `tests/sim/run/test_game_modes.gd`, `tests/sim/run/test_game_ties.gd`, `tests/sim/run/test_relaunch.gd`, `tests/stations/test_fleet_screens.gd` |
-| FT-MIS-015 | tests | `tests/scenarios/test_limp_home.gd`, `tests/sim/run/test_flee_abandon.gd`, `tests/sim/run/test_flee_rules.gd` |
+| FT-MIS-015 | tests | `tests/scenarios/test_limp_home.gd`, `tests/sim/run/test_flee_abandon.gd`, `tests/sim/run/test_flee_rules.gd`, `tests/sim/run/test_out_of_fight.gd` |
 | FT-MIS-016 | tests | `tests/net/test_run_abandon_l3.gd`, `tests/sim/run/test_flee_abandon.gd`, `tests/stations/m4_phone/test_m4_phone_screens.gd`, `tests/stations/test_fleet_screens.gd`, `tests/stations/test_settings_menu.gd` |
 | FT-MIS-017 | tests | `tests/sim/core/test_sim_world.gd`, `tests/sim/economy/test_modules.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/sim/run/test_outcome.gd`, `tests/sim/run/test_run_reset.gd` |
 | FT-MIS-018 | tests | `tests/sim/economy/test_economy.gd`, `tests/sim/economy/test_reputation.gd` |
@@ -318,7 +318,7 @@ Active ids per area: FT-GEN 14, FT-ARC 23, FT-NET 51, FT-SIM 37, FT-STN 17, FT-H
 | FT-MIS-022 | tests | `tests/sim/economy/test_modules.gd` |
 | FT-MIS-023 | tests | `tests/director/test_fleet_director.gd`, `tests/scenarios/test_fleet_scenarios.gd`, `tests/sim/run/test_relaunch.gd` |
 | FT-MIS-024 | tests | `tests/sim/run/test_map_def.gd`, `tests/sim/run/test_run_setup_map.gd`, `tests/sim/run/test_seeded_run.gd` |
-| FT-MIS-025 | tests | `tests/director/test_director_budget.gd`, `tests/director/test_director_pacing.gd`, `tests/director/test_director_pending_site.gd`, `tests/net/test_skip_gap_l3.gd`, `tests/sim/run/test_encounter_fixes.gd`, `tests/sim/run/test_encounter_pacing.gd`, `tests/sim/run/test_seeded_run.gd`, `tests/stations/test_gap_banner.gd` |
+| FT-MIS-025 | tests | `tests/director/test_director_budget.gd`, `tests/director/test_director_pacing.gd`, `tests/director/test_director_pending_site.gd`, `tests/net/test_skip_gap_l3.gd`, `tests/sim/run/test_encounter_fixes.gd`, `tests/sim/run/test_encounter_pacing.gd`, `tests/sim/run/test_out_of_fight.gd`, `tests/sim/run/test_seeded_run.gd`, `tests/stations/test_gap_banner.gd` |
 | FT-MIS-026 | tests | `tests/scenarios/test_debris_leg.gd`, `tests/sim/flight/test_jump.gd`, `tests/sim/run/test_encounter_fixes.gd`, `tests/sim/run/test_seeded_run.gd` |
 | FT-MIS-027 | tests | `tests/director/test_director_budget.gd`, `tests/director/test_director_pending_site.gd`, `tests/sim/run/test_encounter_fixes.gd`, `tests/sim/run/test_encounter_pacing.gd`, `tests/sim/run/test_seeded_run.gd`, `tests/stations/test_comms_board.gd` |
 | FT-MIS-028 | tests | `tests/director/test_director_budget.gd`, `tests/director/test_director_pacing.gd`, `tests/director/test_director_picks.gd` |
@@ -334,9 +334,9 @@ Active ids per area: FT-GEN 14, FT-ARC 23, FT-NET 51, FT-SIM 37, FT-STN 17, FT-H
 | FT-MIS-038 | tests | `tests/net/test_debrief_l3.gd` |
 | FT-MIS-039 | tests | `tests/app/test_main_menu.gd`, `tests/app/test_training_picker.gd`, `tests/input/test_binding_markers.gd`, `tests/input/test_radial_route.gd`, `tests/net/test_training_captain_l3.gd`, `tests/net/test_training_next_gate.gd`, `tests/net/test_training_solo_l3.gd`, `tests/presentation/test_controls_pad_focus.gd`, `tests/scenarios/test_shakedown.gd`, `tests/scenarios/test_shakedown_coverage.gd`, `tests/scenarios/test_shakedown_crew.gd`, `tests/scenarios/test_shakedown_skip.gd`, `tests/scenarios/test_shakedown_solo.gd`, `tests/stations/test_training_banner.gd`, `tests/stations/test_training_pad_skip.gd`, `tests/stations/test_training_touch.gd`, `tools/tests/test_dialogue_binding_slot.py` |
 | FT-MIS-040 | tests | `tests/net/test_host_pause_l3.gd`, `tests/stations/m4_phone/test_m4_phone_screens.gd`, `tests/stations/test_pause_overlay.gd`, `tests/stations/test_settings_menu.gd` |
-| FT-MIS-041 | tests | `tests/app/test_content_packs.gd`, `tests/scenarios/test_comms_beat_lint.gd`, `tests/scenarios/test_debris_leg.gd`, `tests/scenarios/test_enemy_wave.gd`, `tests/scenarios/test_finale.gd`, `tests/scenarios/test_fleet_scenarios.gd`, `tests/sim/api/test_scenario_meta.gd`, `tests/sim/run/test_flee_rules.gd` |
+| FT-MIS-041 | tests | `tests/app/test_content_packs.gd`, `tests/scenarios/test_comms_beat_lint.gd`, `tests/scenarios/test_debris_leg.gd`, `tests/scenarios/test_enemy_wave.gd`, `tests/scenarios/test_finale.gd`, `tests/scenarios/test_fleet_scenarios.gd`, `tests/sim/api/test_scenario_meta.gd`, `tests/sim/run/test_flee_rules.gd`, `tests/sim/run/test_out_of_fight.gd` |
 | FT-MIS-042 | tests | `tests/net/test_contract_flags_l3.gd`, `tests/net/test_fleet_sharing_l3.gd`, `tests/pairs/test_p9_weapons_comms.gd`, `tests/sim/story/test_cards.gd`, `tests/stations/test_weapons_flags.gd` |
-| FT-MIS-050 | tests | `tests/scenarios/test_limp_home.gd`, `tests/sim/run/test_flee_rules.gd`, `tests/stations/test_crippled_alerts.gd`, `tests/stations/test_outcome_card.gd` |
+| FT-MIS-050 | tests | `tests/scenarios/test_limp_home.gd`, `tests/sim/run/test_flee_rules.gd`, `tests/sim/run/test_out_of_fight.gd`, `tests/stations/test_crippled_alerts.gd`, `tests/stations/test_outcome_card.gd` |
 | FT-MIS-051 | tests | `tests/sim/run/test_fail_forward.gd`, `tests/stations/test_vote_prompt_cost.gd` |
 | FT-MIS-052 | tests | `tests/scenarios/test_dock_market.gd`, `tests/sim/run/test_fail_forward.gd`, `tests/stations/test_crippled_alerts.gd` |
 | FT-MIS-053 | tests | `tests/sim/run/test_fail_forward.gd` |
