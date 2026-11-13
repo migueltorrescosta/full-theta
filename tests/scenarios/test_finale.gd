@@ -6,7 +6,7 @@ extends GdUnitTestSuite
 const SITE: StringName = &"hollow_gate"
 
 
-func _finale(escorts: int = 2, strength: float = 1.0, limit: float = 300.0) -> ScenarioFixture:
+func _finale(escorts: float = 2.0, strength: float = 1.0, limit: float = 300.0) -> ScenarioFixture:
 	var f: ScenarioFixture = ScenarioFixture.make()
 	f.strength = strength
 	f.params = {"escorts": escorts, "time_limit": limit}
@@ -24,16 +24,17 @@ func _says(f: ScenarioFixture, line: String) -> bool:
 
 # FT: FT-MIS-003, FT-MIS-041
 # The boss (2 mounts, twice the raider's hull) arrives first and hails, its hail card posted;
-# count_for(escorts, strength) raiders join from 45 s, one every 15 s.
+# escorts x strength raiders, rounded (1.5 x 1.3 is 2, Normal's finale), join from 45 s, one
+# every 15 s.
 func test_a_heavy_raider_and_escorts_arrive_and_hail() -> void:
-	var f: ScenarioFixture = _finale(2, 1.3)
+	var f: ScenarioFixture = _finale(1.5, 1.3)
 	var bosses: Array[int] = f.ships_of(Finale.BOSS_KEY)
 	assert_int(bosses.size()).is_equal(1)
 	assert_int(f.ships_of(Factions.RAIDER_KEY).size()).is_equal(0)
 	f.run(60 * 46)
 	assert_int(f.ships_of(Factions.RAIDER_KEY).size()).is_equal(1)
 	f.run(60 * 31)
-	assert_int(f.ships_of(Factions.RAIDER_KEY).size()).is_equal(Scenario.count_for(2, 1.3))
+	assert_int(f.ships_of(Factions.RAIDER_KEY).size()).is_equal(2)
 	var boss: ShipDef = f.world.defs[bosses[0]]
 	var raider: ShipDef = f.world.defs[f.ships_of(Factions.RAIDER_KEY)[0]]
 	assert_int(boss.mounts.size()).is_equal(2)
