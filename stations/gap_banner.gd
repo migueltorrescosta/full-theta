@@ -105,9 +105,11 @@ func _show_offers(offers: Array, pick: int, form: LayoutMode.Form) -> void:
 		return
 	_heading.text = tr("gap.pick")
 	if offers != _shown_offers:
+		# A later gap's offers start closed again; the first ones keep what was set.
+		if not _shown_offers.is_empty():
+			expanded = false
 		_shown_offers = offers
 		_shown_pick = -1
-		expanded = false
 		_group = ButtonGroup.new()
 		for b: Node in _offers.get_children():
 			_offers.remove_child(b)
