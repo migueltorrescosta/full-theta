@@ -51,7 +51,7 @@ func test_a_non_voter_never_sees_it_and_it_goes_with_the_gap() -> void:
 func _offers(n: int) -> Array:
 	var out: Array = []
 	for i: int in n:
-		out.append({"site": i, "name_key": "site.kestrel_yard", "risk": i % 3, "reward": 1})
+		out.append({"site": i, "name_key": "site.vesper_beacon", "risk": i % 3, "reward": 1})
 	return out
 
 
@@ -66,16 +66,22 @@ func _picker_banner(pickers: Array, offers: Array, pick: int) -> GapBanner:
 
 # FT: FT-MIS-025
 # w-bzx: a picker with 3 offers sees one toggle per offer (name, then the tags), the current
-# pick pressed; tapping another sends SitePick.
+# pick pressed; tapping another sends SitePick and closes them on a phone, "Next" naming it.
 func test_a_picker_sees_the_offers_and_taps_one() -> void:
 	I18n.apply("en")
 	var b: GapBanner = _picker_banner([StationFixture.SESSION], _offers(3), 1)
+	# Opened, as a tap on "Next" does on a phone (desktop and tablet always show the offers).
+	b.expanded = true
+	b.refresh()
 	var offer: Button = b.find_child("Offer2", true, false)
 	assert_bool(offer.is_visible_in_tree()).is_true()
 	assert_str(offer.text).contains("\n").contains("High risk · Fair pay")
 	assert_bool((b.find_child("Offer1", true, false) as Button).button_pressed).is_true()
 	offer.button_pressed = true
 	assert_array(StationFixture.sent(b.ctx).of("site_pick")).is_equal([["site_pick", [2]]])
+	b.refresh()
+	assert_bool(b.expanded).is_false()
+	assert_str((b.find_child("Next", true, false) as Button).text).is_equal("Next: Vesper Beacon")
 	assert_bool((b.find_child("Offer1", true, false) as Button).button_pressed).is_false()
 
 
@@ -88,3 +94,4 @@ func test_no_choice_for_a_non_picker_or_a_single_offer() -> void:
 		assert_bool(b.visible).is_true()
 		var offer: Button = b.find_child("Offer0", true, false)
 		assert_bool(offer == null or not offer.is_visible_in_tree()).is_true()
+		assert_bool((b.find_child("Next", true, false) as Button).is_visible_in_tree()).is_false()

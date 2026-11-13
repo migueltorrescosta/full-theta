@@ -62,6 +62,8 @@ var claim: String = ""
 ## at Weapons show its Claim button (C3).
 var crew_seats: Array = []
 var events: Array = []
+## Whether a phone's gap card shows its site offers (w-bzx; they start collapsed).
+var gap_open: bool = false
 var focus: int = 0
 ## Force the touch layout (a tablet-sized shot has no touch screen under Xvfb).
 var touch: bool = false
@@ -308,6 +310,7 @@ func _ready() -> void:
 					var v: Array = p["vector"]
 					p["vector"] = Vector3(v[0], v[1], v[2])
 				_ctx.crew.handle_event(e, StationFixture.NOW_MS - 2000)
+			s.gap.expanded = gap_open
 	if not insets.is_empty():
 		var shade: InsetShade = InsetShade.new()
 		shade.insets = insets
