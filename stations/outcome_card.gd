@@ -117,7 +117,8 @@ func refresh() -> void:
 	if not visible:
 		return
 	_place()
-	_title.text = tr("outcome.win" if card.get("outcome", "") == "win" else "outcome.loss")
+	var outcome: String = card.get("outcome", "")
+	_title.text = tr("outcome." + outcome if outcome in ["win", "survived"] else "outcome.loss")
 	_why.text = why_text(card)
 	var secs: int = int(card.get("time", 0.0))
 	var hull: int = roundi(float(card.get("hull", 0.0)) * 100.0)
@@ -216,8 +217,8 @@ static func partial_line(debrief: Dictionary) -> String:
 
 ## Why the run ended, in one line: the win rule, or how the ship was lost.
 static func why_text(card: Dictionary) -> String:
-	if card.get("outcome", "") == "win":
-		return TranslationServer.translate("outcome.why_win")
+	if card.get("outcome", "") in ["win", "survived"]:
+		return TranslationServer.translate("outcome.why_" + str(card["outcome"]))
 	if float(card.get("hull", 0.0)) <= 0.0:
 		return TranslationServer.translate("outcome.why_destroyed")
 	return TranslationServer.translate("outcome.why_gave_up")

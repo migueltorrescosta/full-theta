@@ -28,4 +28,5 @@ finale_scenario = &"finale"
 finale_site = &"hollow_gate"
 finale_tries = 2
 finale_escorts = 1.5
+finale_escorts_from = 0.8
 finale_time_limit = 300.0

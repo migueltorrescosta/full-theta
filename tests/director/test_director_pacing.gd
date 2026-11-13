@@ -110,7 +110,8 @@ func test_the_finale_is_last_and_winning_it_closes_the_run() -> void:
 
 # FT: FT-MIS-028, FT-MIS-001
 # gp-06: a finale whose time ran out is offered again after the gap, at most finale_tries
-# times; then the run closes anyway.
+# times; then the run closes with the ship surviving, neither a win nor a loss (w-a89), and the
+# game ends SURVIVED.
 func test_a_failed_finale_is_retried_then_the_run_closes() -> void:
 	var out: Array = _run([TestScenario.make(&"s_a", 1), TimedOut.new()], _def(1, 2))
 	var w: SimWorld = out[0]
@@ -124,7 +125,9 @@ func test_a_failed_finale_is_retried_then_the_run_closes() -> void:
 	var ends: Array[DirectorDecision] = _of_kind(d, DirectorDecision.Kind.END_RUN)
 	assert_int(ends.size()).is_equal(1)
 	assert_str(ends[0].reason_key).is_equal("director.reason.finale_out")
-	assert_int(w.ships.ship_outcome[0]).is_equal(ShipStateTable.ShipOutcome.WIN)
+	assert_int(w.ships.ship_outcome[0]).is_equal(ShipStateTable.ShipOutcome.SURVIVED)
+	assert_int(OutcomeSystem.game_outcome(w).reason).is_equal(GameOutcome.Reason.SURVIVED)
+	assert_bool(OutcomeSystem.game_outcome(w).winners.is_empty()).is_true()
 
 
 # FT: FT-MIS-001

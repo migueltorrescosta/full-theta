@@ -5,7 +5,8 @@ extends RefCounted
 ## apart), per scenario too, the encounters per run (the director picks 4 to 6, Q4), the run
 ## length in minutes over all runs and over the won and the lost ones apart, and the share of
 ## runs that survive at least 60 % of their encounters, and the run-loss line (the share of
-## runs that lose the ship, against D31's 23 to 41 % band, gp-18). Built from BotRun records
+## runs that lose the ship, against D31's 23 to 41 % band, gp-18; runs that closed Survived,
+## the finale out of tries, are counted apart and are not lost, w-a89). Built from BotRun records
 ## only, with no clock or path in it, so the same runs give the same text.
 
 ## The targets the figures are read against.
@@ -35,13 +36,14 @@ static func markdown(results: Array[Dictionary]) -> String:
 	out.append("Runs: %d. Encounters played: %d.\n" % [results.size(), _encounters(results).size()])
 	out.append(
 		(
-			"| difficulty / crew | runs | won | lost | stalled | encounters per run (mean, range) "
+			"| difficulty / crew | runs | won | survived | lost | stalled "
+			+ "| encounters per run (mean, range) "
 			+ "| encounters | ship lost | loss rate | fled | fled rate "
 			+ "| run length min, all runs (mean, median) | won runs (mean, median) "
 			+ "| lost runs (mean, median) | survive 60 % |"
 		)
 	)
-	out.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+	out.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
 	for key: String in keys:
 		out.append(_row(key, groups[key]))
 	out.append("")
@@ -60,7 +62,8 @@ static func markdown(results: Array[Dictionary]) -> String:
 
 
 ## The run-loss line (gp-18): per difficulty and crew, the share of runs that lost the ship,
-## read against D31's band (an average crew on Normal; stalled runs count as not lost).
+## read against D31's band (an average crew on Normal; stalled and survived runs count as not
+## lost, and survived ones are shown apart, w-a89).
 static func _run_loss(keys: Array, groups: Dictionary) -> String:
 	var out: PackedStringArray = PackedStringArray(
 		[
@@ -69,21 +72,33 @@ static func _run_loss(keys: Array, groups: Dictionary) -> String:
 				"Target: %d to %d %% of runs lose the ship for an average crew on Normal (D31).\n"
 				% [roundi(RUN_LOSS_LO * 100), roundi(RUN_LOSS_HI * 100)]
 			),
-			"| difficulty / crew | runs | lost runs | run loss | in D31 band |",
-			"|---|---|---|---|---|",
+			"| difficulty / crew | runs | lost runs | survived runs | run loss | in D31 band |",
+			"|---|---|---|---|---|---|",
 		]
 	)
 	for key: String in keys:
 		var runs: Array = groups[key]
 		var lost: int = 0
+		var survived: int = 0
 		for r: Dictionary in runs:
 			lost += 1 if r["outcome"] == "loss" else 0
+			survived += 1 if r["outcome"] == "survived" else 0
 		var share: float = float(lost) / maxi(runs.size(), 1)
 		var inside: bool = share >= RUN_LOSS_LO and share <= RUN_LOSS_HI
-		out.append(
-			(
-				"| %s | %d | %d | %s | %s |"
-				% [key, runs.size(), lost, _pct(lost, runs.size()), "yes" if inside else "no"]
+		(
+			out
+			. append(
+				(
+					"| %s | %d | %d | %d | %s | %s |"
+					% [
+						key,
+						runs.size(),
+						lost,
+						survived,
+						_pct(lost, runs.size()),
+						"yes" if inside else "no",
+					]
+				)
 			)
 		)
 	out.append("")
@@ -103,7 +118,7 @@ static func _row(key: String, runs: Array) -> String:
 	var rows: Array[Dictionary] = _encounters(runs)
 	var lost: int = _count(rows, "lost")
 	var fled: int = _count(rows, "fled")
-	var counts: Dictionary = {"win": 0, "loss": 0, "stalled": 0}
+	var counts: Dictionary = {"win": 0, "survived": 0, "loss": 0, "stalled": 0}
 	var all: Array[float] = []
 	var won: Array[float] = []
 	var lost_runs: Array[float] = []
@@ -118,11 +133,12 @@ static func _row(key: String, runs: Array) -> String:
 			lost_runs.append(minutes)
 		survived += 1 if _survived_share(r) >= SURVIVE_SHARE else 0
 	return (
-		"| %s | %d | %d | %d | %d | %s | %d | %d | %s | %d | %s | %s | %s | %s | %s |"
+		"| %s | %d | %d | %d | %d | %d | %s | %d | %d | %s | %d | %s | %s | %s | %s | %s |"
 		% [
 			key,
 			runs.size(),
 			counts["win"],
+			counts["survived"],
 			counts["loss"],
 			counts["stalled"],
 			_per_run(runs),

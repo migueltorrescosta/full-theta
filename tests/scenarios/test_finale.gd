@@ -47,6 +47,19 @@ func test_a_heavy_raider_and_escorts_arrive_and_hail() -> void:
 	assert_bool(ServerMain.HAIL_CONVERSATIONS.has(Finale.BOSS_KEY)).is_true()
 
 
+# FT: FT-MIS-003
+# w-4cm: under DirectorDef.finale_escorts_from (Easy's finale, strength 0.5 x 1.3) the heavy
+# raider comes alone.
+func test_a_weak_finale_has_no_escorts() -> void:
+	var f: ScenarioFixture = ScenarioFixture.make()
+	f.strength = 0.65
+	f.params = {"escorts": 1.5, "escorts_from": 0.8, "time_limit": 300.0}
+	f.begin(Finale.ID, SITE)
+	f.run(60 * 120)
+	assert_int(f.ships_of(Finale.BOSS_KEY).size()).is_equal(1)
+	assert_int(f.ships_of(Factions.RAIDER_KEY).size()).is_equal(0)
+
+
 # FT: FT-MIS-004
 func test_destroying_the_whole_wave_wins_it() -> void:
 	var f: ScenarioFixture = _finale()

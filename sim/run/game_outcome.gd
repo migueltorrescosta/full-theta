@@ -9,12 +9,19 @@ extends RefCounted
 ## objective is complete (COOP). ALL_LOST: every crewed ship is out of play and none won.
 ## FIRST_TO_FINISH: a ship (RACE) or a team (TEAMS) completed the final objective first.
 ## LAST_STANDING: one ship (LAST_STANDING) or one team (TEAMS) is left in play.
-## HOLDOUT_OVER: the finite side has run out of ships and lives (HOLDOUT).
-enum Reason { NONE, OBJECTIVE, ALL_LOST, FIRST_TO_FINISH, LAST_STANDING, HOLDOUT_OVER }
+## HOLDOUT_OVER: the finite side has run out of ships and lives (HOLDOUT). SURVIVED: no ship
+## plays on and none won, but one survived its run (the finale out of tries, w-a89).
+enum Reason { NONE, OBJECTIVE, ALL_LOST, FIRST_TO_FINISH, LAST_STANDING, HOLDOUT_OVER, SURVIVED }
 
 ## Wire names, in Reason order.
 const REASON_NAMES: Array[String] = [
-	"none", "objective", "all_lost", "first_to_finish", "last_standing", "holdout_over"
+	"none",
+	"objective",
+	"all_lost",
+	"first_to_finish",
+	"last_standing",
+	"holdout_over",
+	"survived",
 ]
 ## Sim events the M4 rules emit (SimEvent.kind). &"eliminated": a crewed ship left play
 ## (ship_id the ship, tag &"destroyed" | &"abandoned" | &"forfeit", value the relaunches left,

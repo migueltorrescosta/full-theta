@@ -85,11 +85,15 @@ func test_the_report_counts_losses_and_fled_encounters_apart() -> void:
 		"time": 300.0,
 		"encounters": rows
 	}
-	var report: String = BotReport.markdown([run])
-	assert_str(report).contains("| 3 | 1 | 33.3 % | 1 | 33.3 % |")
+	# w-a89: a run closed Survived (the finale out of tries) is not lost, and is counted apart.
+	var survived: Dictionary = run.duplicate()
+	survived["outcome"] = "survived"
+	var report: String = BotReport.markdown([run, survived])
+	assert_str(report).contains("| 6 | 2 | 33.3 % | 2 | 33.3 % |")
+	assert_str(report).contains("| easy / average | 2 | 0 | 1 | 1 | 0 |")
 	# gp-18: the run-loss line, read against D31's 23 to 41 % band.
-	assert_str(report).contains("| easy / average | 1 | 1 | 100.0 % | no |")
-	assert_str(report).contains("| enemy_wave | 2 | 1 | 50.0 % | 0 | 0.0 % |")
+	assert_str(report).contains("| easy / average | 2 | 1 | 1 | 50.0 % | no |")
+	assert_str(report).contains("| enemy_wave | 4 | 2 | 50.0 % | 0 | 0.0 % |")
 
 
 # FT: FT-TST-022, FT-GEN-011

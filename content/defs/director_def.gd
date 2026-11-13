@@ -40,7 +40,8 @@ extends Resource
 ## The finale (gp-06, D3): the scenario id the run ends with, played once the regular picks are
 ## over, its budget ignored, at strength preset x ramp_end (&"": no finale, the run closes as
 ## before). Winning it closes the run; a fled or timed-out one is offered again after the gap,
-## at most finale_tries times in all, after which the run closes.
+## at most finale_tries times in all, after which the run closes with the ship surviving
+## rather than winning (w-a89).
 @export var finale_scenario: StringName = &""
 ## The map site the finale is placed at when it is open and free (else any free site).
 @export var finale_site: StringName = &""
@@ -49,6 +50,9 @@ extends Resource
 ## Raider escorts of the heavy raider at strength 1 (count), scaled like a wave and rounded
 ## (at least one); a fraction tunes between presets (1.5: 1 on Easy, 2 on Normal, 3 on Hard).
 @export var finale_escorts: float = 0.0
+## The finale's strength under which the heavy raider comes alone (w-4cm: no escorts on Easy;
+## dimensionless, the strength the finale is played at, preset x ramp_end x fleet; 0: always).
+@export var finale_escorts_from: float = 0.0
 ## The finale's time limit (s): past it the encounter ends PARTIAL.
 @export var finale_time_limit: float = 300.0
 
@@ -75,6 +79,7 @@ func validate() -> Array[String]:
 		errors.append("finale_tries must be at least 1, got %d" % finale_tries)
 	if finale_escorts < 0.0:
 		errors.append("finale_escorts must be at least 0, got %s" % finale_escorts)
+	DefCheck.non_negative(errors, "finale_escorts_from", finale_escorts_from)
 	DefCheck.positive(errors, "finale_time_limit", finale_time_limit)
 	for preset: StringName in strength_per_preset:
 		if not strength_per_preset[preset] > 0.0:

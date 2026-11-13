@@ -71,7 +71,7 @@ static func finish(world: SimWorld, id: int, result: EncounterTable.Result) -> v
 ## Whether the director has closed the crewed ship's run and the ship is in no encounter.
 static func run_complete(world: SimWorld, ship: int) -> bool:
 	return (
-		world.run_def != null and world.ships.encounter[ship] < 0 and world.ships.closed[ship] == 1
+		world.run_def != null and world.ships.encounter[ship] < 0 and world.ships.closed[ship] != 0
 	)
 
 

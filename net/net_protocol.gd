@@ -128,7 +128,7 @@ const EVENT_ALERT: String = "alert"
 const EVENT_MARKS: String = "marks"
 const EVENT_PING: String = "ping"
 ## The run reset (D178, NetRunReset), to every session with a pick on the ship:
-## {ship, outcome ("win" | "loss"), time, hull} and {ship, voters, needed}.
+## {ship, outcome ("win" | "survived" | "loss"), time, hull} and {ship, voters, needed}.
 const EVENT_SHIP_OUTCOME: String = "ship_outcome"
 const EVENT_RUN_VOTES: String = "run_votes"
 ## The end-of-run debrief (RunDebrief.for_ship, FT-MIS-006, FT-MIS-010, FT-MIS-038,

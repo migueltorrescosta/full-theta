@@ -275,7 +275,10 @@ func scoreboard_rows() -> Array:
 		var state: String = FleetMessages.IN_PLAY
 		if eliminated.has(id) or world.ships.ship_outcome[id] == ShipStateTable.ShipOutcome.LOSS:
 			state = FleetMessages.DESTROYED
-		elif world.ships.ship_outcome[id] == ShipStateTable.ShipOutcome.WIN:
+		elif (
+			world.ships.ship_outcome[id]
+			in [ShipStateTable.ShipOutcome.WIN, ShipStateTable.ShipOutcome.SURVIVED]
+		):
 			state = FleetMessages.FINISHED
 		var k: int = world.ships.kills[id] if rules.is_pvp() else 0
 		var done: int = world.ships.encounters_done[id]

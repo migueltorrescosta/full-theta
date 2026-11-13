@@ -86,6 +86,11 @@ func test_debrief_record_of_a_finished_run() -> void:
 	assert_bool(fled["encounters"][0]["fled"]).is_true()
 	assert_int(fled["losses"]).is_equal(0)
 	assert_int(fled["fled"]).is_equal(1)
+	# A run closed with the finale out of tries is survived (w-a89).
+	w.ships.ship_outcome[0] = ShipStateTable.ShipOutcome.SURVIVED
+	assert_str(RunDebrief.new(w, [], coop, FirstUse.new()).for_ship(0)["result"]).is_equal(
+		"survived"
+	)
 
 
 # FT: FT-MIS-038, FT-PAIR-013
