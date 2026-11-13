@@ -422,7 +422,7 @@ Active ids per area: FT-GEN 14, FT-ARC 23, FT-NET 51, FT-SIM 37, FT-STN 17, FT-H
 | FT-TST-019 | tests | `tests/release/test_release_bundle.gd`, [#12](https://github.com/migueltorrescosta/full-theta/issues/12) |
 | FT-TST-020 | tests | `tools/tests/test_l5.py` |
 | FT-TST-021 | tests | `tests/stations/test_first_visit_help.gd`, `tools/tests/test_web_check.py`, [#9](https://github.com/migueltorrescosta/full-theta/issues/9) |
-| FT-TST-022 | tests | `tests/scenarios/test_enemy_wave.gd`, `tests/tools/test_bot_batch.gd` |
+| FT-TST-022 | tests | `tests/scenarios/test_enemy_wave.gd`, `tests/tools/test_bot_batch.gd`, `tests/tools/test_bot_site_pick.gd` |
 | FT-LIC-001 | manual | [#2](https://github.com/migueltorrescosta/full-theta/issues/2) |
 | FT-LIC-002 | manual | [#2](https://github.com/migueltorrescosta/full-theta/issues/2) |
 | FT-LIC-003 | manual | [#2](https://github.com/migueltorrescosta/full-theta/issues/2) |

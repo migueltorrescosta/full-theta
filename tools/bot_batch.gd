@@ -3,7 +3,9 @@ extends SceneTree
 ## of the director's run with scripted crews, without a network, and writes a markdown
 ## report of the per-encounter loss rate, fled encounters, encounters per run (4 to 6, Q4),
 ## run length (all runs, won and lost apart) and the share of runs that survive 60 % of
-## their encounters. Run it as a transient unit (tools/bot_batch.sh).
+## their encounters; runs.jsonl also holds each run's crew site picks (crew_picks) and, per
+## encounter, whether the crew picked it (picked) and the offers' scenarios (offered). Run it
+## as a transient unit (tools/bot_batch.sh).
 ##   godot --headless --path . -s res://tools/bot_batch.gd -- [flags]
 ##   --profiles average,novice   crews [average,novice]
 ##   --difficulties easy,normal  presets [easy,normal]

@@ -3,7 +3,8 @@ extends RefCounted
 ## The scripted crews of the bot batch (FT-TST-022, FT-MIS-009, FT-MIS-037): numbers only,
 ## BotCrew reads them. "average" is a competent crew; "novice" is a first-time crew on Easy:
 ## slower to react, loose aim, fires less, flies by impulse half the time and picks cards at
-## random. Everything is a plain number so #13 can tune a profile without touching BotCrew.
+## random; both pick sites the same way. Everything is a plain number so #13 can tune a
+## profile without touching BotCrew.
 
 const NAMES: PackedStringArray = ["average", "novice"]
 
@@ -48,6 +49,11 @@ class Profile:
 	var decoy_hull: float = 0.6
 	## Comms calls for help (gp-14) once this many hostiles are in play; 0 never.
 	var help_hostiles: int = 2
+	## The Captain's site pick (E2, w-bzx), comms_time after a gap's offers appear, by the fleet's
+	## lowest hull fraction: from pick_bold_hull the best pay, from pick_careful_hull the best pay
+	## less risk, below it the lowest risk.
+	var pick_bold_hull: float = 0.75
+	var pick_careful_hull: float = 0.5
 
 
 static func named(profile_name: String) -> Profile:
