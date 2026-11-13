@@ -12,7 +12,7 @@ budget_per_ship = Dictionary[StringName, int]({
 })
 strength_per_preset = Dictionary[StringName, float]({
 &"easy": 0.5,
-&"hard": 1.5,
+&"hard": 1.25,
 &"normal": 1.0
 })
 spawn_site_every = 120.0
