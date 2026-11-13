@@ -23,7 +23,7 @@ class ThreeOffers:
 				. append(
 					{
 						"site": 10 + i,
-						"name_key": "site.kestrel_yard",
+						"name_key": "site.vesper_beacon",
 						"scenario": &"wave",
 						"risk": i,
 						"reward": 2 - i,
@@ -111,7 +111,7 @@ func test_the_captain_picks_and_everyone_else_is_refused() -> void:
 	assert_int(p["pick"]).is_equal(0)
 	assert_int((p["offers"] as Array).size()).is_equal(3)
 	assert_dict(p["offers"][2]).is_equal(
-		{"site": 12, "name_key": "site.kestrel_yard", "risk": 2, "reward": 0}
+		{"site": 12, "name_key": "site.vesper_beacon", "risk": 2, "reward": 0}
 	)
 	assert_str(await _refused(crew[2], 1)).is_equal(NetGame.NOT_CREW)
 	assert_str(await _refused(viewer, 1)).is_equal(NetGame.NOT_CREW)
