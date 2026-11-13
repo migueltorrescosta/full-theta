@@ -22,8 +22,15 @@ extends RefCounted
 ##    anywhere (a dock after the crippling) within limp_home_time of that, it has limped
 ##    home, and a jump on the way there is no flee: its bit joins limped_mask,
 ##    &"limped_home" is emitted and the encounter ends PARTIAL, so its accepted cards pay
-##    RunDef.partial_pay (the scenarios' end()). Later, docking is nothing special.
-## 4. A ship destroyed or abandoned leaves the encounter as a loss. When every ship has
+##    RunDef.partial_pay (the scenarios' end()).
+## 4. In an ACTIVE encounter, a crewed ship in play that is docked anywhere (and did not limp
+##    home in step 3) while a live ship of a hostile faction other than Factions.DEBRIS,
+##    spawned since the encounter opened, exists is out of the fight (w-ckm): it leaves the
+##    encounter as fled (&"fled", other_id the watcher or -1), charged the flee cost only
+##    when a hostile sees it (hostile_seeing, D233). Docking doesn't stop the clock: the rest
+##    of a fleet fights on, and a lone ship's encounter ends FLED (step 5), so a finale sat
+##    out at a dock uses a try. Travel legs, with only debris, are unaffected.
+## 5. A ship destroyed or abandoned leaves the encounter as a loss. When every ship has
 ##    left (lost or fled) the encounter ends LOST, or FLED when none was lost.
 ## A scenario ends an encounter itself with EndEncounterCommand (finish()). The run is won
 ## once the director has closed it for a crewed ship (FinishShipCommand, after at least
@@ -47,6 +54,7 @@ static func step(world: SimWorld) -> void:
 			_check_flee(world, id, jumped)
 			if _check_limp(world, id):
 				continue
+			_check_docked(world, id)
 		_check_losses(world, id)
 
 
@@ -137,13 +145,36 @@ static func _check_flee(world: SimWorld, id: int, jumped: Dictionary[int, bool])
 				_flee(world, id, ship, ships.limp_seen_by[ship])
 
 
-## The ship has fled (D233): marked, out of the encounter, charged.
+## The ship has fled (D233): marked, out of the encounter, charged when a hostile saw it.
 static func _flee(world: SimWorld, id: int, ship: int, seen_by: int) -> void:
 	world.encounters.fled_mask[id] |= 1 << ship
 	world.ships.fled_count[ship] += 1
 	_leave(world, ship)
 	world.emit(&"fled", ship, seen_by, id, Vector3.ZERO, _scenario(world, id))
-	_charge_flee(world, ship, seen_by)
+	if seen_by >= 0:
+		_charge_flee(world, ship, seen_by)
+
+
+## Docked ships out of the fight (step 4, w-ckm).
+static func _check_docked(world: SimWorld, id: int) -> void:
+	if not _hostile_since(world, id):
+		return
+	for ship: int in _ships(world.encounters.ships_mask[id]):
+		if world.ships.encounter[ship] != id or not world.is_crew_in_play(ship):
+			continue
+		if world.helm.docked_site[ship] >= 0:
+			_flee(world, id, ship, hostile_seeing(world, ship))
+
+
+## Whether a live non-debris ship spawned since the encounter opened is hostile to one of
+## its crewed ships.
+static func _hostile_since(world: SimWorld, id: int) -> bool:
+	var crew: int = world.faction_of(world.encounters.owner_ship[id])
+	for o: int in range(world.encounters.npc_floor[id], world.ship_count()):
+		var f: int = world.faction_of(o)
+		if f != Factions.DEBRIS and world.kin.is_alive(o) and world.is_hostile(crew, f):
+			return true
+	return false
 
 
 ## Crippling and limping home (step 3); true when a ship limped home and ended the encounter.

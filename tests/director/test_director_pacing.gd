@@ -130,6 +130,30 @@ func test_a_failed_finale_is_retried_then_the_run_closes() -> void:
 	assert_bool(OutcomeSystem.game_outcome(w).winners.is_empty()).is_true()
 
 
+# FT: FT-MIS-028, FT-MIS-025
+# w-ckm: a finale sat out at a dock is no refuge. With its raider about, the docked crew is out
+# of the fight, so each try ends FLED and uses a try; then the run closes Survived.
+func test_a_finale_sat_out_at_a_dock_uses_its_tries() -> void:
+	var def: RunDef = _def(1, 2)
+	var w: SimWorld = ApiFixture.world(1, def)
+	var fin: TestScenario = TestScenario.make(FINALE, 0, true, 1 << 30)
+	var d: Director = Director.new(
+		def.director, &"normal", [TestScenario.make(&"s_a", 1), fin], 3, Factions.CREW
+	)
+	var host: ScenarioHost = ScenarioHost.new(w)
+	# A stand-in dock at the yard for the whole run.
+	w.helm.docked_site[0] = 0
+	for i: int in TICKS:
+		host.advance(SimWorld.DT * 1.001, d.before_tick)
+	var picks: Array[DirectorDecision] = _of_kind(d, DirectorDecision.Kind.PICK_ENCOUNTER)
+	assert_int(picks.size()).is_equal(3)
+	assert_int(w.ships.fled_count[0]).is_equal(2)
+	var ends: Array[DirectorDecision] = _of_kind(d, DirectorDecision.Kind.END_RUN)
+	assert_int(ends.size()).is_equal(1)
+	assert_str(ends[0].reason_key).is_equal("director.reason.finale_out")
+	assert_int(w.ships.ship_outcome[0]).is_equal(ShipStateTable.ShipOutcome.SURVIVED)
+
+
 # FT: FT-MIS-001
 # gp-06: a spent budget ends the regular picks at the fewest less one; the finale still comes.
 func test_a_spent_budget_still_leads_to_the_finale() -> void:
