@@ -181,9 +181,11 @@ func test_notice_box_never_covers_the_read_outs() -> void:
 		await await_idle_frame()
 		var box: Rect2 = bar.notice_rect()
 		for c: Control in [bar._name, bar._hull, bar._shields, bar._pips, bar.chip, bar._timer]:
-			assert_bool(box.intersects(c.get_global_rect())).override_failure_message(
-				"%s covers %s at %d" % [box, c, case[0]]
-			).is_false()
+			(
+				assert_bool(box.intersects(c.get_global_rect()))
+				. override_failure_message("%s covers %s at %d" % [box, c, case[0]])
+				. is_false()
+			)
 		assert_float(box.size.x).is_greater(100.0)
 		# Only the narrowest one-row bar (900 px) has too little room after the station names
 		# and covers them; the others leave them in view.
