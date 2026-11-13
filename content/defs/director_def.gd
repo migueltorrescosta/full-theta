@@ -46,8 +46,9 @@ extends Resource
 @export var finale_site: StringName = &""
 ## Finale attempts before the run closes anyway (count).
 @export var finale_tries: int = 1
-## Raider escorts of the heavy raider at strength 1 (count, scaled like a wave, at least one).
-@export var finale_escorts: int = 0
+## Raider escorts of the heavy raider at strength 1, scaled like a wave and rounded (at least
+## one); a fraction tunes between presets (1.5: 1 on Easy, 2 on Normal, 3 on Hard).
+@export var finale_escorts: float = 0.0
 ## The finale's time limit (s): past it the encounter ends PARTIAL.
 @export var finale_time_limit: float = 300.0
 
@@ -72,8 +73,8 @@ func validate() -> Array[String]:
 	DefCheck.positive(errors, "ramp_end", ramp_end)
 	if finale_tries < 1:
 		errors.append("finale_tries must be at least 1, got %d" % finale_tries)
-	if finale_escorts < 0:
-		errors.append("finale_escorts must be at least 0, got %d" % finale_escorts)
+	if finale_escorts < 0.0:
+		errors.append("finale_escorts must be at least 0, got %s" % finale_escorts)
 	DefCheck.positive(errors, "finale_time_limit", finale_time_limit)
 	for preset: StringName in strength_per_preset:
 		if not strength_per_preset[preset] > 0.0:

@@ -22,10 +22,8 @@ func meta() -> ScenarioMeta:
 
 func start(api: ScenarioApi, params: Dictionary) -> void:
 	super.start(api, params)
-	var escorts: int = int(params.get("escorts", 0))
-	_count = (
-		1 + (Scenario.count_for(escorts, float(params.get("strength", 1.0))) if escorts > 0 else 0)
-	)
+	var escorts: float = float(params.get("escorts", 0.0)) * float(params.get("strength", 1.0))
+	_count = 1 + (maxi(1, roundi(escorts)) if escorts > 0.0 else 0)
 	_limit = float(params.get("time_limit", _limit))
 
 
