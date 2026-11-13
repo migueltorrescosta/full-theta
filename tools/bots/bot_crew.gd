@@ -15,7 +15,8 @@ extends RefCounted
 ##   sight, it faces Kestrel Yard and jumps (the sim then counts the encounter as fled);
 ## - travels: to the site of its pending encounter (the yard on a debris leg) by jump or by
 ##   impulse, undocking first, and holds there;
-## - Comms: accepts cards by the profile, answers a hailing raider and demands its surrender.
+## - Comms: accepts cards by the profile, answers a hailing raider and demands its surrender;
+## - Captain: picks one of a quiet gap's site offers (E2, w-bzx) by the fleet's hull.
 
 const ENGAGE_REACH: float = 12000.0
 const DEBRIS_REACH: float = 6000.0
@@ -27,6 +28,11 @@ const NONE: int = -2
 
 var profile: BotProfiles.Profile
 var ship: int
+## The current gap's site offers (RunDriver.site_offers of the crew's faction), a
+## `func() -> Array[Dictionary]`; unset, the crew never picks.
+var offers: Callable = Callable()
+## The crew's site picks: {tick, offered: [scenario], pick: offer index}.
+var picks: Array[Dictionary] = []
 
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _seen: Dictionary[StringName, int] = {}
@@ -41,6 +47,8 @@ var _hail_at: Dictionary[int, int] = {}
 var _moving: bool = false
 ## The mount the last aim went to; the shots follow it.
 var _mount: int = 0
+## The offer list the crew last picked from (pick once per list).
+var _picked: String = ""
 
 
 func _init(crew_profile: BotProfiles.Profile, ship_id: int, seed_value: int) -> void:
@@ -72,6 +80,7 @@ func act(world: SimWorld) -> void:
 		_undock(world)
 		_travel(world)
 	_comms(world)
+	_pick_site(world)
 	if target >= 0:
 		_decoy(world)
 		_call_help(world)
@@ -370,6 +379,63 @@ func _demand_surrender(world: SimWorld, card: int) -> void:
 		reply.card = card
 		reply.option = &"o1"
 		_submit(world, reply)
+
+
+# --- Captain ---
+
+
+## Picks one of the gap's offers once per offer list, comms_time after it appears: a logged
+## SetFlagCommand on the faction's pick flag, the offer's index plus one.
+func _pick_site(world: SimWorld) -> void:
+	if not offers.is_valid():
+		return
+	var list: Array[Dictionary] = offers.call()
+	if list.size() < 2:
+		return
+	var faction: int = world.faction_of(ship)
+	var key: String = "%d %s" % [world.story_flags.get_flag(Director.gap_flag(faction)), list]
+	if key == _picked or not _after(StringName("pick " + key), world, profile.comms_time):
+		return
+	_picked = key
+	var pick: int = choose(list, _fleet_hull(world), profile)
+	var flag: SetFlagCommand = SetFlagCommand.new()
+	flag.flag_name = Director.pick_flag(faction)
+	flag.value = pick + 1
+	world.submit(flag)  # a run-wide command, as the server's: no ship
+	var offered: Array[String] = []
+	for o: Dictionary in list:
+		offered.append(String(o["scenario"]))
+	picks.append({"tick": world.tick, "offered": offered, "pick": pick})
+
+
+## The offer a crew whose weakest ship is at hull fraction `hull` picks: bold, the best pay
+## (then the lower risk); careful, the best pay less risk (then the lower risk); below that,
+## the lowest risk (then the better pay). Further ties go to the lower index.
+static func choose(list: Array[Dictionary], hull: float, p: BotProfiles.Profile) -> int:
+	var best: int = 0
+	var best_score: Vector2i = Vector2i(-1000, -1000)
+	for i: int in list.size():
+		var risk: int = list[i]["risk"]
+		var pay: int = list[i]["reward"]
+		var score: Vector2i = Vector2i(-risk, pay)
+		if hull >= p.pick_bold_hull:
+			score = Vector2i(pay, -risk)
+		elif hull >= p.pick_careful_hull:
+			score = Vector2i(pay - risk, -risk)
+		if score > best_score:
+			best_score = score
+			best = i
+	return best
+
+
+## The lowest hull fraction among the faction's crewed ships in play.
+func _fleet_hull(world: SimWorld) -> float:
+	var faction: int = world.faction_of(ship)
+	var low: float = 1.0
+	for id: int in world.ship_count():
+		if world.is_crew_in_play(id) and world.faction_of(id) == faction:
+			low = minf(low, DamageSystem.hull_fraction(world, id))
+	return low
 
 
 # --- helpers ---
