@@ -840,6 +840,8 @@
     "weapons.you": {"en": "you", "pt_PT": "tu", "it": "tu"},
     "alerts.lane_warning": {"en": "Friendly in the line of fire", "pt_PT": "Aliado na linha de fogo", "it": "Alleato sulla linea di tiro"},
     "alerts.crippled": {"en": "{time} · Crippled: dock to limp home", "pt_PT": "{time} · Nave avariada: atraca para voltar a casa", "it": "{time} · Nave in avaria: attracca per rientrare"},
+    "alerts.fuel_low": {"en": "Fuel low: ask Comms to buy more", "pt_PT": "Combustível baixo: pede às Comunicações para comprar mais", "it": "Carburante basso: chiedi alle Comunicazioni di comprarne altro"},
+    "alerts.fuel_out": {"en": "Fuel almost gone: ask Comms to buy more", "pt_PT": "Combustível quase no fim: pede às Comunicações para comprar mais", "it": "Carburante quasi finito: chiedi alle Comunicazioni di comprarne altro"},
     "alerts.limped_home": {"en": "Limped home: half pay", "pt_PT": "De volta a custo: metade do pagamento", "it": "Rientrati a fatica: paga a metà"},
     "alerts.bounty": {"en": "Bounty +{n}", "pt_PT": "Recompensa +{n}", "it": "Taglia +{n}"},
     "alerts.salvage": {"en": "Salvage +{n}", "pt_PT": "Salvados +{n}", "it": "Recupero +{n}"},

@@ -62,8 +62,6 @@ const SCROLL_BAR_WIDTH: float = 14.0
 ## (the bare digits and Alt + digit belong to the stations' own keys).
 const TABS_FROM: int = 3
 const TAB_HINT_KEY: String = "dev_tabs"
-## The share opener at the bottom of the view on a phone on its side.
-const OPENER_WIDTH: float = 160.0
 
 var ctx: StationContext
 ## Station ids of the panels, in order (F1, F2, ...).
@@ -96,10 +94,6 @@ var rotate_banner: RotateBanner
 ## six-station sheet. It leads the page tabs: in the top bar on its side, in the bottom tab
 ## bar upright. Null until a phone shows one.
 var joint_switch: RailButton = null
-## On a phone on its side the share buttons sit in this drawer over the main area, opened
-## by `share_opener` (#28): the radar column has no room for 48 px buttons under the disc.
-var share_drawer: TouchDrawer
-var share_opener: RailButton
 ## The phone frame (#28 follow-up, PhoneFrame): shown only on phones, so tablets and
 ## desktops keep their layout. `phone` is set by the layout.
 var phone: bool = false
@@ -125,9 +119,6 @@ var _extras: VBoxContainer
 var _side_margin: MarginContainer
 var _side_scroll: ScrollContainer
 var _blocked: bool = false
-## The phone-landscape buttons (joint switch, share opener): at the top of the radar column
-## or, with the column hidden, at the bottom centre of the main area.
-var _phone_bar: BoxContainer
 var _extras_pad: Control
 ## The dev seat's station tabs (one button per panel) and its one-line hint; null when the
 ## screen holds one or two panels.
@@ -360,7 +351,6 @@ func _process(delta: float) -> void:
 	var none: Array[StringName] = []
 	var own: bool = phone and focused_panel().shows_shares
 	share_bar.show_features(none if own else common.shareable(), left)
-	layout.sync_share()
 
 
 ## Where the toasts and the critical banner show (C5, D319), in the screen's coordinates: the

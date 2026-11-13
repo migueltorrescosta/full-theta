@@ -20,19 +20,15 @@ func dock_reserve() -> Vector2:
 ## joint view or the dev seat on a phone (#28; upright too, w-yk5) shows only the focused panel,
 ## which gets the whole width when it draws its own rails and radar, and the station chip
 ## in the top bar's tab strip instead of the docked panels (FT-JNT-001: tap to focus). On
-## a phone on its side the share buttons move into a drawer
-## (D274: 48 px with 8 px gaps don't fit under the disc); its opener sits at the top of the
-## radar column or, with the column hidden, at the bottom centre of the main area (clear of
-## the rails); a panel may take the opener into its rails (StationPanel.share_slot) or show
-## the buttons itself. Off a phone a full-screen panel hides the column and holds the buttons
-## in its StationPanel.share_home.
+## a phone each station holds its share buttons on its Crew page (StationPanel.shows_shares).
+## Off a phone a full-screen panel hides the column and holds the buttons in its
+## StationPanel.share_home.
 func show_side() -> void:
 	if s.panels.is_empty():
 		return
 	var form_now: LayoutMode.Form = (
 		LayoutMode.form_of(s) if s.is_inside_tree() else LayoutMode.Form.DESKTOP
 	)
-	var sideways: bool = form_now == LayoutMode.Form.PHONE_LANDSCAPE
 	var phone_form: bool = LayoutMode.is_phone(form_now)
 	var phone_alone: bool = s.panels.size() >= 2 and phone_form
 	var alone: bool = s.panels.size() == 1 or phone_alone
@@ -48,24 +44,16 @@ func show_side() -> void:
 	# Off a phone a full-screen panel (Science alone) holds the buttons in its share_home, so
 	# they stay on screen without the radar column (D217, #35 A11).
 	var home: Container = null if s._side.visible or phone_form else s.focused_panel().share_home
-	# Also in the drawer whenever a phone's radar column is hidden (Science alone upright).
-	var in_drawer: bool = sideways or (not s._side.visible and home == null)
-	var parent: Control = (
-		s.share_drawer.body if in_drawer else (home if home != null else s._extras)
-	)
+	var parent: Control = home if home != null else s._extras
 	if s.share_bar.get_parent() != parent:
 		s.share_bar.reparent(parent, false)
 		if parent == s._extras:
 			s._extras.move_child(s.share_bar, s._extras_pad.get_index() + 1)
-	if in_drawer:
-		s.share_bar.min_width = TouchDrawer.WIDTH - 2.0 * UiTheme.TOUCH_GAP
-	elif home != null and s.focused_panel().share_home_width > 0.0:
+	if home != null and s.focused_panel().share_home_width > 0.0:
 		# A tablet's rail (C14): as wide as the rail, at the touch sizes (D274).
 		s.share_bar.min_width = s.focused_panel().share_home_width
 		s.share_bar.button_h = UiTheme.TOUCH_PRIMARY
 		s.share_bar.gap = UiTheme.TOUCH_GAP
-	sync_share()
-	_place_phone_bar()
 	_place_training(
 		not phone_form and s._side.visible and s.training != null and not s.training.touch_layout()
 	)
@@ -97,86 +85,10 @@ func _place_training(in_column: bool) -> void:
 		s.training.dock(false)
 
 
-## The opener shows while the share buttons sit in the drawer and there is something to
-## share; the drawer closes when there isn't.
-func sync_share() -> void:
-	var want: bool = (
-		s.share_bar.get_parent() == s.share_drawer.body
-		and s.share_bar.visible
-		and not s.focused_panel().shows_shares
-	)
-	if not want:
-		s.share_drawer.close()
-	if s.share_opener.visible != want or s.share_opener.get_parent() != _opener_home():
-		s.share_opener.visible = want
-		_place_phone_bar()
-
-
-## The opener's container: the panel's slot in its rails while the radar column is hidden
-## (Science), else the bar with the joint switch.
-func _opener_home() -> Container:
-	var slot: Container = null if s._side.visible else s.focused_panel().share_slot
-	return slot if slot != null else s._phone_bar
-
-
-func _place_phone_bar() -> void:
-	var home: Container = _opener_home()
-	if s.share_opener.get_parent() != home:
-		if s.share_opener.get_parent() != null:
-			s.share_opener.get_parent().remove_child(s.share_opener)
-		home.add_child(s.share_opener)
-	s.share_opener.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var shown: bool = s.share_opener.visible and home == s._phone_bar
-	s._phone_bar.visible = shown
-	var in_side: bool = s._side.visible
-	for p: StationPanel in s.panels:
-		var reserve: float = 0.0
-		if shown and not in_side and p == s.focused_panel():
-			reserve = UiTheme.TOUCH_PRIMARY + 2.0 * UiTheme.TOUCH_GAP + s._band_h
-		if p.bottom_reserve != reserve:
-			p.bottom_reserve = reserve
-			p.queue_redraw()
-	var parent: Control = s._extras if in_side else s._main
-	if s._phone_bar.get_parent() != parent:
-		s._phone_bar.reparent(parent, false)
-	s._phone_bar.vertical = in_side
-	var w: float = (
-		StationScreen.OPENER_WIDTH
-		if s.share_opener.get_parent() == s._phone_bar and not in_side
-		else 0.0
-	)
-	s.share_opener.custom_minimum_size = Vector2(w, UiTheme.TOUCH_PRIMARY)
-	if in_side:
-		s._extras.move_child(s._phone_bar, 0)
-	else:
-		s._phone_bar.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-		s._phone_bar.grow_horizontal = Control.GROW_DIRECTION_BOTH
-		s._phone_bar.grow_vertical = Control.GROW_DIRECTION_BEGIN
-		s._phone_bar.offset_bottom = -UiTheme.TOUCH_GAP - s._band_h
-	# The drawer: beside the radar column, or centred above the bar; never in the band.
-	var half: float = TouchDrawer.WIDTH / 2.0
-	s.share_drawer.anchor_top = 0.0
-	s.share_drawer.anchor_bottom = 1.0
-	s.share_drawer.offset_top = UiTheme.TOUCH_GAP
-	if in_side:
-		s.share_drawer.anchor_left = 1.0
-		s.share_drawer.anchor_right = 1.0
-		s.share_drawer.offset_right = -UiTheme.TOUCH_GAP
-		s.share_drawer.offset_left = -UiTheme.TOUCH_GAP - TouchDrawer.WIDTH
-		s.share_drawer.offset_bottom = -s._band_h
-	else:
-		s.share_drawer.anchor_left = 0.5
-		s.share_drawer.anchor_right = 0.5
-		s.share_drawer.offset_left = -half
-		s.share_drawer.offset_right = half
-		s.share_drawer.offset_bottom = -UiTheme.TOUCH_PRIMARY - 2.0 * UiTheme.TOUCH_GAP - s._band_h
-	raise_overlays()
-
-
-## Keeps the main area's overlays over the focused panel, in order: the bottom bar, the
-## share drawer, the view-top row, the choice sheet on top.
+## Keeps the main area's overlays over the focused panel, in order: the view-top row, the
+## choice sheet on top.
 func raise_overlays() -> void:
-	for c: Control in [s._phone_bar, s.share_drawer, s.frame.view_top, s.sheet]:
+	for c: Control in [s.frame.view_top, s.sheet]:
 		if c != null and c.get_parent() == s._main:
 			s._main.move_child(c, -1)
 
@@ -288,19 +200,6 @@ func build() -> void:
 	s._side_band = Control.new()
 	s._side_band.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	s._side.add_child(s._side_band)
-	var share_text: String = tr("share.drawer")
-	s.share_drawer = TouchDrawer.new(share_text, SIDE_RIGHT)
-	s.share_drawer.name = "ShareDrawer"
-	s._main.add_child(s.share_drawer)
-	s.share_opener = RailButton.make(share_text + " ▸")
-	s.share_opener.name = "ShareOpener"
-	s.share_opener.visible = false
-	s.share_drawer.bind_opener(s.share_opener)
-	s._phone_bar = BoxContainer.new()
-	s._phone_bar.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
-	s._phone_bar.visible = false
-	s._phone_bar.add_child(s.share_opener)
-	s._extras.add_child(s._phone_bar)
 	s.toasts = Toasts.new()
 	s.add_child(s.toasts)
 	s.chip_strip = ChipStrip.new()

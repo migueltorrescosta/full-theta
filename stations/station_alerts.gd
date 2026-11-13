@@ -51,6 +51,10 @@ const DEPENDS: Dictionary = {
 const FAULT_KEYS: Array[String] = [
 	"engines", "thrusters", "weapons", "shields", "sensors", "reactor"
 ]
+## Stations whose screens get the low-fuel toasts (D490, D456): they hold the exact propellant
+## (the STATUS block shows other seats a band or nothing, and Comms alone sees 0, which can't
+## be told from an empty tank).
+const FUEL_AUDIENCE: Array[String] = ["helm"]
 ## A toast of the same kind within this gap is skipped (ms): hits and the repeating
 ## proximity warning still flash and sound, without filling the toast column.
 const TOAST_GAP_MS: int = 2500
@@ -64,6 +68,8 @@ var tones: AlertTones
 
 var _level: int = CrewState.ALERT_NORMAL
 var _toast_ms: Dictionary = {}
+## 0 fuel fine, 1 under StationContext.FUEL_LOW, 2 under FUEL_ALMOST_GONE: the tier last toasted.
+var _fuel_tier: int = 0
 
 
 func setup(
@@ -119,8 +125,34 @@ func on_sim_event(kind: StringName, p: Dictionary) -> void:
 		tones.play(route[2] if route.size() > 2 else kind, now)
 
 
+func _process(_delta: float) -> void:
+	check_fuel()
+
+
+## Toasts, with no tone, when the own ship's propellant first falls under a tier (warn under
+## FUEL_LOW, danger under FUEL_ALMOST_GONE); a refuel above the tier re-arms it (D490). A seat
+## that holds no FUEL_AUDIENCE station, or a snapshot with no propellant, says nothing.
+func check_fuel() -> void:
+	if not _covers(FUEL_AUDIENCE):
+		return
+	var status: Dictionary = ctx.snap.blocks.get(StationCatalogue.Section.STATUS, {})
+	var share: float = ctx.propellant_share()
+	if share < 0.0 or not status.has("propellant"):
+		return
+	var tier: int = 0
+	if share < StationContext.FUEL_ALMOST_GONE:
+		tier = 2
+	elif share < StationContext.FUEL_LOW:
+		tier = 1
+	if tier > _fuel_tier:
+		var key: String = "alerts.fuel_out" if tier == 2 else "alerts.fuel_low"
+		toasts.push(tr(key), "danger" if tier == 2 else "warn", ctx.now_ms())
+	_fuel_tier = tier
+
+
 func _on_crew_changed(what: StringName) -> void:
 	if what == &"reset":
+		_fuel_tier = 0
 		_level = ctx.crew.alert
 		banner.stop_countdown()
 	if what != &"alert" or ctx.crew.alert == _level:

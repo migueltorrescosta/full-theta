@@ -272,7 +272,7 @@ func view_in_stage() -> Rect2:
 		r.size.y = minf(r.size.y, bottom - r.position.y)
 	var top: float = panel.top_reserve
 	r.position.y += top
-	r.size.y = maxf(r.size.y - top - panel.bottom_reserve, 1.0)
+	r.size.y = maxf(r.size.y - top, 1.0)
 	return r
 
 

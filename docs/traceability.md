@@ -161,7 +161,7 @@ Active ids per area: FT-GEN 14, FT-ARC 23, FT-NET 51, FT-SIM 37, FT-STN 17, FT-H
 | FT-HLM-009 | tests | `tests/stations/helm/test_helm_reach.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_shield_ring.gd` |
 | FT-HLM-010 | tests | `tests/stations/helm/test_helm_tablet.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_controls.gd` |
 | FT-HLM-011 | tests | `tests/net/test_shortcut_filter.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_shield_ring.gd` |
-| FT-HLM-012 | tests | `tests/net/test_shortcut_filter.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_panel.gd` |
+| FT-HLM-012 | tests | `tests/net/test_shortcut_filter.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_station_alerts.gd` |
 | FT-HLM-013 | tests | `tests/sim/combat/test_ram_and_dock.gd`, `tests/sim/flight/test_dock.gd`, `tests/stations/helm/test_helm_tablet.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_controls.gd`, `tests/stations/test_helm_jump_dock.gd` |
 | FT-HLM-014 | tests | `tests/stations/helm/test_helm_reach.gd`, `tests/stations/helm/test_helm_tablet.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_controls.gd` |
 | FT-HLM-015 | tests | `tests/stations/helm/test_helm_reach.gd`, `tests/stations/helm/test_helm_tablet.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_controls.gd` |
