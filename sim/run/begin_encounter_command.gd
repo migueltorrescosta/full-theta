@@ -35,7 +35,14 @@ func apply(world: SimWorld) -> bool:
 			return false
 		mask |= 1 << s
 	var id: int = world.encounters.add_encounter(
-		ships[0], world.faction_of(ships[0]), scenario, site, mask, cost, world.tick
+		ships[0],
+		world.faction_of(ships[0]),
+		scenario,
+		site,
+		mask,
+		cost,
+		world.tick,
+		world.ship_count()
 	)
 	for s: int in ships:
 		world.ships.encounter[s] = id
