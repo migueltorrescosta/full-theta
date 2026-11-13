@@ -16,8 +16,6 @@ const KINDS: Array[StringName] = [&"lobby", &"fleet", &"picked", &"handover", &"
 ## Under the desktop top bar and its goal row (px).
 const DESK_TOP: float = 68.0
 const EDGE: float = 8.0
-## The stations a guest may take, as the server's NetLobby.LIGHT_STATIONS.
-const LIGHT_STATIONS: Array[String] = ["engineering", "science", "relay", "comms"]
 
 var ctx: StationContext
 
@@ -57,7 +55,7 @@ static func guest_row(context: StationContext) -> Dictionary:
 
 ## The light stations of the watched ship a guest may take (NetLobby._guest_rule): none
 ## another player's seat covers, none a stand-in holds for a dropped player (a fill bot gives
-## way), in LIGHT_STATIONS order.
+## way), in StationCatalogue.LIGHT_STATIONS order.
 static func free_stations(context: StationContext) -> Array[String]:
 	var state: Dictionary = context.crew.ship_state(context.crew.ship)
 	var taken: Dictionary = {}
@@ -69,7 +67,7 @@ static func free_stations(context: StationContext) -> Array[String]:
 		if str((bot as Dictionary).get("for", "")) != "":
 			taken[str(bot["seat"])] = true
 	var out: Array[String] = []
-	for st: String in LIGHT_STATIONS:
+	for st: String in StationCatalogue.LIGHT_STATIONS:
 		if not taken.has(st):
 			out.append(st)
 	return out

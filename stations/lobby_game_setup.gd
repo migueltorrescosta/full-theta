@@ -83,9 +83,9 @@ func summary_text() -> String:
 	for id: String in ["drop_pause", "fill_bots"]:
 		if bool(_ctx.crew.fleet.get(id, false)):
 			parts.append(tr("lobby.short." + id))
-	var modifier: RunModifierDef = ModePanel.modifier_def(str(_ctx.crew.fleet.get("modifier", "")))
-	if modifier != null:
-		parts.append(tr(modifier.name_key))
+	var modifier: String = ModePanel.modifier_name(str(_ctx.crew.fleet.get("modifier", "")))
+	if modifier != "":
+		parts.append(modifier)
 	return " · ".join(parts)
 
 

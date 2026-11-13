@@ -6,18 +6,13 @@ extends VBoxContainer
 ## shows what the `fleet` event says. Only the host opens the sheet; the buttons grey once the
 ## universe has started. Under the mode, the host's two options as switches (#40 D1, D2:
 ## "Pause when someone drops", "Fill light stations with bots"), and the run modifier with its
-## detail and a Reroll button while there is another to roll (gp-11); no row without one.
+## detail and a Reroll button while there is another to roll (the `fleet` event's
+## `rerollable`, gp-11); no row without one.
 
 ## The session modes and team win rules, in GameRules order (the wire names).
 const MODES: Array[String] = ["coop", "race", "last_standing", "teams", "holdout"]
 const TEAM_WINS: Array[String] = ["last_team_standing", "first_to_finish"]
 const GAP: int = UiTheme.TOUCH_GAP
-## The run modifier definitions the client names (RunModifierDef, by id): loaded once from
-## MODIFIER_DIR; tests may set them.
-const MODIFIER_DIR: String = "res://content/runs/modifiers"
-
-static var modifier_defs: Dictionary = {}
-static var _modifiers_loaded: bool = false
 
 var ctx: StationContext
 
@@ -83,16 +78,9 @@ func setup(context: StationContext) -> void:
 	refresh()
 
 
-## The run modifier definition of `id`, or null (none, or one this client doesn't have).
-static func modifier_def(id: String) -> RunModifierDef:
-	if not _modifiers_loaded:
-		_modifiers_loaded = true
-		if DirAccess.dir_exists_absolute(MODIFIER_DIR):
-			for path: String in DefLibrary.list_tres(MODIFIER_DIR):
-				var def: RunModifierDef = load(path) as RunModifierDef
-				if def != null and not modifier_defs.has(String(def.id)):
-					modifier_defs[String(def.id)] = def
-	return modifier_defs.get(id) as RunModifierDef
+## The run modifier's name ("" for none): the string modifier.<id>.name (gp-11).
+static func modifier_name(id: String) -> String:
+	return "" if id == "" else TranslationServer.translate("modifier.%s.name" % id)
 
 
 ## Whether the host may change the mode: only before the universe starts.
@@ -152,14 +140,13 @@ func refresh() -> void:
 		sw.text = tr("lobby.option." + str(pair[1]))
 		sw.set_pressed_no_signal(option(pair[1]))
 		sw.disabled = not can
-	var def: RunModifierDef = modifier_def(str(ctx.crew.fleet.get("modifier", "")))
-	_modifier.visible = def != null
-	if def != null:
-		_modifier_name.text = tr("lobby.modifier") % tr(def.name_key)
-		_modifier_detail.text = tr(def.detail_key) if def.detail_key != &"" else ""
-		_modifier_detail.visible = _modifier_detail.text != ""
+	var id: String = str(ctx.crew.fleet.get("modifier", ""))
+	_modifier.visible = id != ""
+	if id != "":
+		_modifier_name.text = tr("lobby.modifier") % modifier_name(id)
+		_modifier_detail.text = tr("modifier.%s.detail" % id)
 		_reroll.text = tr("lobby.reroll")
-		_reroll.visible = can and modifier_defs.size() > 1
+		_reroll.visible = can and bool(ctx.crew.fleet.get("rerollable", false))
 
 
 ## Two columns of mode buttons on a narrow sheet, three otherwise.

@@ -8,10 +8,6 @@ func before() -> void:
 	I18n.apply("en")
 
 
-func after() -> void:
-	ModePanel.modifier_defs.clear()
-
-
 func _lobby(host: bool = true) -> LobbyScreen:
 	var ctx: StationContext = StationFixture.context("helm")
 	ctx.crew.lobby[0]["started"] = false
@@ -27,16 +23,6 @@ func _fleet(l: LobbyScreen, options: Dictionary) -> void:
 	var p: Dictionary = l.ctx.crew.fleet.duplicate(true)
 	p.merge(options, true)
 	l.ctx.crew.handle_event({"type": "fleet", "payload": p}, 0)
-
-
-static func _modifiers(ids: Array) -> void:
-	ModePanel.modifier_defs.clear()
-	for id: String in ids:
-		var def: RunModifierDef = RunModifierDef.new()
-		def.id = StringName(id)
-		def.name_key = StringName(id.capitalize())
-		def.detail_key = &"lobby.option.fill_bots"
-		ModePanel.modifier_defs[id] = def
 
 
 func _node(l: LobbyScreen, node_name: String) -> Control:
@@ -66,26 +52,30 @@ func test_host_switches_send_the_options() -> void:
 
 
 # FT: FT-NET-050
-# The modifier row shows the rolled modifier's name and detail, with Reroll for the host
-# while there is another one; no row without a modifier; a player sees it in the summary.
+# The modifier row shows the rolled modifier's name and detail (its strings), with Reroll
+# for the host while the server says there is another one; no row without a modifier; a
+# player sees it in the summary.
 func test_modifier_row_and_reroll() -> void:
-	_modifiers(["ion_storm", "calm"])
 	var l: LobbyScreen = _lobby()
 	(_node(l, "GameSetup") as Button).pressed.emit()
 	assert_bool(_node(l, "Modifier").visible).is_false()
-	_fleet(l, {"modifier": "ion_storm"})
+	_fleet(l, {"modifier": "rich_pickings", "rerollable": true})
 	assert_bool(_node(l, "Modifier").visible).is_true()
-	assert_str((_node(l, "ModifierName") as Label).text).is_equal("Modifier: Ion Storm")
+	assert_str((_node(l, "ModifierName") as Label).text).is_equal("Modifier: Rich pickings")
+	assert_str((_node(l, "ModifierDetail") as Label).text).is_equal(
+		tr("modifier.rich_pickings.detail")
+	)
 	var reroll: Button = _node(l, "Reroll") as Button
 	assert_bool(reroll.visible).is_true()
 	reroll.pressed.emit()
 	assert_int(StationFixture.sent(l.ctx).of("reroll_modifier").size()).is_equal(1)
-	_modifiers(["ion_storm"])
-	_fleet(l, {"modifier": "ion_storm", "fill_bots": false})
+	_fleet(l, {"rerollable": false})
 	assert_bool(reroll.visible).is_false()
 	var player: LobbyScreen = _lobby(false)
-	_fleet(player, {"modifier": "ion_storm"})
-	assert_str((_node(player, "SetupSummary") as Label).text).is_equal("Co-op · Easy · Ion Storm")
+	_fleet(player, {"modifier": "rich_pickings"})
+	assert_str((_node(player, "SetupSummary") as Label).text).is_equal(
+		"Co-op · Easy · Rich pickings"
+	)
 
 
 # FT: FT-NET-047, FT-NET-049

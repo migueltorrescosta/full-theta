@@ -69,6 +69,8 @@ const FILTERED: Array[int] = [
 ]
 
 const CREW: Array[String] = ["helm", "weapons", "engineering", "science", "relay", "comms"]
+## The stations a fill bot or a guest takes: never Helm or Weapons (#40 D2, D10).
+const LIGHT_STATIONS: Array[String] = ["engineering", "science", "relay", "comms"]
 const CAPTAIN: String = "captain"
 const VIEWER: String = "viewer"
 ## Development seat holding every station (FT-NET-029, D72), offered with

@@ -549,7 +549,8 @@ func _eliminate(ship: int, reason: String, lives: int) -> void:
 	game.broadcast(NetProtocol.EVENT_ELIMINATED, payload)
 	var crew: Array = []
 	for s: NetSession in game.by_id.values():
-		if s.on_ship(ship):
+		# Guests stay on their own ship's crew list (a relaunch takes them home, #40 D10).
+		if s.on_ship(ship) and s.guest_from < 0:
 			crew.append([s.id, s.seat])
 	_crews[ship] = crew
 	_handover_at[ship] = game.world.tick + HANDOVER_DELAY_TICKS
@@ -570,6 +571,11 @@ func _hand_over(ship: int) -> void:
 		if to >= 0 and rules.mode in [GameRules.Mode.COOP, GameRules.Mode.TEAMS]:
 			s.guest_from = ship
 		game.lobby.move(s, to, StationCatalogue.VIEWER if to >= 0 else "")
+	# Its guests move on as guests of their own eliminated ship (#40 D10).
+	for s: NetSession in game.by_id.values():
+		if s.ship == ship and s.guest_from >= 0:
+			game.notify(s, NetProtocol.EVENT_HANDOVER, FleetMessages.handover(s.guest_from, to))
+			game.lobby.move(s, to, StationCatalogue.VIEWER if to >= 0 else "")
 	_board_sent = []
 	_board_tick = -SCOREBOARD_EVERY_TICKS
 
@@ -647,6 +653,7 @@ func _fleet_payload() -> Dictionary:
 		"modifier": String(rules.modifier_id),
 		"drop_pause": game.lobby.drop_pause,
 		"fill_bots": game.lobby.fill_bots,
+		"rerollable": modifiers.size() > 1,
 	}
 	return FleetMessages.fleet(
 		ships, mode, team_win, max_ships, lives, Array(waiting()), started, host, options

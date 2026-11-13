@@ -41,6 +41,13 @@ func _pick_reason(c: NetClient, ship: int, seat: String) -> String:
 	return "missing" if e.is_empty() else str(e["payload"]["reason"])
 
 
+## Gives each ship the co-op relaunch's price before it is lost, so its side may relaunch it
+## (gp-10: the lost ship's purse pays).
+static func _fund(server: NetServer, ships: Array) -> void:
+	for ship: int in ships:
+		Economy.add_credits(server.world, ship, server.world.run_def.relaunch_cost)
+
+
 func _fleet(c: NetClient, from: int, pred: Callable) -> Dictionary:
 	var e: Dictionary = await h.next_event(c, NetProtocol.EVENT_FLEET, from, pred)
 	return {} if e.is_empty() else e["payload"]
@@ -63,6 +70,7 @@ func test_guests_take_free_light_stations_and_go_home_on_relaunch() -> void:
 	ana.start()
 	assert_bool(await h.until(func() -> bool: return server.game.sim_running())).is_true()
 	assert_bool(server.game.lobby.bots[1].has("relay")).is_true()
+	_fund(server, [0])
 	server.world.kin.alive[0] = 0
 	var guest: NetSession = h.session_of(server, ana)
 	assert_bool(await h.until(func() -> bool: return guest.ship == 1)).is_true()
@@ -95,6 +103,40 @@ func test_guests_take_free_light_stations_and_go_home_on_relaunch() -> void:
 	assert_bool(server.game.lobby.active_bots(1).has("relay")).is_true()
 
 
+# FT: FT-NET-049, FT-MIS-030
+# A guest's host ship is eliminated in turn: the guest moves on to a surviving ship, still a
+# guest of its own ship, and stays off the host ship's crew list: the host ship's relaunch
+# seats only its own crew, the guest's own ship's relaunch takes the guest home.
+func test_guests_of_an_eliminated_ship_stay_guests_of_their_own() -> void:
+	var server: NetServer = h.fleet_server(GameRules.Mode.COOP, 3, [], true, GRACE_S)
+	server.game.lobby.fill_bots = true
+	var ana: NetClient = await h.joined(server, "ana", StationCatalogue.ALL, 0)
+	var cy: NetClient = await h.joined(server, "cy", "tactical", 1)
+	await h.joined(server, "dee", StationCatalogue.ALL, 2)
+	server.game.fleet.rules.relaunch[GameRules.CREW_FACTIONS[0]] = RelaunchPolicy.unlimited()
+	h.all_ready(server)
+	ana.start()
+	assert_bool(await h.until(func() -> bool: return server.game.sim_running())).is_true()
+	var guest: NetSession = h.session_of(server, ana)
+	_fund(server, [0, 1])
+	server.world.kin.alive[0] = 0
+	assert_bool(await h.until(func() -> bool: return guest.ship == 1)).is_true()
+	assert_str(await _pick_reason(ana, 1, "relay")).is_empty()
+	var host: NetSession = h.session_of(server, cy)
+	server.world.kin.alive[1] = 0
+	assert_bool(await h.until(func() -> bool: return guest.ship == 2 and host.ship == 2)).is_true()
+	assert_int(guest.guest_from).is_equal(0)
+	assert_str(guest.seat).is_equal(StationCatalogue.VIEWER)
+	assert_int(host.guest_from).is_equal(1)
+	cy.vote_relaunch(1, true)
+	assert_bool(await h.until(func() -> bool: return host.ship == 1)).is_true()
+	await h.wait(200)
+	assert_int(guest.ship).is_equal(2)
+	ana.vote_relaunch(0, true)
+	assert_bool(await h.until(func() -> bool: return guest.ship == 0)).is_true()
+	assert_str(guest.seat).is_equal(StationCatalogue.ALL)
+
+
 # FT: FT-NET-049
 # Race sends eliminated crews to the scoreboard: nobody is a guest there.
 func test_no_guests_in_race() -> void:
@@ -122,6 +164,7 @@ func test_host_options_ride_on_game_mode() -> void:
 	assert_bool(first["drop_pause"]).is_true()  # NetHarness keeps the old pause on
 	assert_bool(first["fill_bots"]).is_false()
 	assert_str(first["modifier"]).is_equal(String(rolled))
+	assert_bool(first["rerollable"]).is_true()
 	var from: int = h.mark(host)
 	host.set_mode("teams", "last_team_standing", -1, false, true)
 	var fleet: Dictionary = await _fleet(
@@ -167,6 +210,10 @@ func test_reroll_is_host_only_and_changes_the_modifier() -> void:
 	var lone: NetServer = h.fleet_server(GameRules.Mode.COOP, 1, [], true, 10.0, SECRET)
 	lone.game.fleet.roll_modifiers([&"only"], 1)
 	var lone_host: NetClient = await h.welcomed(lone, "host", "", SECRET)
+	(
+		assert_bool(h.last_event(lone_host, NetProtocol.EVENT_FLEET)["payload"]["rerollable"])
+		. is_false()
+	)
 	from = h.mark(lone_host)
 	lone_host.reroll_modifier()
 	var lone_why: String = await _rejected(lone_host, NetProtocol.Type.REROLL_MODIFIER, from)

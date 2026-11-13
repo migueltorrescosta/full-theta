@@ -5,8 +5,6 @@
 [resource]
 script = ExtResource("1_mod")
 id = &"scrap_rush"
-name_key = &"modifier.scrap_rush.name"
-detail_key = &"modifier.scrap_rush.detail"
 strength = 0.9
 bounty = 0.5
 salvage = 1.5

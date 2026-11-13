@@ -20,9 +20,6 @@ extends RefCounted
 ##   TEAMS may take its free light stations; guests never count for coverage.
 ## Messages: Pick, Release, Ready, Start, Toggles, Abandon, AbandonVote, Takeover.
 
-## The stations a fill bot or a guest takes: never Helm or Weapons (gp-03, gp-04).
-const LIGHT_STATIONS: Array[String] = ["engineering", "science", "relay", "comms"]
-
 ## Ships that started (FT-NET-019). Read it through is_launched, launched_ships
 ## and any_launched; launch() adds one.
 var launched: Dictionary[int, bool] = {}
@@ -135,7 +132,7 @@ func fill_stations(ship: int) -> Array[String]:
 	if not fill_bots or launched.has(ship):
 		return out
 	var open: Array[String] = NetCoverage.uncovered(seats_of(ship))
-	for station: String in LIGHT_STATIONS:
+	for station: String in StationCatalogue.LIGHT_STATIONS:
 		if open.has(station):
 			out.append(station)
 	return out
@@ -633,7 +630,7 @@ func _on_takeover(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 func _guest_rule(s: NetSession, ship: int, seat: String) -> String:
 	if seat == StationCatalogue.VIEWER:
 		return ""
-	if not LIGHT_STATIONS.has(seat):
+	if not StationCatalogue.LIGHT_STATIONS.has(seat):
 		return CommandGate.NOT_ALLOWED
 	var held: Array = bots.get(ship, {}).get(seat, [-1, ""])
 	if int(held[0]) >= 0:

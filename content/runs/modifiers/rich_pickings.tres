@@ -5,8 +5,6 @@
 [resource]
 script = ExtResource("1_mod")
 id = &"rich_pickings"
-name_key = &"modifier.rich_pickings.name"
-detail_key = &"modifier.rich_pickings.detail"
 strength = 1.1
 bounty = 2.0
 salvage = 2.0
