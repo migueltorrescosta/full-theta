@@ -1002,18 +1002,18 @@ func _bar(font: Font, at: Vector2, label: String, value: float, envelope: bool) 
 	_text(font, at + Vector2(0.0, 10.0 + (fs - SMALL) / 2.0), label, Palette.color("text_dim"), fs)
 	var bar: Rect2 = Rect2(at + Vector2(label_width, 0.0), Vector2(_bar_width(), 10.0))
 	var top: float = BAR_MAX if envelope else 1.0
-	draw_rect(bar, Color(Palette.color("background"), 0.6))
-	var fill: Rect2 = Rect2(bar.position, Vector2(bar.size.x * clampf(value / top, 0.0, 1.0), 10.0))
 	var low: bool = value < (0.75 if envelope else StationContext.FUEL_LOW)
 	var critical: bool = not envelope and value < StationContext.FUEL_ALMOST_GONE
 	var fill_role: String = "danger_text" if critical else ("warn" if low else "ok")
-	draw_rect(fill, Palette.color(fill_role))
-	draw_rect(bar, Palette.color("line"), false, 1.0)
-	if envelope:
-		var x: float = bar.position.x + bar.size.x / BAR_MAX
-		draw_line(
-			Vector2(x, bar.position.y - 2.0), Vector2(x, bar.end.y + 2.0), Palette.color("text")
-		)
+	BarPaint.draw(
+		self,
+		bar,
+		value / top,
+		Palette.color(fill_role),
+		Color(Palette.color("background"), 0.6),
+		Palette.color("line"),
+		1.0 / BAR_MAX if envelope else -1.0
+	)
 	_text(
 		font,
 		bar.position + Vector2(bar.size.x + 6.0, 10.0 + (fs - SMALL) / 2.0),
