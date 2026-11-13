@@ -209,6 +209,11 @@ func skip_gap(ready: bool) -> void:
 	_send(NetProtocol.Type.SKIP_GAP, {"ready": ready})
 
 
+## Picks one of the quiet gap's site offers (w-bzx; an index into the `gap` event's offers).
+func site_pick(offer: int) -> void:
+	_send(NetProtocol.Type.SITE_PICK, {"offer": offer})
+
+
 func vote_abandon(ship: int, vote: bool) -> void:
 	_send(NetProtocol.Type.ABANDON_VOTE, {"ship": ship, "vote": vote})
 

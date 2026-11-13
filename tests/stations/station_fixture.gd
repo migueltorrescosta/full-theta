@@ -103,6 +103,9 @@ class RecordingClient:
 	func skip_gap(ready: bool) -> void:
 		sent.append(["skip_gap", [ready]])
 
+	func site_pick(offer: int) -> void:
+		sent.append(["site_pick", [offer]])
+
 	func takeover(ship: int, seat: String) -> void:
 		sent.append(["takeover", [ship, seat]])
 

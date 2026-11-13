@@ -93,6 +93,7 @@ func _samples() -> Dictionary:
 		NetProtocol.Type.REROLL_MODIFIER: {},
 		NetProtocol.Type.PRIORITY_TARGET: {"contact": 3},
 		NetProtocol.Type.SKIP_GAP: {"ready": true},
+		NetProtocol.Type.SITE_PICK: {"offer": 1},
 	}
 
 

@@ -124,7 +124,8 @@ var relaunch_votes: Dictionary = {}
 var handover: Dictionary = {}
 ## The `game_over` payload, {} while the session goes on.
 var game_over: Dictionary = {}
-## The fleet's quiet gap (NetSkipGap, gp-07): {faction, ends_at, ready, voters}, {} outside one.
+## The fleet's quiet gap (NetSkipGap, gp-07): {faction, ends_at, ready, voters, offers, pick,
+## pickers} (offers [{site, name_key, risk, reward}], w-bzx), {} outside one.
 var gap: Dictionary = {}
 
 var _filter: ShortcutFilter = null
@@ -661,6 +662,11 @@ func votes_on_gap() -> bool:
 
 func gap_ready() -> bool:
 	return _lists(gap.get("ready", []), session)
+
+
+## Whether this session picks the next site of the quiet gap (w-bzx: the Captain, or Comms).
+func picks_site() -> bool:
+	return _lists(gap.get("pickers", []), session)
 
 
 static func _lists(ids: Variant, id: int) -> bool:
