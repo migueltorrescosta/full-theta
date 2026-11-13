@@ -19,3 +19,10 @@ func decisions() -> Array[DirectorDecision]:
 ## lesson's bots act for the other stations first.
 func solo_station() -> StringName:
 	return &""
+
+
+## The crew-chosen site offers (E2, w-bzx) of the faction's current quiet gap, in offer order
+## (the first is the director's own pick): [{site: int, name_key: String, scenario: StringName,
+## risk: int, reward: int}]; empty outside a gap, before a finale, in a race or with no choice.
+func site_offers(_faction: int) -> Array[Dictionary]:
+	return []

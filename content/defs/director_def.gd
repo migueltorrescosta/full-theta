@@ -57,6 +57,16 @@ extends Resource
 @export var finale_escorts_from: float = 0.0
 ## The finale's time limit (s): past it the encounter ends PARTIAL.
 @export var finale_time_limit: float = 300.0
+## Crew-chosen sites (E2, w-bzx): at the start of each quiet gap before a regular encounter the
+## director offers up to this many picks, each a different scenario at a different free site
+## (count; 0 or 1: no choice, the director picks as before). The Captain, or Comms when no
+## Captain is seated, picks one; with no pick the first (the director's own) is played.
+@export var site_offers: int = 0
+## Each offer's risk tag by scenario id: 0 low, 1 some, 2 high (a scenario not listed: 2 when
+## tagged hostile, else 0).
+@export var offer_risk: Dictionary[StringName, int] = {}
+## Each offer's pay tag by scenario id: 0 low, 1 fair, 2 high (a scenario not listed: 1).
+@export var offer_reward: Dictionary[StringName, int] = {}
 
 
 func validate() -> Array[String]:
@@ -83,6 +93,12 @@ func validate() -> Array[String]:
 		errors.append("finale_escorts must be at least 0, got %s" % finale_escorts)
 	DefCheck.non_negative(errors, "finale_escorts_from", finale_escorts_from)
 	DefCheck.positive(errors, "finale_time_limit", finale_time_limit)
+	if site_offers < 0:
+		errors.append("site_offers must be at least 0, got %d" % site_offers)
+	for tags: Dictionary[StringName, int] in [offer_risk, offer_reward]:
+		for k: StringName in tags:
+			if tags[k] < 0 or tags[k] > 2:
+				errors.append("offer tag %s must be 0, 1 or 2, got %d" % [k, tags[k]])
 	for preset: StringName in strength_per_preset:
 		if not strength_per_preset[preset] > 0.0:
 			errors.append("strength_per_preset[%s] must be > 0" % preset)

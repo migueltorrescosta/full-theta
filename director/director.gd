@@ -135,6 +135,13 @@ static func skip_flag(faction: int) -> StringName:
 	return StringName("director.skip.%d" % faction)
 
 
+## The story flag that holds the crew's site pick of the faction's current gap (E2, w-bzx): the
+## offer's index plus one, 0 for none. The server (NetSkipGap, a logged SetFlagCommand from the
+## Captain's or Comms' SitePick) or a bot crew sets it; the director clears it when it offers.
+static func pick_flag(faction: int) -> StringName:
+	return StringName("director.pick.%d" % faction)
+
+
 ## The difficulty preset a toggles code names: the part before ":", lower case (D92).
 static func preset_of(code: String) -> StringName:
 	return StringName(code.get_slice(":", 0).strip_edges().to_lower())

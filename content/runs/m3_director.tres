@@ -30,3 +30,14 @@ finale_tries = 2
 finale_escorts = 1.15
 finale_escorts_from = 0.8
 finale_time_limit = 300.0
+site_offers = 3
+offer_risk = Dictionary[StringName, int]({
+&"debris_leg": 0,
+&"enemy_wave": 2,
+&"rescue": 1
+})
+offer_reward = Dictionary[StringName, int]({
+&"debris_leg": 0,
+&"enemy_wave": 1,
+&"rescue": 2
+})
