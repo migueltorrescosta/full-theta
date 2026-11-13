@@ -173,9 +173,8 @@ func test_phone_landscape_one_right_rail() -> void:
 	assert_float(p.top_reserve).is_greater(0.0)
 	var top: float = (p.get_global_transform() * view.position).y + p.top_reserve
 	assert_float(s.frame.selection_bar.get_global_rect().end.y).is_less_equal(top)
-	# The shares are on the Crew page: no Share opener on the screen.
+	# The shares are on the Crew page.
 	assert_bool(p.shows_shares).is_true()
-	assert_bool(s.share_opener.is_visible_in_tree()).is_false()
 
 
 # FT: FT-STN-005, FT-WPN-001, FT-WPN-002

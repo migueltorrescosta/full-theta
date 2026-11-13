@@ -611,8 +611,6 @@ func hud_area(control: Control) -> Rect2:
 	if touch_ui != null and touch_ui.is_inside_tree():
 		# Under the screen's view-top row too (selection bar, request chips).
 		r = touch_ui.clear_view_in(control).intersection(r)
-	# Above the screen's joint switch (a joint view on a phone on its side).
-	r.size.y = maxf(r.size.y - bottom_reserve, 0.0)
 	return r
 
 
@@ -642,16 +640,9 @@ func helm_block() -> Dictionary:
 	return ctx.snap.blocks.get(StationCatalogue.Section.HELM, {})
 
 
-## Propellant left as a share of the ship's capacity (ShipDef in content/), or -1 when
-## the def is unknown.
+## Propellant left as a share of the ship's capacity, or -1 when the def is unknown.
 func propellant_share() -> float:
-	var def: ShipDef = ctx.ship_def()
-	var left: float = float(
-		ctx.snap.blocks.get(StationCatalogue.Section.STATUS, {}).get("propellant", 0.0)
-	)
-	if def == null or def.propellant_capacity <= 0.0:
-		return -1.0
-	return clampf(left / def.propellant_capacity, 0.0, 1.0)
+	return ctx.propellant_share()
 
 
 func _shield_power() -> float:

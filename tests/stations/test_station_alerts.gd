@@ -200,3 +200,68 @@ func test_the_played_spy_keeps_only_the_last_tones() -> void:
 		assert_bool(tones.play(&"ping" if i < 5 else &"fault", i)).is_true()
 	assert_int(tones.played.size()).is_equal(AlertTones.PLAYED_KEPT)
 	assert_bool(tones.played.has(&"ping")).is_false()
+
+
+func _fuel(s: StationScreen, tons: float) -> void:
+	var status: Dictionary = s.ctx.snap.blocks[StationCatalogue.Section.STATUS]
+	status["propellant"] = tons
+	s.alerts.check_fuel()
+
+
+# FT: FT-HLM-012, FT-STN-004
+# D490: a warn toast the first time the fuel falls under 20 %, not repeated while it stays
+# there, and again after a refuel above 20 %; no tone.
+func test_low_fuel_toasts_once_and_again_after_a_refuel() -> void:
+	var s: StationScreen = _screen("helm")
+	_fuel(s, 8000.0)
+	assert_array(s.toasts.texts()).is_empty()
+	_fuel(s, 1900.0)
+	assert_array(s.toasts.texts()).is_equal(["Fuel low: ask Comms to buy more"])
+	_fuel(s, 1500.0)
+	_fuel(s, 1900.0)
+	assert_array(s.toasts.texts()).has_size(1)
+	assert_array(_played(s)).is_empty()
+	_fuel(s, 6000.0)
+	_fuel(s, 1000.0)
+	assert_array(s.toasts.texts()).has_size(2)
+
+
+# FT: FT-HLM-012, FT-STN-004
+# D490: under 10 % a danger toast follows; a refuel to between the tiers re-arms only that one.
+func test_almost_no_fuel_toasts_danger_once() -> void:
+	var s: StationScreen = _screen("helm")
+	_fuel(s, 1900.0)
+	_fuel(s, 900.0)
+	assert_array(s.toasts.texts()).is_equal(
+		["Fuel almost gone: ask Comms to buy more", "Fuel low: ask Comms to buy more"]
+	)
+	_fuel(s, 500.0)
+	assert_array(s.toasts.texts()).has_size(2)
+	_fuel(s, 1500.0)
+	_fuel(s, 500.0)
+	assert_array(s.toasts.texts()).has_size(3)
+
+
+# FT: FT-HLM-012, FT-STN-004
+# A screen that starts already low says so at its first snapshot.
+func test_a_screen_that_starts_low_toasts_at_once() -> void:
+	var s: StationScreen = _screen("approach")
+	_fuel(s, 1000.0)
+	assert_array(s.toasts.texts()).is_equal(["Fuel low: ask Comms to buy more"])
+
+
+# FT: FT-HLM-012, FT-STN-004
+# Weapons never sees the fuel, and a seat with no propellant in its block (Comms alone sees 0,
+# which can't be told from an empty tank) or no snapshot yet says nothing.
+func test_fuel_toasts_stay_off_other_screens_and_unknown_fuel() -> void:
+	for seat: String in ["weapons", "comms"]:
+		var w: StationScreen = _screen(seat)
+		_fuel(w, 500.0)
+		assert_array(w.toasts.texts()).is_empty()
+	var s: StationScreen = _screen("helm")
+	s.ctx.snap.blocks[StationCatalogue.Section.STATUS].erase("propellant")
+	s.alerts.check_fuel()
+	assert_array(s.toasts.texts()).is_empty()
+	s.ctx.snap.blocks.erase(StationCatalogue.Section.STATUS)
+	s.alerts.check_fuel()
+	assert_array(s.toasts.texts()).is_empty()

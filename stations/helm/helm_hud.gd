@@ -1004,8 +1004,8 @@ func _bar(font: Font, at: Vector2, label: String, value: float, envelope: bool) 
 	var top: float = BAR_MAX if envelope else 1.0
 	draw_rect(bar, Color(Palette.color("background"), 0.6))
 	var fill: Rect2 = Rect2(bar.position, Vector2(bar.size.x * clampf(value / top, 0.0, 1.0), 10.0))
-	var low: bool = value < (0.75 if envelope else 0.2)
-	var critical: bool = not envelope and value < 0.1
+	var low: bool = value < (0.75 if envelope else StationContext.FUEL_LOW)
+	var critical: bool = not envelope and value < StationContext.FUEL_ALMOST_GONE
 	var fill_role: String = "danger_text" if critical else ("warn" if low else "ok")
 	draw_rect(fill, Palette.color(fill_role))
 	draw_rect(bar, Palette.color("line"), false, 1.0)

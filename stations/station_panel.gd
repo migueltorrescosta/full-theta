@@ -27,21 +27,14 @@ var station: String = ""
 var ctx: StationContext = null
 var focused: bool = false
 var docked: bool = false
-## True while the panel shows the screen's share buttons itself (Relay's phone drawer):
-## the screen then shows no Share opener of its own (#28).
+## True while the panel shows the screen's share buttons itself (on its Crew page, on a phone).
 var shows_shares: bool = false
-## Where the screen's Share opener goes on a phone on its side while the radar column is
-## hidden (#28): a container in the panel's rails, or null for the bottom of the view.
-var share_slot: Container = null
 ## Off a phone, where a full_screen() panel alone (the radar column hidden) puts the screen's
 ## share buttons, or null (#35 A11, D217).
 var share_home: Container = null
 ## The share buttons' width (px) in share_home, at the touch sizes (a tablet's rail, C14); 0
 ## keeps the column's width and sizes.
 var share_home_width: float = 0.0
-## Height (px) at the bottom of the panel that the screen's joint switch and Share opener
-## cover on a phone on its side (#28); a hand-drawn view keeps its read-outs above it.
-var bottom_reserve: float = 0.0
 ## The panel's pages on a phone (null: one page, no tabs).
 var pages: PageHost = null
 ## Height (px) at the top of view_rect() that the screen's view-top row covers on a phone; a

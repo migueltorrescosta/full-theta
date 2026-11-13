@@ -221,13 +221,12 @@ func test_larger_screens_keep_their_layout() -> void:
 
 # FT: FT-STN-005, FT-PAIR-007, FT-JNT-001
 # In Systems (Engineering with Science) on its side the share buttons are on Engineering's
-# Crew page, 2 taps from rest; the screen shows no Share opener of its own.
+# Crew page, 2 taps from rest.
 func test_shares_on_the_crew_page() -> void:
 	var s: StationScreen = await _screen(Vector2i(844, 390), LANDSCAPE, "systems")
 	s.focus(0)
 	await _frames(2)
 	assert_str(s.focused_station()).is_equal("engineering")
-	assert_bool(s.share_opener.is_visible_in_tree()).is_false()
 	var crew: CrewPage = (s.focused_panel() as EngineeringPanel).phone.crew_page
 	crew.refresh()
 	var share: Array = crew.entries().filter(func(e: Array) -> bool: return e[0] == "share")
