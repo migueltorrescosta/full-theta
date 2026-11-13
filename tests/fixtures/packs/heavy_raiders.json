@@ -1,0 +1,36 @@
+{
+  "format": 1,
+  "id": "heavy_raiders",
+  "name": "Heavy raiders",
+  "author": "Full Theta",
+  "licence": "CC0-1.0",
+  "ships": [
+    {
+      "id": "brute",
+      "base": "m1_raider",
+      "name": "Brute",
+      "hull_max": 75000000,
+      "engage_range_min": 1200,
+      "engage_range_max": 2500
+    }
+  ],
+  "encounters": [
+    {
+      "id": "brute_pair",
+      "ship": "brute",
+      "name": "Captain Vey",
+      "count": 2,
+      "threat_cost": 4,
+      "second_after": 30,
+      "next_every": 15,
+      "taunt_after": 20,
+      "time_limit": 300
+    },
+    {
+      "id": "raider_trio",
+      "ship": "m1_raider",
+      "count": 3,
+      "threat_cost": 5
+    }
+  ]
+}

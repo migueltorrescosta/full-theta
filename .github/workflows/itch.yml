@@ -1,0 +1,64 @@
+# itch.io uploads (FT-ARC-023, D475). When the owner publishes a drafted
+# release (release.yml), this pushes its Linux, Windows and macOS packages to
+# the itch.io game named by the repository variable ITCH_GAME (user/game) with
+# butler, using the BUTLER_API_KEY secret. Both are set by the owner in the
+# repository settings; neither is in the repository. With either missing the
+# job does nothing. It runs no repository code: it downloads the release's own
+# assets and a pinned, checksummed butler. No web channel: browser stations
+# load from the host's own server (docs/release.md, itch.io).
+name: itch
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: itch-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    if: ${{ vars.ITCH_GAME != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      BUTLER_VERSION: 15.32.0
+      BUTLER_SHA256: 2335971394ef6596f95ded0833e85ee28755e13761716ef4c91d6b11f69162f5
+      TAG: ${{ github.event.release.tag_name }}
+    steps:
+      - name: Check the API key
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          if [ -z "$BUTLER_API_KEY" ]; then
+            echo "::notice::BUTLER_API_KEY is not set; nothing uploaded"
+            echo "skip=1" >>"$GITHUB_ENV"
+          fi
+      - name: Fetch butler (pinned)
+        if: env.skip != '1'
+        run: |
+          curl -fsSL -o butler.zip "https://broth.itch.zone/butler/linux-amd64/$BUTLER_VERSION/archive/default"
+          echo "$BUTLER_SHA256  butler.zip" | sha256sum -c -
+          unzip -q butler.zip -d butler && chmod +x butler/butler
+      - name: Download the release packages
+        if: env.skip != '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir release
+          --pattern '*-linux-x86_64.tar.gz' --pattern '*-windows-x86_64.zip' --pattern '*-macos.zip'
+      - name: Push to itch.io
+        if: env.skip != '1'
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+          ITCH_GAME: ${{ vars.ITCH_GAME }}
+        run: |
+          # The Linux tarball is unpacked so butler keeps the executable bits.
+          mkdir linux && tar -xzf release/*-linux-x86_64.tar.gz -C linux
+          push() { butler/butler push "$1" "$ITCH_GAME:$2" --userversion "$TAG"; }
+          push linux linux
+          push release/*-windows-x86_64.zip windows
+          push release/*-macos.zip mac

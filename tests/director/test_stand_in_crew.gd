@@ -33,7 +33,7 @@ static func _ticks_of(host: ScenarioHost, kind: StringName) -> Array:
 	)
 
 
-# FT: FT-NET-047
+# FT: FT-NET-048
 # A Weapons stand-in aims at the raider in sight at once and fires within a few seconds of
 # its reaction time, never before it, and only Weapons commands go out for that station.
 func test_weapons_stand_in_fires_after_its_reaction() -> void:
@@ -52,7 +52,7 @@ func test_weapons_stand_in_fires_after_its_reaction() -> void:
 		assert_str(StationCatalogue.station_of_command(row[1])).is_equal("weapons")
 
 
-# FT: FT-NET-047
+# FT: FT-NET-048
 # A Helm stand-in turns to face the nearest hostile (Face held on it, the contact selected)
 # within its first look.
 func test_helm_stand_in_faces_the_hostile() -> void:
@@ -67,7 +67,7 @@ func test_helm_stand_in_faces_the_hostile() -> void:
 		assert_str(StationCatalogue.station_of_command(row[1])).is_equal("helm")
 
 
-# FT: FT-NET-047
+# FT: FT-NET-048
 # The same seed gives the same commands (a run with stand-ins replays).
 func test_stand_ins_are_deterministic() -> void:
 	var sent: Array = []

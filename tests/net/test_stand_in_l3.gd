@@ -47,7 +47,7 @@ func _bots(c: NetClient) -> Array:
 	return [] if e.is_empty() else e["payload"].get("bots", [])
 
 
-# FT: FT-NET-047, FT-NET-033
+# FT: FT-NET-048, FT-NET-033
 # Option off (the default): when the grace of Ops ends a stand-in takes Relay and Comms for
 # them, the universe never pauses, the lobby names the bot for the player, and the bots act
 # (their commands land in the log).
@@ -76,7 +76,7 @@ func test_stand_in_takes_over_after_the_grace() -> void:
 	assert_bool(await h.until(acted)).is_true()
 
 
-# FT: FT-NET-047, FT-NET-026
+# FT: FT-NET-048, FT-NET-026
 # The dropped player rejoins after the grace: the seat (and its free claims) come back to
 # them and the bot leaves.
 func test_rejoin_takes_the_seat_back_from_the_bot() -> void:
@@ -93,7 +93,7 @@ func test_rejoin_takes_the_seat_back_from_the_bot() -> void:
 	assert_bool(server.game.sim_running()).is_true()
 
 
-# FT: FT-NET-047
+# FT: FT-NET-048
 # The ship's Captain takes a bot's station with a plain pick (no pause needed): that bot
 # leaves, the other stays.
 func test_a_player_taking_a_bot_station_sends_it_away() -> void:
@@ -104,7 +104,7 @@ func test_a_player_taking_a_bot_station_sends_it_away() -> void:
 	assert_array(server.game.lobby.bots[PLAYER].keys()).is_equal(["comms"])
 
 
-# FT: FT-NET-034, FT-NET-047
+# FT: FT-NET-034, FT-NET-048
 # Option on: no stand-in, the grace ends in the coverage pause as before (D83).
 func test_the_host_option_pauses_instead() -> void:
 	var server: NetServer = _server()
@@ -115,7 +115,7 @@ func test_the_host_option_pauses_instead() -> void:
 	assert_bool(server.game.lobby.bots.is_empty()).is_true()
 
 
-# FT: FT-NET-048
+# FT: FT-NET-049
 # Fill light stations with bots: Helm and Weapons held by two players pass coverage ("crew
 # 2/2", the light stations shown as bots to come); Start puts fill bots on the four light
 # stations. One player alone, or without the option, is refused.
@@ -149,7 +149,7 @@ func test_two_players_start_with_fill_bots() -> void:
 	assert_bool(server.game.lobby.bots[PLAYER].has("relay")).is_false()
 
 
-# FT: FT-NET-048
+# FT: FT-NET-049
 # One player on Tactical (Helm and Weapons) is still one player: fill bots never make a crew
 # of one.
 func test_fill_bots_need_two_players() -> void:

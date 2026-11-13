@@ -16,6 +16,9 @@ extends RefCounted
 ##
 ## The host picks the session language before launch (Options.language); it
 ## reaches the child as `--language` (FT-AUD-013).
+##
+## The client's own `--osc` and `--packs` flags (after `--`) pass on to the child, so a game
+## hosted from the menu gets room hardware events and content packs too (D470, D472).
 
 ## Minutes without connected players before the child exits by itself.
 ## FT-NET-003 leaves N open (provisional: see docs/protocol.md, Rates and limits).
@@ -23,6 +26,8 @@ const DEFAULT_IDLE_EXIT_MIN: int = 10
 const SECRET_BYTES: int = 32
 ## Environment variable that carries the host secret to the child (D127).
 const SECRET_ENV: String = "FT_HOST_SECRET"
+## Client flags (each with one value) the server child gets as they are.
+const FORWARDED: Array[String] = ["--osc", "--packs"]
 
 ## The child's pid, or -1 when none was spawned.
 var pid: int = -1
@@ -85,6 +90,15 @@ static func server_args(
 	return args
 
 
+## The FORWARDED flags and their values among the client's arguments.
+static func forwarded(client_args: PackedStringArray) -> PackedStringArray:
+	var out: PackedStringArray = PackedStringArray()
+	for i: int in client_args.size() - 1:
+		if FORWARDED.has(client_args[i]):
+			out.append_array([client_args[i], client_args[i + 1]])
+	return out
+
+
 ## A fresh random host secret, hex (D127).
 static func new_secret() -> String:
 	return Crypto.new().generate_random_bytes(SECRET_BYTES).hex_encode()
@@ -117,6 +131,7 @@ func spawn(options: HostSession.Options, pid_file_path: String = ServerPidFile.P
 	args.append_array(
 		server_args(options, ProjectSettings.globalize_path(pid_file_path), project_path())
 	)
+	args.append_array(forwarded(OS.get_cmdline_user_args()))
 	# The child inherits the environment at fork; clear it again at once.
 	OS.set_environment(SECRET_ENV, host_secret)
 	pid = OS.create_process(executable, args)

@@ -43,7 +43,7 @@ func _node(l: LobbyScreen, node_name: String) -> Control:
 	return l.find_child(node_name, true, false) as Control
 
 
-# FT: FT-NET-047, FT-NET-048
+# FT: FT-NET-048, FT-NET-049
 # The host's switches send GameMode with the mode kept and the option flipped, show what the
 # `fleet` event says, and the summary names an option that is on.
 func test_host_switches_send_the_options() -> void:
@@ -65,7 +65,7 @@ func test_host_switches_send_the_options() -> void:
 	assert_bool(fill.disabled).is_true()
 
 
-# FT: FT-NET-050
+# FT: FT-NET-051
 # The modifier row shows the rolled modifier's name and detail, with Reroll for the host
 # while there is another one; no row without a modifier; a player sees it in the summary.
 func test_modifier_row_and_reroll() -> void:
@@ -88,7 +88,7 @@ func test_modifier_row_and_reroll() -> void:
 	assert_str((_node(player, "SetupSummary") as Label).text).is_equal("Co-op · Easy · Ion Storm")
 
 
-# FT: FT-NET-047, FT-NET-049
+# FT: FT-NET-048, FT-NET-050
 # A cell names a stand-in bot for the dropped player, a fill bot and a guest.
 func test_cells_name_bots_and_guests() -> void:
 	var l: LobbyScreen = _lobby()

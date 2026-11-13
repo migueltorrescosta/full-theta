@@ -55,6 +55,8 @@ var probe: LoadProbe
 ## The server log (D199), or null until start_server_log(); other systems add their
 ## events and counters to it (ServerLog).
 var server_log: ServerLog
+## Room hardware events over OSC (`--osc`, FT-NET-047), or null: off.
+var osc: OscEmitter
 var age_stats: SnapshotAgeStats = SnapshotAgeStats.new()
 
 ## Solo training (D303), set by ServerMain: builds the Shakedown's RunSetup, and the driver
@@ -368,6 +370,8 @@ func _process(delta: float) -> void:
 			var events: Array[SimEvent] = world.drain_events()
 			game.after_ticks(events)
 			run_reset.after_ticks(events)
+			if osc != null:
+				osc.after_ticks(events, _crew_ids(), game.crew.marks.alert, now_us)
 			t[3] = Time.get_ticks_usec()
 			if world.tick >= _next_snapshot_tick:
 				_post_state()
@@ -420,6 +424,14 @@ func _poll_lan_services() -> void:
 		if beacon.last_error != OK and not beacon_failure_logged:
 			beacon_failure_logged = true
 			push_warning("LAN beacon cannot send: %s" % error_string(beacon.last_error))
+
+
+## The crewed ships' ids.
+func _crew_ids() -> PackedInt32Array:
+	var out: PackedInt32Array = PackedInt32Array()
+	for c: Dictionary in game.crew_ships():
+		out.append(c["id"])
+	return out
 
 
 ## Sessions holding a pick (the probe waits for all of them).

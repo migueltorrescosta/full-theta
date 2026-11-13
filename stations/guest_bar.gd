@@ -1,6 +1,6 @@
 class_name GuestBar
 extends PanelContainer
-## A guest's way onto a friendly ship's free light stations (#40 D10, gp-04, FT-NET-049): the
+## A guest's way onto a friendly ship's free light stations (#40 D10, gp-04, FT-NET-050): the
 ## server marks the session's own seat row `guest` once its eliminated crew was handed over to
 ## the ship it watches (co-op and teams). While the guest watches (Viewer) and at least one
 ## light station is free, "Help out:" lists them, each a button that picks it through the

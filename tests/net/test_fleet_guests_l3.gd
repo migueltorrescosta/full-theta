@@ -46,7 +46,7 @@ func _fleet(c: NetClient, from: int, pred: Callable) -> Dictionary:
 	return {} if e.is_empty() else e["payload"]
 
 
-# FT: FT-NET-049, FT-MIS-030
+# FT: FT-NET-050, FT-MIS-030
 # Co-op, two ships (dev seats: one crew player covers a ship's coverage), ship 1's player on
 # Tactical with fill bots on the light stations. Ship 0 is destroyed: its two players view
 # ship 1 as guests; one takes Relay (the fill bot gives way and still counts), the other is
@@ -95,7 +95,7 @@ func test_guests_take_free_light_stations_and_go_home_on_relaunch() -> void:
 	assert_bool(server.game.lobby.active_bots(1).has("relay")).is_true()
 
 
-# FT: FT-NET-049
+# FT: FT-NET-050
 # Race sends eliminated crews to the scoreboard: nobody is a guest there.
 func test_no_guests_in_race() -> void:
 	var server: NetServer = h.fleet_server(GameRules.Mode.RACE, 2, [], true, GRACE_S)
@@ -110,7 +110,7 @@ func test_no_guests_in_race() -> void:
 	assert_int(s.guest_from).is_equal(-1)
 
 
-# FT: FT-NET-047, FT-NET-048
+# FT: FT-NET-048, FT-NET-049
 # GameMode carries the host's two options (off by default): the `fleet` event says them,
 # the lobby follows, and a mode change keeps the run modifier.
 func test_host_options_ride_on_game_mode() -> void:
@@ -135,7 +135,7 @@ func test_host_options_ride_on_game_mode() -> void:
 	assert_int(server.game.lobby.min_crew()).is_equal(2)
 
 
-# FT: FT-NET-050
+# FT: FT-NET-051
 # The host rerolls the run modifier before the start: another one each time, never the same;
 # anyone else is refused `not_host`, a lone modifier `no_reroll`, and the world built at Start
 # carries the last roll.

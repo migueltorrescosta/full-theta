@@ -26,7 +26,7 @@ func _buttons(b: GuestBar) -> Array:
 	return b.find_children("*", "Button", true, false).map(func(n: Node) -> String: return n.name)
 
 
-# FT: FT-NET-049
+# FT: FT-NET-050
 # A watching guest sees the light stations nobody holds (a fill bot gives way, a stand-in
 # doesn't); a tap picks one through Pick.
 func test_a_watching_guest_sees_the_free_light_stations() -> void:
@@ -41,7 +41,7 @@ func test_a_watching_guest_sees_the_free_light_stations() -> void:
 	assert_array(sent).is_equal([StationFixture.SHIP, "engineering"])
 
 
-# FT: FT-NET-049
+# FT: FT-NET-050
 # Nothing shows for a viewer who is no guest, nor for a guest with no station free.
 func test_hidden_without_a_use() -> void:
 	assert_bool(_bar(StationCatalogue.VIEWER, false).visible).is_false()
@@ -52,7 +52,7 @@ func test_hidden_without_a_use() -> void:
 	assert_bool(_bar("helm", false).visible).is_false()
 
 
-# FT: FT-NET-049
+# FT: FT-NET-050
 # A guest seated at a light station gets Back to watching, which picks the Viewer again.
 func test_a_seated_guest_goes_back_to_watching() -> void:
 	var b: GuestBar = _bar("relay", true)
@@ -75,7 +75,7 @@ func _screen(seat: String) -> StationScreen:
 	return s
 
 
-# FT: FT-NET-049, FT-MIS-030
+# FT: FT-NET-050, FT-MIS-030
 # The top bar says "Watching Kestrel" while the handed-over player watches; seated at one of
 # its stations as a guest, the bar names the ship as their own.
 func test_a_seated_guest_is_not_watching() -> void:
@@ -83,7 +83,7 @@ func test_a_seated_guest_is_not_watching() -> void:
 	assert_str(_screen("relay").top_bar.watching).is_empty()
 
 
-# FT: FT-NET-049
+# FT: FT-NET-050
 # While the handover notice shows where the bar would go (a tablet), the bar sits under it,
 # and moves back up once the notice hides.
 func test_the_bar_keeps_clear_of_the_handover_notice() -> void:
