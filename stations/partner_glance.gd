@@ -123,6 +123,12 @@ func show_for(ctx: StationContext, partner_id: String, focused: String) -> void:
 	action.visible = intent != ""
 	if intent != "":
 		action.text = tr(ACTIONS[intent])
+		# A longer translation ("Impulso") widens the button instead of losing letters.
+		var w: float = (
+			action.get_theme_font("font").get_string_size(action.text, 0, -1, FONT).x
+			+ action.get_theme_stylebox("normal").get_minimum_size().x
+		)
+		action.custom_minimum_size.x = maxf(UiTheme.TOUCH_PRIMARY, ceilf(w))
 
 
 ## One read-out's text from the view (a dash while its block hasn't come).

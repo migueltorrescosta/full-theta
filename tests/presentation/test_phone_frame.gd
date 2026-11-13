@@ -425,11 +425,30 @@ func test_partner_glance_in_tactical() -> void:
 	assert_bool(s.frame.glance.is_visible_in_tree()).is_true()
 	assert_str(s.frame.glance.text.text).contains("80 m/s")
 	assert_bool(s.frame.glance.action.visible).is_true()
+	# "Stop" fits a square target; only a longer translation ("Impulso") widens it.
+	assert_float(s.frame.glance.action.custom_minimum_size.x).is_equal(float(UiTheme.TOUCH_PRIMARY))
 	s.frame.glance.action.pressed.emit()
 	var stops: Array = _sent(s, "command").filter(
 		func(c: Array) -> bool: return c[1][0]["kind"] == "helm_all_stop"
 	)
 	assert_int(stops.size()).is_equal(1)
+	_drop(s)
+
+
+# FT: FT-JNT-005, FT-STN-005
+# A translation longer than a square target ("Impulso") widens the glance's action button
+# instead of cutting the word (it used to read "Impu").
+func test_the_glance_action_fits_a_longer_translation() -> void:
+	I18n.apply("pt_PT")
+	var s: StationScreen = await _screen(Vector2i(844, 390), "drive", LANDSCAPE)
+	s.focus(1)
+	s._process(0.016)
+	await _frames(1)
+	var action: RailButton = s.frame.glance.action
+	assert_str(action.text).is_equal("Impulso")
+	var need: float = action.get_theme_font("font").get_string_size("Impulso", 0, -1, 13).x
+	assert_float(action.size.x).is_greater_equal(need)
+	I18n.apply("en")
 	_drop(s)
 
 
