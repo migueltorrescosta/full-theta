@@ -53,9 +53,9 @@ func _commands(s: StationScreen, kind: String) -> Array:
 
 ## The index of the overlay row of `kind` whose field `key` is `value`.
 func _row(panel: CommsPanel, kind: String, key: String, value: Variant) -> int:
-	var rows: Array[Dictionary] = panel.overlay.rows()
+	var rows: Array[CommsRows.Row] = panel.overlay.rows()
 	for i: int in rows.size():
-		if rows[i]["kind"] == kind and str(rows[i].get(key, "")) == str(value):
+		if rows[i].kind == kind and str(rows[i].get(key)) == str(value):
 			return i
 	return -1
 
@@ -69,11 +69,11 @@ func test_goods_are_bought_and_sold_by_key() -> void:
 	var panel: CommsPanel = s.panels[0] as CommsPanel
 	var parts: int = _row(panel, "buy", "item", "parts")
 	assert_int(parts).is_greater_equal(0)
-	assert_str(panel.overlay.row_text(panel.overlay.rows()[parts])).is_equal(
+	assert_str(panel.overlay.rows()[parts].text()).is_equal(
 		"Parts: buy 25  sell 12  stock 20"
 	)
 	var fuel: int = _row(panel, "buy", "item", "propellant")
-	assert_str(panel.overlay.row_text(panel.overlay.rows()[fuel])).contains("x100 per press")
+	assert_str(panel.overlay.rows()[fuel].text()).contains("x100 per press")
 	panel.overlay.focus = parts
 	s.dispatch(_ev("comms_buy"))
 	s.dispatch(_ev("comms_sell"))
@@ -101,7 +101,7 @@ func test_visible_buy_and_sell_buttons() -> void:
 	var s: StationScreen = await _screen()
 	var panel: CommsPanel = s.panels[0] as CommsPanel
 	var o: CommsOverlay = panel.overlay
-	assert_str(str(o.rows()[o.focus]["kind"])).is_not_equal("reply")
+	assert_str(str(o.rows()[o.focus].kind)).is_not_equal("reply")
 	assert_bool(o.buy_button.visible).is_true()
 	assert_bool(o.sell_button.visible).is_true()
 	o.focus = _row(panel, "buy", "item", "parts")
@@ -128,7 +128,7 @@ func test_the_module_line_shows_the_trade_in() -> void:
 	var panel: CommsPanel = s.panels[0] as CommsPanel
 	var at: int = _row(panel, "module", "module", "hx2_afterburner")
 	assert_int(at).is_greater_equal(0)
-	assert_str(panel.overlay.row_text(panel.overlay.rows()[at])).is_equal(
+	assert_str(panel.overlay.rows()[at].text()).is_equal(
 		"Module HX-2 Afterburner, slot 1: 900  swaps out BX-3 Reactor for 450, net 450"
 	)
 	panel.overlay.focus = at
@@ -146,7 +146,7 @@ func test_the_module_line_shows_the_trade_in() -> void:
 	)
 	var sell: int = _row(panel, "sell_module", "slot", 0)
 	assert_int(sell).is_greater_equal(0)
-	assert_str(panel.overlay.row_text(panel.overlay.rows()[sell])).is_equal(
+	assert_str(panel.overlay.rows()[sell].text()).is_equal(
 		"Sell BX-3 Reactor (slot 1)  for 450"
 	)
 	# The empty slot has nothing to sell.
