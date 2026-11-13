@@ -34,8 +34,8 @@ const FONT_NUM: int = 14
 const FONT_LABEL: int = 13
 ## A mount list row and its Claim button (px).
 const ROW_H: float = 56.0
-## A mount card in the three-column list: four lines of 14 px text (a long mount name wraps).
-const CARD_H: float = 96.0
+## A mount card in the three-column list: two lines of 14 px text (a long mount name wraps).
+const CARD_H: float = 64.0
 const ROW_CLAIM_WIDTH: float = 88.0
 ## The mount list's widest (px).
 const LIST_WIDTH: float = 392.0
@@ -226,7 +226,7 @@ func _refresh_rows() -> void:
 	for i: int in rows.size():
 		var look: RailButton = rows[i][0]
 		var claim: RailButton = rows[i][1]
-		look.text = WeaponsStatus.mount_text(p, i, _list_box.columns == 1)
+		look.text = WeaponsStatus.mount_text(p, i, _list_box.columns == 1, _list_box.columns > 1)
 		_heat_colour(look, WeaponsStatus.heat_role(p, i))
 		look.role = RailButton.Role.ACCENT if i == p.mount else RailButton.Role.PLAIN
 		look.disabled = not p.is_usable(i)
@@ -445,8 +445,8 @@ static func touch_help() -> Array:
 		[Rect2(565, 64, 48, 48), "requests"],
 	]
 	var mounts: Array = [
-		[Rect2(231, 128, 122, 96), "row"],
-		[Rect2(231, 232, 122, 56), "row_claim"],
+		[Rect2(231, 128, 122, 68), "row"],
+		[Rect2(231, 204, 122, 56), "row_claim"],
 		[Rect2(629, 278, 168, 88), "fire"],
 	]
 	var crew: Array = [

@@ -289,7 +289,10 @@ func _draw_probes(font: Font) -> void:
 			draw_arc(p, r_px, 0.0, TAU, 48, col * Color(1, 1, 1, 0.5), 1.0, true)
 		draw_arc(p, blip_r(), 0.0, TAU, 20, col, 2.0, true)
 		draw_circle(p, 2.0, col if pr["deployed"] else Palette.color("background"))
-		_draw_text(font, p + Vector2(10.0, -8.0), "P%d" % (int(pr["serial"]) + 1), col)
+		# (left of the ring: the item callout, "Probe · 1 low · mid", starts on its right)
+		var tag: String = "P%d" % (int(pr["serial"]) + 1)
+		var w: float = font.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
+		_draw_text(font, p + Vector2(-10.0 - w, -8.0), tag, col)
 
 
 ## The sites the SITES section marks pending (gp-16): a dashed ring with "?" in it.

@@ -5,9 +5,8 @@ extends PanelContainer
 ## one toggle, "Ready for the next one". It shows only to a session that votes (a human crew
 ## player or the Captain on a ship of the fleet in play: CrewState.votes_on_gap), so a viewer
 ## never sees a control it can't use. Once every voter is Ready the server ends the gap; the
-## card goes when the gap does. It sits at the screen's bottom-left corner (the Shakedown
-## banner's: the two never show together); on a phone, where that corner holds the Helm
-## throttle and other controls, at the bottom centre of the view, over readouts only.
+## card goes when the gap does. It sits at the top centre, under the top bar (on a phone under
+## the view-top row, like the vote prompts), where no readout or control is.
 
 var ctx: StationContext
 
@@ -46,6 +45,8 @@ func refresh() -> void:
 	if not visible:
 		return
 	_place(1 if LayoutMode.is_phone(LayoutMode.form_of(self)) else 0)
+	if _phone == 1:
+		position.y = VotePrompt.phone_top(self)
 	var left: int = maxi(0, ceili((int(gap["ends_at"]) - ctx.snap.tick) / CrewState.TICK_RATE))
 	_text.text = (
 		tr("gap.text")
@@ -65,12 +66,10 @@ func _place(phone: int) -> void:
 	if phone == _phone:
 		return
 	_phone = phone
-	var corner: Control.LayoutPreset = (
-		Control.PRESET_CENTER_BOTTOM if phone == 1 else Control.PRESET_BOTTOM_LEFT
-	)
-	set_anchors_and_offsets_preset(corner, Control.PRESET_MODE_MINSIZE, 12 + 24 * phone)
-	grow_vertical = Control.GROW_DIRECTION_BEGIN
-	grow_horizontal = Control.GROW_DIRECTION_BOTH if phone == 1 else Control.GROW_DIRECTION_END
+	set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE)
+	grow_horizontal = Control.GROW_DIRECTION_BOTH
+	grow_vertical = Control.GROW_DIRECTION_END
+	position.y = VotePrompt.phone_top(self) if phone == 1 else VotePrompt.EDGE_GAP
 
 
 func _on_toggled(on: bool) -> void:

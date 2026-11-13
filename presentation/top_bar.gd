@@ -114,7 +114,13 @@ func _init() -> void:
 	chip.pressed.connect(open_alert_picker)
 	chip.draw.connect(_draw_chip)
 	var spacer: Control = Control.new()
+	# (the station names take the free room and trim with an ellipsis when it runs out, so the
+	# timer and the sound button stay on screen; the spacer only pushes them right)
 	spacer.size_flags_horizontal = SIZE_EXPAND_FILL
+	spacer.size_flags_stretch_ratio = 0.0
+	_stations.size_flags_horizontal = SIZE_EXPAND_FILL
+	_stations.clip_text = true
+	_stations.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	var keyed: Dictionary = {_hull: "hull", _shields: "shields", _pips: "pips_used"}
 	for c: Control in [
 		_name, _hull, _shields, _pips, chip, _stations, spacer, _timer, sound, fullscreen

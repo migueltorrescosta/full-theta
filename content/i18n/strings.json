@@ -839,7 +839,7 @@
     "weapons.touch_guided": {"en": "Fire at mark", "pt_PT": "Lançar à marca", "it": "Spara al segno"},
     "weapons.you": {"en": "you", "pt_PT": "tu", "it": "tu"},
     "alerts.lane_warning": {"en": "Friendly in the line of fire", "pt_PT": "Aliado na linha de fogo", "it": "Alleato sulla linea di tiro"},
-    "alerts.crippled": {"en": "Crippled: dock within {time} to limp home", "pt_PT": "Nave avariada: atraca em {time} para voltar a casa", "it": "Nave in avaria: attracca entro {time} per rientrare"},
+    "alerts.crippled": {"en": "{time} · Crippled: dock to limp home", "pt_PT": "{time} · Nave avariada: atraca para voltar a casa", "it": "{time} · Nave in avaria: attracca per rientrare"},
     "alerts.limped_home": {"en": "Limped home: half pay", "pt_PT": "De volta a custo: metade do pagamento", "it": "Rientrati a fatica: paga a metà"},
     "alerts.bounty": {"en": "Bounty +{n}", "pt_PT": "Recompensa +{n}", "it": "Taglia +{n}"},
     "alerts.salvage": {"en": "Salvage +{n}", "pt_PT": "Salvados +{n}", "it": "Recupero +{n}"},

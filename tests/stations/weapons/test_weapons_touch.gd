@@ -344,8 +344,8 @@ func test_mount_list_looks_and_claims() -> void:
 	assert_int(t.rows.size()).is_equal(p.mount_count())
 	var look: RailButton = t.rows[0][0]
 	var claim: RailButton = t.rows[0][1]
-	# Three cards across (gp-12): state, heat and rounds on three lines.
-	assert_str(look.text).is_equal("1 bow · ready\nheat 15% cool\n380/400 rounds")
+	# Three cards across (gp-12): two short lines, so the row stays low over the reticle.
+	assert_str(look.text).is_equal("1 bow · ready\n15% cool · 380")
 	assert_str(claim.text).is_equal("Claim mount")
 	_tap(look)
 	assert_array(heard).is_equal(["mount_1"])
