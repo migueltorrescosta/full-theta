@@ -28,8 +28,8 @@ func _init(world: SimWorld, decisions: Array, coop: CoopEvents, first_use: First
 
 ## The record for one crewed ship:
 ## {time, result "win|survived|loss|abandoned|open", encounters: [{id, scenario, site,
-## site_name_key, result, lost, fled, limped, time}], losses, fled, decisions, first_use, coop, highlights}
-## (highlights: RunHighlights.for_ship, {} without them).
+## site_name_key, result, lost, fled, limped, time}], losses, fled, decisions, first_use, coop,
+## highlights} (highlights: RunHighlights.for_ship, {} without them).
 func for_ship(ship: int) -> Dictionary:
 	var rows: Array = []
 	var losses: int = 0
