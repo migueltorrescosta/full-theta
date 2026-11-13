@@ -51,8 +51,9 @@ extends Resource
 ## (at least one); a fraction tunes between presets (1.15: 1 on Normal, 2 on Hard;
 ## none on Easy, finale_escorts_from).
 @export var finale_escorts: float = 0.0
-## The finale's strength under which the heavy raider comes alone (w-4cm: no escorts on Easy;
-## dimensionless, the strength the finale is played at, preset x ramp_end x fleet; 0: always).
+## The finale's strength under which the heavy raider comes alone (dimensionless, the strength
+## the finale is played at: preset x ramp_end x fleet; 0: always escorts). w-4cm: no escorts on
+## Easy.
 @export var finale_escorts_from: float = 0.0
 ## The finale's time limit (s): past it the encounter ends PARTIAL.
 @export var finale_time_limit: float = 300.0
