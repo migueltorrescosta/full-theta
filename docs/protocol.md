@@ -160,7 +160,7 @@ Version 8 (M4, #11; owner M4-Q1 to M4-Q10, 2026-10-28). Code: `net/net_fleet.gd`
 | `takeover` | `ship`, `seat`, `by` (name), `from_ship` | every session of the ship's side |
 | `handover` | `ship` (the eliminated one), `to_ship` (the ship now viewed, −1 the scoreboard) | each session of the eliminated ship |
 | `scoreboard` | `rows` [{`ship`, `name`, `team`, `state` (`in_play`, `finished`, `destroyed`), `encounters`, `time` (since the start, to the ship's outcome), `kills` (PvP)}], one per started ship; no hull, no positions (M4-Q9) | the connected sessions without a pick once the universe started, on a change of state or progress, at most once a second when only the times move, and after Welcome |
-| `eliminated` | `ship`, `reason` (`destroyed`, `abandoned`, `forfeit`), `lives` (relaunches left, −1 unlimited) | every session |
+| `eliminated` | `ship`, `reason` (`destroyed`, `abandoned`, `forfeit`), `lives` (relaunches left, −1 unlimited), `cost`, `purse` | every session |
 | `relaunch_votes` | `ship`, `voters` [names, sorted], `sessions` [voter session ids, sorted: a client finds its own vote by id, as for `abandon_votes`], `needed` | the ship's sessions |
 | `relaunched` | `ship`, `lives` | every session |
 | `game_over` | `reason`, `winners` [ship], `team` (−1 none), `hold_time` (holdout score), `time` | every session |
@@ -313,7 +313,7 @@ Every provisional value, once. Code comments that call a value provisional point
   - `crippled`: the ship is crippled in its encounter; `value` the seconds it has to dock and limp home (RunDef.limp_home_time), `other` the encounter, `tag` the scenario. Helm and the Captain show it as a counting-down critical banner.
   - `limped_home`: it docked in time; `other` the encounter (which ends `partial`), `value` the site.
   - `bounty`: `ship` the killer, `other` the raider, `value` the credits. `salvage`: `ship` the collector, `other` the wrecked ship, `value` the credits. Comms and the Captain toast them.
-  - `eliminated` gains `cost` (int): the credits a relaunch takes from the ship's purse (co-op, RunDef.relaunch_cost; 0 elsewhere). Its `lives` is 0 when the purse can't pay, so no relaunch is offered.
+  - `eliminated` gains `cost` (int): the credits a relaunch takes from the ship's purse (co-op, RunDef.relaunch_cost; 0 elsewhere). Its `lives` is what the policy allows, whatever the purse; `purse` (int) is the ship's credits at elimination (−1 unknown). A `purse` below `cost` shows the relaunch disabled with its price; the Relaunch vote is refused `no_relaunch` while the purse can't pay.
   - The `debrief` encounter rows gain `limped` (bool): the ship limped home from it.
 
 ### Skip the quiet gap (gp-07, NetSkipGap)

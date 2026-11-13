@@ -186,6 +186,11 @@ func _refresh_relaunch() -> void:
 	_votes.text = tr("relaunch.votes") % [voters.size(), int(v.get("needed", 0)), ", ".join(voters)]
 	_votes.visible = not voters.is_empty()
 	var voted: bool = crew.has_relaunch_vote()
+	var purse: int = int(crew.eliminated.get(id, {}).get("purse", -1))
+	if purse >= 0 and purse < cost:
+		# Short of the price (gp-10): shown, disabled, with the price and the purse.
+		_button("Relaunch", tr("relaunch.short") % [cost, purse]).disabled = true
+		return
 	_button("Relaunch", tr("relaunch.unvote") if voted else tr("relaunch.vote")).pressed.connect(
 		func() -> void: ctx.intents.vote_relaunch(id, not voted)
 	)

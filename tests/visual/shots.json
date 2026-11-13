@@ -367,6 +367,8 @@
     {"name": "l5_outcome_partial", "scene": "res://tests/visual/m4_shot.tscn", "size": [1280, 720], "set": {"view": "outcome_partial"}},
     {"name": "l5_php_outcome_partial", "scene": "res://tests/visual/m4_shot.tscn", "size": [390, 844], "set": {"view": "outcome_partial", "insets": [0, 47, 0, 34]}},
     {"name": "l5_hd_relaunch_paid", "scene": "res://tests/visual/m4_shot.tscn", "size": [1920, 1080], "set": {"view": "relaunch_paid"}},
+    {"name": "l5_hd_relaunch_short", "scene": "res://tests/visual/m4_shot.tscn", "size": [1920, 1080], "set": {"view": "relaunch_short"}},
+    {"name": "l5_php_relaunch_short", "scene": "res://tests/visual/m4_shot.tscn", "size": [390, 844], "set": {"view": "relaunch_short", "insets": [0, 47, 0, 34]}},
     {"name": "l5_phl_relaunch_paid", "scene": "res://tests/visual/m4_shot.tscn", "size": [844, 390], "set": {"view": "relaunch_paid", "insets": [47, 0, 47, 21]}},
     {"name": "l5_hd_crippled", "scene": "res://tests/visual/m4_shot.tscn", "size": [1920, 1080], "set": {"view": "crippled"}},
     {"name": "l5_phl_crippled", "scene": "res://tests/visual/m4_shot.tscn", "size": [844, 390], "set": {"view": "crippled", "insets": [47, 0, 47, 21]}},
