@@ -337,9 +337,10 @@ static func _emit_eliminated(world: SimWorld, id: int) -> void:
 	var tag: StringName = &"destroyed"
 	if world.ships.status[id] == ShipStateTable.Status.ABANDONED:
 		tag = &"forfeit" if world.rules.is_pvp() else &"abandoned"
-	# A relaunch the purse can't pay for is none left (gp-10): the crew is not offered the vote.
+	# value: the relaunches the policy allows; other: the purse, so a short one (gp-10) is shown
+	# disabled with its price, not hidden. RelaunchShipCommand refuses the vote.
 	var policy: RelaunchPolicy = world.rules.relaunch_for(world.faction_of(id))
 	var left: int = policy.left(world.ships.relaunches[id])
-	if not RelaunchShipCommand.allowed(world, id):
-		left = 0
-	world.emit(GameOutcome.EVENT_ELIMINATED, id, -1, left, Vector3.ZERO, tag)
+	world.emit(
+		GameOutcome.EVENT_ELIMINATED, id, Economy.credits(world, id), left, Vector3.ZERO, tag
+	)

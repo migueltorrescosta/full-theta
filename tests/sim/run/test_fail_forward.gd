@@ -60,7 +60,9 @@ func test_a_purse_short_of_the_price_has_no_relaunch() -> void:
 	assert_int(Economy.credits(w, 0)).is_less(w.run_def.relaunch_cost)
 	DamageSystem.damage_hull(w, 0, INF, -1)
 	var gone: Array[SimEvent] = of_kind(f.step(1), GameOutcome.EVENT_ELIMINATED)
-	assert_int(int(gone[0].value)).is_equal(0)
+	# The event keeps the policy's lives and carries the purse: the client shows the relaunch disabled.
+	assert_int(int(gone[0].value)).is_equal(1)
+	assert_int(gone[0].other_id).is_equal(Economy.credits(w, 0))
 	assert_int(f.outcome().reason).is_equal(GameOutcome.Reason.ALL_LOST)
 	var c: RelaunchShipCommand = relaunch(f, 0)
 	f.step(1)

@@ -1198,6 +1198,7 @@
     "relaunch.life": {"en": "1 life left.", "pt_PT": "Resta 1 vida.", "it": "Resta 1 vita."},
     "relaunch.unlimited": {"en": "Relaunch as often as you like.", "pt_PT": "Podes voltar quantas vezes quiseres.", "it": "Puoi rientrare quante volte vuoi."},
     "relaunch.cost": {"en": "Costs %d credits.", "pt_PT": "Custa %d créditos.", "it": "Costa %d crediti."},
+    "relaunch.short": {"en": "Relaunch (%d, you have %d)", "pt_PT": "Voltar (%d, tens %d)", "it": "Rientra (%d, hai %d)"},
     "relaunch.votes": {"en": "Relaunch votes %d/%d: %s", "pt_PT": "Votos para voltar %d/%d: %s", "it": "Voti per rientrare %d/%d: %s"},
     "relaunch.vote": {"en": "Relaunch", "pt_PT": "Voltar ao jogo", "it": "Rientra"},
     "relaunch.unvote": {"en": "Take back my vote", "pt_PT": "Retirar o meu voto", "it": "Ritira il mio voto"},

@@ -11,7 +11,8 @@
 ##   highlights, or its Details (the full debrief, ux-20);
 ## - "outcome_partial": the end card with encounters that limped home or ran out of time
 ##   (gp-09); "relaunch_paid": a co-op ship's paid relaunch prompt over a friendly ship's main
-##   screen (gp-10); "crippled": Helm with the crippled countdown banner (gp-09);
+##   screen (gp-10); "relaunch_short": the same with a purse short of the price (disabled
+##   button, w-7v6); "crippled": Helm with the crippled countdown banner (gp-09);
 ## - "pause": the host's own ship paused under a host pause (`host` false: a crew player's);
 ## - "menu_web": the web main menu;
 ## - "bots": Helm with stand-in and fill bots on the ship, named in the top bar (#40 D1);
@@ -110,6 +111,16 @@ func _ready() -> void:
 			_fleet("coop", true)
 			_event("picked", {"ship": 1, "seat": "viewer"})
 			_event("eliminated", FleetMessages.eliminated(0, "destroyed", 1, 800))
+			_event("handover", FleetMessages.handover(0, 1))
+			_event("relaunch_votes", {"ship": 0, "voters": ["Bo"], "sessions": [], "needed": 2})
+			_station()
+			var p: VotePrompt = VotePrompt.new()
+			add_child(p)
+			p.setup(_ctx, VotePrompt.Kind.RELAUNCH)
+		"relaunch_short":
+			_fleet("coop", true)
+			_event("picked", {"ship": 1, "seat": "viewer"})
+			_event("eliminated", FleetMessages.eliminated(0, "destroyed", 1, 800, 500))
 			_event("handover", FleetMessages.handover(0, 1))
 			_event("relaunch_votes", {"ship": 0, "voters": ["Bo"], "sessions": [], "needed": 2})
 			_station()
