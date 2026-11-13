@@ -520,50 +520,16 @@ func _claim() -> void:
 
 
 ## Does what a row of the overlay says: a reply, one buy step of an item, a module, a sale.
-func _activate_row(row: Dictionary) -> void:
-	var card: int = overlay.card_id
-	match row["kind"]:
-		"reply":
-			if not bool(row["enabled"]):
-				_note(tr("comms.refused_requirement"))
-			else:
-				ctx.intents.command({"kind": "comms_reply", "card": card, "option": row["id"]})
-		"buy":
-			_trade(row, true)
-		"module":
-			(
-				ctx
-				. intents
-				. command(
-					{
-						"kind": "comms_buy_module",
-						"card": card,
-						"module_key": row["module"],
-						"slot": row["slot"],
-					}
-				)
-			)
-		"sell_module":
-			ctx.intents.command({"kind": "comms_sell_module", "card": card, "slot": row["slot"]})
+func _activate_row(row: CommsRows.Row) -> void:
+	if row is CommsRows.Reply and not row.enabled:
+		_note(tr("comms.refused_requirement"))
+	else:
+		_send(row.command(overlay.card_id))
 
 
-func _trade(row: Dictionary, buy: bool) -> void:
-	var item: String = str(row["item"])
-	if not buy and int(row["sell"]) <= 0:
-		return
-	(
-		ctx
-		. intents
-		. command(
-			{
-				"kind": "comms_trade",
-				"card": overlay.card_id,
-				"item": item,
-				"qty": CommsData.step_of(item) if not item.begins_with("repair:") else 1,
-				"buy": buy,
-			}
-		)
-	)
+func _send(cmd: Dictionary) -> void:
+	if not cmd.is_empty():
+		ctx.intents.command(cmd)
 
 
 func _note(text: String) -> void:
@@ -572,9 +538,9 @@ func _note(text: String) -> void:
 	overlay.queue_redraw()
 
 
-func _focused_row() -> Dictionary:
-	var rows: Array[Dictionary] = overlay.rows()
-	return rows[overlay.focus] if overlay.focus < rows.size() else {}
+func _focused_row() -> CommsRows.Row:
+	var rows: Array[CommsRows.Row] = overlay.rows()
+	return rows[overlay.focus] if overlay.focus < rows.size() else null
 
 
 # --- Events. ---
@@ -642,8 +608,8 @@ func handle_intent(ev: Dictionary) -> bool:
 ## the focused card, or does the focused line of the overlay.
 func take_select() -> bool:
 	if overlay.card_id >= 0:
-		var row: Dictionary = _focused_row()
-		if not row.is_empty():
+		var row: CommsRows.Row = _focused_row()
+		if row != null:
 			_activate_row(row)
 		return true
 	return _open_selected()
@@ -678,16 +644,9 @@ func _reply_key(n: int) -> bool:
 func _buy_sell(buy: bool) -> bool:
 	if overlay.card_id < 0:
 		return false
-	var row: Dictionary = _focused_row()
-	match str(row.get("kind", "")):
-		"buy":
-			_trade(row, buy)
-		"module":
-			if buy:
-				_activate_row(row)
-		"sell_module":
-			if not buy:
-				_activate_row(row)
+	var row: CommsRows.Row = _focused_row()
+	if row != null:
+		_send(row.trade(overlay.card_id, buy))
 	return true
 
 

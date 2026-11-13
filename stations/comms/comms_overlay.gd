@@ -11,7 +11,7 @@ extends Control
 ## Close button closes; with `fill` set the box fills the overlay (a phone on its side, where
 ## the overlay covers the board and the radar column).
 
-signal row_activated(row: Dictionary)
+signal row_activated(row: CommsRows.Row)
 ## The visible Buy or Sell button was pressed: one step on the focused row (R23-9).
 signal trade_pressed(buy: bool)
 signal closed
@@ -65,7 +65,7 @@ var close_button: RailButton
 var buy_button: RailButton
 var sell_button: RailButton
 
-var _rows: Array[Dictionary] = []
+var _rows: Array[CommsRows.Row] = []
 var _rects: Array[Rect2] = []
 var _box: Rect2 = Rect2()
 var _press: Vector2 = Vector2(-1.0, -1.0)
@@ -122,7 +122,7 @@ func show_card(blk: Dictionary, id: int) -> void:
 	if fresh:
 		# A card that trades opens on its first trade row, so Enter does not pick "Go back".
 		for i: int in _rows.size():
-			if _rows[i]["kind"] != "reply":
+			if _rows[i].kind != "reply":
 				focus = i
 				break
 	visible = true
@@ -139,64 +139,9 @@ func card() -> Dictionary:
 	return CommsData.card(data, card_id)
 
 
-## The actionable rows: {"kind": "reply" (id, n, enabled, verify), "buy" (item, price, sell,
-## stock), "module" (module, slot, price, old, trade_in) or "sell_module" (slot, module,
-## pay), "text"}.
-func rows() -> Array[Dictionary]:
+## The actionable rows: replies, goods to buy, modules to buy and fitted modules to sell.
+func rows() -> Array[CommsRows.Row]:
 	return _rows
-
-
-## The row's text.
-func row_text(row: Dictionary) -> String:
-	match row["kind"]:
-		"reply":
-			var t: String = "%d  %s" % [row["n"], TranslationServer.translate(str(row["text"]))]
-			return t + ("  " + TranslationServer.translate("comms.verify")) if row["verify"] else t
-		"buy":
-			var item: String = str(row["item"])
-			var t: String = (
-				TranslationServer.translate("comms.buy_line")
-				% [CommsData.item_text(item), int(row["price"])]
-			)
-			if int(row["sell"]) > 0:
-				t += "  " + TranslationServer.translate("comms.sell_at") % int(row["sell"])
-			if int(row["stock"]) >= 0:
-				t += "  " + TranslationServer.translate("comms.stock") % int(row["stock"])
-			var step: int = CommsData.step_of(item)
-			if step > 1:
-				t += "  " + TranslationServer.translate("comms.per_press") % step
-			return t
-		"module":
-			var t: String = (
-				TranslationServer.translate("comms.module_line")
-				% [
-					TranslationServer.translate(str(row["name"])),
-					int(row["slot"]) + 1,
-					int(row["price"]),
-				]
-			)
-			if str(row["old"]) != "":
-				t += (
-					"  "
-					+ (
-						TranslationServer.translate("comms.module_swap")
-						% [
-							CommsData.module_text(str(row["old"])),
-							int(row["trade_in"]),
-							int(row["price"]) - int(row["trade_in"]),
-						]
-					)
-				)
-			return t
-		"sell_module":
-			var t: String = (
-				TranslationServer.translate("comms.sell_module")
-				% [CommsData.module_text(str(row["module"])), int(row["slot"]) + 1]
-			)
-			if int(row["pay"]) > 0:
-				t += "  " + TranslationServer.translate("comms.sells_for") % int(row["pay"])
-			return t
-	return str(row.get("text", ""))
 
 
 ## The index of the row at `pos` (local), or -1.
@@ -215,7 +160,7 @@ func box_rect() -> Rect2:
 ## The row of reply `n` (1 to 4), or -1.
 func reply_index(n: int) -> int:
 	for i: int in _rows.size():
-		if _rows[i]["kind"] == "reply" and int(_rows[i]["n"]) == n:
+		if _rows[i] is CommsRows.Reply and _rows[i].n == n:
 			return i
 	return -1
 
@@ -237,8 +182,8 @@ func move_focus(step: int) -> void:
 
 ## True when a row of the card trades (the Buy and Sell buttons show).
 func trades() -> bool:
-	for row: Dictionary in _rows:
-		if row["kind"] != "reply" and row["kind"] != "text":
+	for row: CommsRows.Row in _rows:
+		if row.can_buy() or row.can_sell():
 			return true
 	return false
 
@@ -254,12 +199,9 @@ func page_text() -> String:
 func _sync_trade_buttons() -> void:
 	if buy_button == null:
 		return
-	var row: Dictionary = _rows[focus] if focus >= 0 and focus < _rows.size() else {}
-	var kind: String = str(row.get("kind", ""))
-	buy_button.disabled = kind != "buy" and kind != "module"
-	sell_button.disabled = not (
-		kind == "sell_module" or (kind == "buy" and int(row.get("sell", 0)) > 0)
-	)
+	var row: CommsRows.Row = _rows[focus] if focus >= 0 and focus < _rows.size() else null
+	buy_button.disabled = row == null or not row.can_buy()
+	sell_button.disabled = row == null or not row.can_sell()
 
 
 ## True when rows below the page shown don't fit.
@@ -278,72 +220,26 @@ func page(down: bool) -> bool:
 	return true
 
 
-func _make_rows() -> Array[Dictionary]:
-	var out: Array[Dictionary] = []
+func _make_rows() -> Array[CommsRows.Row]:
+	var out: Array[CommsRows.Row] = []
 	var node: Dictionary = CommsData.node_of(data, card_id)
 	var n: int = 0
 	for o: Dictionary in node.get("options", []):
 		n += 1
 		if n > MAX_REPLIES:
 			break
-		(
-			out
-			. append(
-				{
-					"kind": "reply",
-					"id": o["id"],
-					"n": n,
-					"text": o["text"],
-					"enabled": o["enabled"],
-					"verify": o["verify"],
-				}
-			)
-		)
+		out.append(CommsRows.Reply.new(o, n))
 	for o: Dictionary in CommsData.offers_of(data, card_id):
-		(
-			out
-			. append(
-				{
-					"kind": "buy",
-					"item": o["item"],
-					"price": o["price"],
-					"sell": o["sell"],
-					"stock": o["stock"],
-				}
-			)
-		)
+		out.append(CommsRows.Buy.new(o))
 	var sell_pay: Dictionary = {}
 	for m: Dictionary in CommsData.modules_of(data, card_id):
-		(
-			out
-			. append(
-				{
-					"kind": "module",
-					"module": m["module"],
-					"name": m["name"],
-					"slot": m["slot"],
-					"price": m["price"],
-					"old": m["old"],
-					"trade_in": m["trade_in"],
-				}
-			)
-		)
+		out.append(CommsRows.Module.new(m))
 		if str(m["old"]) != "":
 			sell_pay[int(m["slot"])] = int(m["trade_in"])
 	if not CommsData.offers_of(data, card_id).is_empty() or sell_pay.size() > 0:
 		for f: Dictionary in data.get("fitted", []):
 			if str(f["module"]) != "":
-				(
-					out
-					. append(
-						{
-							"kind": "sell_module",
-							"slot": f["slot"],
-							"module": f["module"],
-							"pay": sell_pay.get(int(f["slot"]), 0),
-						}
-					)
-				)
+				out.append(CommsRows.SellModule.new(f, sell_pay.get(int(f["slot"]), 0)))
 	return out
 
 
@@ -385,11 +281,11 @@ func _layout() -> void:
 	# A row that doesn't fit on a line wraps and grows (a phone's trade offer).
 	var heights: Array[float] = []
 	var rows_h: float = 0.0
-	for row: Dictionary in _rows:
+	for row: CommsRows.Row in _rows:
 		var text_h: float = (
 			font
 			. get_multiline_string_size(
-				row_text(row), HORIZONTAL_ALIGNMENT_LEFT, row_width - 16.0, FONT_SIZE
+				row.text(), HORIZONTAL_ALIGNMENT_LEFT, row_width - 16.0, FONT_SIZE
 			)
 			. y
 		)
@@ -635,12 +531,12 @@ func _draw_row(font: Font, i: int) -> void:
 	var r: Rect2 = _rects[i]
 	if r.size == Vector2.ZERO:
 		return
-	var row: Dictionary = _rows[i]
-	var off: bool = row["kind"] == "reply" and not bool(row["enabled"])
+	var row: CommsRows.Row = _rows[i]
+	var off: bool = row is CommsRows.Reply and not row.enabled
 	draw_rect(r, Palette.color("panel_focus") if i == focus else Palette.color("background"))
 	if i == focus:
 		draw_rect(r, Palette.color("accent"), false, 2.0)
-	var text: String = row_text(row)
+	var text: String = row.text()
 	var text_h: float = (
 		font
 		. get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 16.0, FONT_SIZE)

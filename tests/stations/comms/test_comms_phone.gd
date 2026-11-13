@@ -100,7 +100,7 @@ func _tap_row(p: CommsPanel, kind: String) -> int:
 	var taps: int = 0
 	for _turn: int in 4:
 		for i: int in o.rows().size():
-			if o.rows()[i]["kind"] == kind and o._rects[i].size != Vector2.ZERO:
+			if o.rows()[i].kind == kind and o._rects[i].size != Vector2.ZERO:
 				_tap(o, o._rects[i].get_center())
 				return taps + 1
 		o.next_button.pressed.emit()
