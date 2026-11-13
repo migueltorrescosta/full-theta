@@ -333,9 +333,9 @@ func _finger(r: DiscRadar, index: int, down: bool) -> void:
 # FT: FT-STN-012
 # P28-Help: the touch picture's pages.
 func test_touch_help_has_every_page() -> void:
-	var pages: Array = SciencePanel.touch_help()
+	var pages: Array[HelpPage] = SciencePanel.touch_help()
 	(
-		assert_array(pages.map(func(p: Dictionary) -> String: return p["page"]))
+		assert_array(pages.map(func(p: HelpPage) -> String: return p.title))
 		. is_equal(["Contacts", "Card", "Crew"])
 	)
 

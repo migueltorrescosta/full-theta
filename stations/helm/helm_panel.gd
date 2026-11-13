@@ -137,9 +137,7 @@ func _apply_form() -> void:
 		_captured = false
 		var screen: StationScreen = self.screen()
 		if screen != null and portrait:
-			screen.rotate_banner.label.text = TouchText.of(
-				HelmTouch.ROTATE_KEY, HelmTouch.ROTATE_TEXT
-			)
+			screen.rotate_banner.label.text = tr(HelmTouch.ROTATE_KEY)
 	# In the frame with the phone layout only, its Crew page holding the share buttons
 	# (w-yk5: no second set behind the share opener).
 	in_frame = touch_ui != null
@@ -702,7 +700,7 @@ func _apply_mouse_mode() -> void:
 ## The touch picture of the phone pages (P28-Help, TouchHelpPicture), in the 844x390 frame:
 ## the Fly page also numbers the persistent controls. A box is an intent's label or a
 ## "Name: what" text (`touch.helm.help.*`).
-static func touch_help() -> Array:
+static func touch_help() -> Array[HelpPage]:
 	var texts: Array[String] = [
 		"throttle",
 		"turn",
@@ -746,9 +744,9 @@ static func touch_help() -> Array:
 		[["crew", Rect2(629, 64, 168, 160)]],
 	]
 	var titles: Array[String] = HelmTouch.page_titles()
-	var out: Array = []
+	var out: Array[HelpPage] = []
 	for p: int in pages.size():
-		var boxes: Array = []
+		var boxes: Array[HelpBox] = []
 		for c: Array in (persistent if p == HelmTouch.PAGE_FLY else []) + pages[p]:
 			var key: String = c[0]
 			var text: String = TouchText.t(IntentTable.label_key(key))
@@ -757,6 +755,6 @@ static func touch_help() -> Array:
 				text = TouchText.t("help.radar")
 			elif key in texts:
 				text = TouchText.t("touch.helm.help." + key)
-			boxes.append(TouchText.named(c[1], text))
-		out.append({"page": titles[p], "boxes": boxes})
+			boxes.append(HelpBox.named(c[1], text))
+		out.append(HelpPage.new(titles[p], boxes))
 	return out

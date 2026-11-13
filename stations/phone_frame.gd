@@ -398,11 +398,7 @@ func cycle_target(step: int) -> void:
 ## extras (StationPanel.selection_extras).
 func open_selection_sheet() -> void:
 	var ctx: StationContext = screen.ctx
-	var labels: Array = [
-		tr("intent.ping"),
-		TouchText.of("sheet.mark_here", "Mark here"),
-		TouchText.of("sheet.clear", "Clear")
-	]
+	var labels: Array = [tr("intent.ping"), tr("sheet.mark_here"), tr("sheet.clear")]
 	var acts: Array[Callable] = [
 		func() -> void: screen.common.ping_at(Vector2(-1.0, -1.0)),
 		func() -> void: screen.common.mark_item(ctx.crew.selection),
@@ -442,7 +438,7 @@ func _on_station_chip() -> void:
 	var labels: Array = []
 	for i: int in screen.stations.size():
 		labels.append("%d %s" % [i + 1, tr("station." + screen.stations[i])])
-	screen.sheet.open(TouchText.of("sheet.stations", "Stations"), labels, screen.focus)
+	screen.sheet.open(tr("sheet.stations"), labels, screen.focus)
 
 
 ## The partner glance's action: the other station's intent, run by its own panel.
@@ -463,7 +459,7 @@ func on_pinged(p: Dictionary) -> void:
 	var label: String = str(ctx.picture().find(item).get("label", ""))
 	if label == "" and item["kind"] == "contact":
 		label = ctx.snap.callsign(int(item["id"]))
-	var text: String = TouchText.of("toast.pinged", "%s pinged %s") % [str(p.get("by", "")), label]
+	var text: String = tr("toast.pinged") % [str(p.get("by", "")), label]
 	ping_toast.show_ping(text, ctx.now_ms())
 
 

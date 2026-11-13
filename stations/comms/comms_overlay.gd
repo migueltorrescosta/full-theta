@@ -85,7 +85,7 @@ func _init() -> void:
 	clip_contents = true
 	prev_button = _foot_button("Prev", "‹", func() -> void: page(false))
 	next_button = _foot_button("Next", "›", func() -> void: page(true))
-	close_button = _foot_button("Close", TouchText.of("comms.close", "Close"), close)
+	close_button = _foot_button("Close", tr("comms.close"), close)
 	buy_button = _foot_button(
 		"Buy", TranslationServer.translate("comms.buy"), func() -> void: trade_pressed.emit(true)
 	)
@@ -363,11 +363,7 @@ func _body() -> String:
 		var phone: bool = is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self))
 		text += (
 			"\n"
-			+ (
-				TouchText.of("comms.opening", "Opening the channel…")
-				if phone
-				else TranslationServer.translate("comms.open_hint")
-			)
+			+ (tr("comms.opening") if phone else TranslationServer.translate("comms.open_hint"))
 		)
 	return text
 

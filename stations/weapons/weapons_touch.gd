@@ -101,9 +101,9 @@ func _init(panel: WeaponsPanel, for_form: LayoutMode.Form) -> void:
 	else:
 		_portrait()
 	add_child(overlays)
-	pages.add_page(TouchText.of("page.fire", "Fire"), [fire_zone])
-	pages.add_page(TouchText.of("page.mounts", "Mounts"), [mount_list])
-	pages.add_page(TouchText.of("page.crew", "Crew"), [crew])
+	pages.add_page(tr("page.fire"), [fire_zone])
+	pages.add_page(tr("page.mounts"), [mount_list])
+	pages.add_page(tr("page.crew"), [crew])
 	pages.page_changed.connect(func(_i: int) -> void: _panel.queue_redraw())
 
 
@@ -268,12 +268,12 @@ func _make_buttons() -> void:
 	ammo_button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	ammo_button.clip_text = false
 	ammo_button.pressed.connect(_panel.touch_press.bind("ammo_next"))
-	guided_button = RailButton.make(TouchText.of("weapons.touch_guided", "Fire at mark"))
+	guided_button = RailButton.make(tr("weapons.touch_guided"))
 	guided_button.name = "Guided"
 	guided_button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	guided_button.clip_text = false
 	guided_button.pressed.connect(_panel.touch_press.bind("fire_guided"))
-	fire_all_button = RailButton.make(TouchText.of("weapons.touch_fire_all", "Fire all"))
+	fire_all_button = RailButton.make(tr("weapons.touch_fire_all"))
 	fire_all_button.name = "FireAll"
 	fire_all_button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	fire_all_button.clip_text = false
@@ -281,9 +281,7 @@ func _make_buttons() -> void:
 	fire_all_button.held.connect(_panel.touch_hold.bind("fire_all"))
 	for b: RailButton in [claim_button, ammo_button, guided_button, fire_all_button]:
 		b.add_theme_font_size_override("font_size", FONT_LABEL)
-	fire_button = RailButton.make(
-		TouchText.of("weapons.touch_fire", "FIRE"), RailButton.Role.DANGER
-	)
+	fire_button = RailButton.make(tr("weapons.touch_fire"), RailButton.Role.DANGER)
 	fire_button.name = "Fire"
 	fire_button.hold = true
 	fire_button.custom_minimum_size.y = FIRE_H
@@ -431,7 +429,7 @@ func _place() -> void:
 
 ## The touch picture of the phone pages (P28-Help, TouchHelpPicture), in the 844x390 frame:
 ## one right rail over a full-width view; each box's text is "Name: what" (`help.weapons.*`).
-static func touch_help() -> Array:
+static func touch_help() -> Array[HelpPage]:
 	var fire: Array = [
 		[Rect2(629, 64, 168, 80), "mount"],
 		[Rect2(629, 152, 80, 48), "ammo"],
@@ -453,12 +451,12 @@ static func touch_help() -> Array:
 		[Rect2(629, 64, 168, 48), "share"],
 		[Rect2(629, 278, 168, 88), "fire"],
 	]
-	var out: Array = []
+	var out: Array[HelpPage] = []
 	for page: Array in [["page.fire", fire], ["page.mounts", mounts], ["page.crew", crew]]:
-		var boxes: Array = []
+		var boxes: Array[HelpBox] = []
 		for c: Array in page[1]:
 			# (the radar's text is Helm's too, R05-13)
 			var key: String = "help.radar" if c[1] == "radar" else "help.weapons." + str(c[1])
-			boxes.append(TouchText.named(c[0], TouchText.t(key)))
-		out.append({"page": TouchText.t(page[0]), "boxes": boxes})
+			boxes.append(HelpBox.named(c[0], TouchText.t(key)))
+		out.append(HelpPage.new(TouchText.t(page[0]), boxes))
 	return out

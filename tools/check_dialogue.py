@@ -11,6 +11,10 @@
   FT-COM-007); its id is conv.<file name>; every NPC line is a dialogue line, every reply
   text a UI string and every rep a reputation distribution (content/economy/rep/); start
   and next name nodes, option ids are unique per node and every node is reachable.
+- Every UI string key a script names as a literal (`tr("a.b")`, `TouchText.t("a.b")`,
+  `TranslationServer.translate("a.b")`) is in content/i18n/strings.json. Keys built at run
+  time (`tr("a." + x)`) can't be checked; tests/, tools/ and addons/ are not scanned (tests
+  pass missing keys on purpose).
 - Translation completeness: every line, number table and UI string
   (content/i18n/*.json) has non-blank text in each launch language.
 
@@ -27,6 +31,9 @@ from jsonschema import Draft202012Validator
 LANGS = ("en", "pt_PT", "it")
 SLOT = re.compile(r"\{([^{}]*)\}")
 SLOT_NAME = re.compile(r"^[a-z][a-z0-9_]*$")
+# A key literal passed to a translating call (a literal followed by "," or ")" only: not a prefix).
+UI_KEY = re.compile(r'(?<![\w.])(?:tr|TouchText\.t|TranslationServer\.translate)\(\s*"([^"\\]*)"\s*[,)]')
+UI_KEY_SKIP = {"addons", "tests", "tools", "build", "export", "dist"}
 SCHEMAS = {"numbers.json": "numbers.schema.json"}
 DEFAULT_SCHEMA = "dialogue.schema.json"
 
@@ -115,6 +122,24 @@ def _check_strings(root: Path, errors: list[str]) -> None:
             extra = set(texts) - set(LANGS)
             if extra:
                 errors.append(f"{rel}: {key}: unknown languages {sorted(extra)}")
+
+
+def _check_ui_keys(root: Path, errors: list[str]) -> None:
+    """Every literal UI key in our scripts is in strings.json."""
+    path = root / "content/i18n/strings.json"
+    if not path.is_file():
+        return
+    known = set(json.loads(path.read_text(encoding="utf-8")).get("strings", {}))
+    for script in sorted(root.rglob("*.gd")):
+        rel = script.relative_to(root)
+        if rel.parts[0] in UI_KEY_SKIP or rel.parts[0].startswith("."):
+            continue
+        lines = script.read_text(encoding="utf-8").split("\n")
+        code = "\n".join("" if ln.lstrip().startswith("#") else ln for ln in lines)
+        for m in UI_KEY.finditer(code):
+            if m.group(1) not in known:
+                line = code.count("\n", 0, m.start()) + 1
+                errors.append(f"{rel.as_posix()}:{line}: UI string key not in content/i18n/strings.json: {m.group(1)}")
 
 
 def _rep_ids(root: Path) -> set[str]:
@@ -212,6 +237,7 @@ def run(root: Path) -> list[str]:
             _check_line(line, rel, path.stem, seen, errors)
             _check_binding_slots(line, rel, intents, errors)
     _check_strings(root, errors)
+    _check_ui_keys(root, errors)
     _check_conversations(root, seen, errors)
     return errors
 

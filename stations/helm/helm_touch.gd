@@ -42,32 +42,8 @@ const BLOCK_H: float = 300.0
 ## the gap over GAIN_TIME seconds of full ramp.
 const SETPOINT_TOLERANCE: float = 1.0
 const GAIN_TIME: float = 0.5
-## The controls' English texts until content/i18n/strings.json has their "touch.helm.*" keys.
-const TEXTS: Dictionary = {
-	"all_stop": "All stop",
-	"approach": "Approach",
-	"turn": "Turn",
-	"slide": "Slide",
-	"fly": "Fly",
-	"shield": "Shield",
-	"nav": "Nav",
-	"radar_title": "Radar",
-	"face": "Face target",
-	"align": "Roll to target",
-	"dock": "Dock here",
-	"undock": "Leave dock",
-	"jump": "Jump to target",
-	"chase_camera": "Chase",
-	"decoupled": "Decoupled",
-	"shield_track": "Track target",
-	"range_in": "Range −",
-	"range_out": "Range +",
-	"roll_port": "‹ Roll",
-	"roll_starboard": "Roll ›",
-}
 ## The portrait banner's text (StationScreen.rotate_banner).
 const ROTATE_KEY: String = "touch.rotate_helm"
-const ROTATE_TEXT: String = "Turn sideways for the full Helm"
 ## The pages, in tab order (the first is the resting state).
 const PAGE_FLY: int = 0
 const PAGE_SHIELD: int = 1
@@ -194,7 +170,7 @@ static func page_titles() -> Array[String]:
 		text("shield"),
 		text("nav"),
 		text("radar_title"),
-		TouchText.of("page.crew", "Crew"),
+		TouchText.t("page.crew"),
 	]
 
 
@@ -401,9 +377,9 @@ func _stick(key: String) -> VirtualStick:
 	return s
 
 
-## The text of control `key`: "touch.helm.<key>" translated, else TEXTS.
+## The text of control `key`: "touch.helm.<key>" translated.
 static func text(key: String) -> String:
-	return TouchText.of("touch.helm." + key, TEXTS[key])
+	return TouchText.t("touch.helm." + key)
 
 
 ## Portrait: the one stick turns (false) or slides (true); switching lets go of the other.

@@ -24,21 +24,21 @@ const S = StationCatalogue.Section
 ## Controller: cursor speed (px/s) and cutaway turn rate (rad/s) at full deflection.
 const CURSOR_SPEED: float = 450.0
 const TURN_RATE: float = 2.0
-## [intent id, string key, English] of the rail's buttons, in their fixed order (design 2.3):
+## [intent id, string key] of the rail's buttons, in their fixed order (design 2.3):
 ## each label a verb and its object (C3), and each sends its intent as a key or the pad does
 ## (Claim as the common claim). Cause, Probe and Claim hide while they can't matter
 ## (EngineeringModel.shown).
 const TOUCH_ACTIONS: Array = [
-	["pip_add", "eng.touch.pip_add", "Add power"],
-	["pip_remove", "eng.touch.pip_remove", "Cut power"],
-	["shield_tighter", "eng.touch.tighter", "Focus shields"],
-	["shield_wider", "eng.touch.wider", "Widen shields"],
-	["boost", "eng.touch.boost", "Boost engines"],
-	["harden", "eng.touch.harden", "Protect part"],
-	["dispatch_nearest", "eng.touch.repair", "Repair part"],
-	["cause_next", "eng.touch.cause", "Guess cause"],
-	["fabricate_probe", "eng.touch.probe", "Build probe"],
-	["claim", "eng.touch.claim", "Take crew"],
+	["pip_add", "eng.touch.pip_add"],
+	["pip_remove", "eng.touch.pip_remove"],
+	["shield_tighter", "eng.touch.tighter"],
+	["shield_wider", "eng.touch.wider"],
+	["boost", "eng.touch.boost"],
+	["harden", "eng.touch.harden"],
+	["dispatch_nearest", "eng.touch.repair"],
+	["cause_next", "eng.touch.cause"],
+	["fabricate_probe", "eng.touch.probe"],
+	["claim", "eng.touch.claim"],
 ]
 
 ## The block readers and actions (EngineeringModel), shared with the board, cutaway and phone.
@@ -239,29 +239,17 @@ func view_rect() -> Rect2:
 func claim_text() -> String:
 	var item: String = claim_item()
 	if item != "" and int(ctx.crew.claims.get(item, {}).get("session", -1)) == ctx.crew.session:
-		return TouchText.of("eng.touch.release_crew", "Free crew")
-	return TouchText.of("eng.touch.claim", "Take crew")
+		return tr("eng.touch.release_crew")
+	return tr("eng.touch.claim")
 
 
 ## The touch picture of the phone pages (P28-Help, TouchHelpPicture), in the 844x390 frame:
 ## the rail (first page only), the view-top row and each page's view.
-static func touch_help() -> Array:
-	var rail: Array = []
+static func touch_help() -> Array[HelpPage]:
+	var rail: Array[HelpBox] = []
 	# The rail's buttons two to a row in its 4 px padding; the view beside it, 8 px on.
 	var button_width: float = (EngineeringPhone.PHONE_RAIL_WIDTH - 8.0 - UiTheme.TOUCH_GAP) / 2.0
 	var view_x: float = 47.0 + EngineeringPhone.PHONE_RAIL_WIDTH + UiTheme.TOUCH_GAP
-	var what: Array = [
-		["pip_add", "One more pip on the picked part"],
-		["pip_remove", "One pip less"],
-		["tighter", "Focus the shields on a narrower arc"],
-		["wider", "Spread the shields over a wider arc"],
-		["boost", "Overcharge the engines for a while"],
-		["harden", "Protect the picked part from hits (costs parts)"],
-		["repair", "Send the nearest crew to the picked part"],
-		["cause", "Guess the cause of the picked part's fault"],
-		["probe", "Build a probe for Relay"],
-		["claim", "Take or free a crew"],
-	]
 	for i: int in TOUCH_ACTIONS.size():
 		var a: Array = TOUCH_ACTIONS[i]
 		var r: Rect2 = Rect2(
@@ -273,58 +261,37 @@ static func touch_help() -> Array:
 		(
 			rail
 			. append(
-				[
-					r,
-					TouchText.of(a[1], a[2]),
-					TouchText.of("help.eng." + str(what[i][0]), str(what[i][1])),
-				]
+				(
+					HelpBox
+					. new(
+						r,
+						TouchText.t(a[1]),
+						# (its help text: help.eng.<the key's last part>)
+						TouchText.t("help.eng." + str(a[1]).trim_prefix("eng.touch.")),
+					)
+				)
 			)
 		)
 	var view: Rect2 = Rect2(view_x, 124.0, 609.0 - view_x, 236.0)
-	var chip: Array = [
-		Rect2(view.get_center().x - 144.0, 64.0, 288.0, 48.0),
-		TouchText.of("help.chip", "Target"),
-		TouchText.of("help.chip_what", "‹ › change the target; tap it to ping or mark"),
-	]
-	var power: Array = rail.duplicate()
-	power.append(chip)
-	(
-		power
-		. append(
-			[
-				view,
-				TranslationServer.translate("eng.power"),
-				TouchText.of("help.eng.columns", "Tap a column to pick that part"),
-			]
+	var power: Array[HelpBox] = rail.duplicate()
+	power.append(
+		HelpBox.new(
+			Rect2(view.get_center().x - 144.0, 64.0, 288.0, 48.0),
+			TouchText.t("help.chip"),
+			TouchText.t("help.chip_what")
 		)
 	)
+	power.append(HelpBox.new(view, TouchText.t("eng.power"), TouchText.t("help.eng.columns")))
 	return [
-		{"page": TranslationServer.translate("eng.power"), "boxes": power},
-		{
-			"page": TouchText.of("eng.touch.ship", "Ship"),
-			"boxes":
-			[
-				[
-					view,
-					TouchText.of("eng.touch.ship", "Ship"),
-					TouchText.of(
-						"help.eng.cutaway",
-						"Drag a crew onto a part to fix it. Drag empty space to turn."
-					),
-				]
-			],
-		},
-		{
-			"page": TranslationServer.translate("eng.faults"),
-			"boxes":
-			[
-				[
-					view,
-					TranslationServer.translate("eng.faults"),
-					TouchText.of("help.eng.faults", "Faults, repairs and parts")
-				]
-			],
-		},
+		HelpPage.new(TouchText.t("eng.power"), power),
+		HelpPage.new(
+			TouchText.t("eng.touch.ship"),
+			[HelpBox.new(view, TouchText.t("eng.touch.ship"), TouchText.t("help.eng.cutaway"))]
+		),
+		HelpPage.new(
+			TouchText.t("eng.faults"),
+			[HelpBox.new(view, TouchText.t("eng.faults"), TouchText.t("help.eng.faults"))]
+		),
 	]
 
 

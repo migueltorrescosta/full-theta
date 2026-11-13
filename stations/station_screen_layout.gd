@@ -288,7 +288,7 @@ func build() -> void:
 	s._side_band = Control.new()
 	s._side_band.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	s._side.add_child(s._side_band)
-	var share_text: String = TouchText.of("share.drawer", "Share")
+	var share_text: String = tr("share.drawer")
 	s.share_drawer = TouchDrawer.new(share_text, SIDE_RIGHT)
 	s.share_drawer.name = "ShareDrawer"
 	s._main.add_child(s.share_drawer)

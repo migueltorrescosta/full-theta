@@ -165,7 +165,7 @@ func _stack() -> void:
 
 ## The Captain's phone help (P28-Help): per page, the controls in the 844x390 frame on its
 ## side (insets 47, 0, 47, 21) with what each does. The rail is on the first page only.
-static func touch_help() -> Array:
+static func touch_help() -> Array[HelpPage]:
 	# The rail: x 47-215, rows from y 72 (the top bar's 56 px, the frame's 8 px gap and the
 	# rail's own 8 px).
 	var x0: float = 47.0
@@ -175,7 +175,7 @@ static func touch_help() -> Array:
 		["view_2", "view_3", "tactical", "Tactical", "close_up", "Close-up"],
 		["view_4", "", "status", "Status", "", ""],
 	]
-	var boxes: Array = []
+	var boxes: Array[HelpBox] = []
 	var y: float = 72.0
 	for r: Array in rows:
 		for k: int in 2:
@@ -184,67 +184,41 @@ static func touch_help() -> Array:
 			var at: Rect2 = Rect2(
 				x0 + k * (half + UiTheme.TOUCH_GAP), y, half, UiTheme.TOUCH_PRIMARY
 			)
-			var label: String = TranslationServer.translate("view." + str(r[2 + 2 * k]))
-			var what: String = TouchText.of("help.captain.view", "Show this on the main screen")
-			boxes.append([at, label, what])
+			var label: String = TouchText.t("view." + str(r[2 + 2 * k]))
+			boxes.append(HelpBox.new(at, label, TouchText.t("help.captain.view")))
 		y += UiTheme.TOUCH_PRIMARY + UiTheme.TOUCH_GAP
-	(
-		boxes
-		. append(
-			[
-				Rect2(x0, y, half, UiTheme.TOUCH_PRIMARY),
-				TranslationServer.translate("intent.ping"),
-				TouchText.of("help.captain.ping", "Ping the selection for everyone"),
-			]
+	boxes.append(
+		HelpBox.new(
+			Rect2(x0, y, half, UiTheme.TOUCH_PRIMARY),
+			TouchText.t("intent.ping"),
+			TouchText.t("help.captain.ping")
 		)
 	)
-	(
-		boxes
-		. append(
-			[
-				Rect2(x0 + half + UiTheme.TOUCH_GAP, y, half, UiTheme.TOUCH_PRIMARY),
-				TranslationServer.translate("intent.mark"),
-				TouchText.of("help.captain.mark", "Mark the selection (free slots only)"),
-			]
+	boxes.append(
+		HelpBox.new(
+			Rect2(x0 + half + UiTheme.TOUCH_GAP, y, half, UiTheme.TOUCH_PRIMARY),
+			TouchText.t("intent.mark"),
+			TouchText.t("help.captain.mark")
 		)
 	)
-	(
-		boxes
-		. append(
-			[
-				Rect2(223.0, 72.0, 574.0, 297.0),
-				TouchText.of("help.captain.mirror_label", "Main screen"),
-				TouchText.of(
-					"help.captain.mirror", "Tap to select; hold to ping, hold and drag to mark"
-				),
-			]
+	boxes.append(
+		HelpBox.new(
+			Rect2(223.0, 72.0, 574.0, 297.0),
+			TouchText.t("help.captain.mirror_label"),
+			TouchText.t("help.captain.mirror")
 		)
 	)
 	var lists: Rect2 = Rect2(489.0, 72.0, 308.0, 297.0)
 	return [
-		{"page": TouchText.of("page.screen", "Screen"), "boxes": boxes},
-		{
-			"page": TouchText.of("page.requests", "Requests"),
-			"boxes":
-			[
-				[
-					lists,
-					TranslationServer.translate("captain.chips"),
-					TouchText.of("help.captain.requests", "Who asked whom for what, read-only"),
-				]
-			],
-		},
-		{
-			"page": TouchText.of("page.cards", "Cards"),
-			"boxes":
-			[
-				[
-					lists,
-					TranslationServer.translate("captain.cards"),
-					TouchText.of("help.captain.cards", "Tap a card to show it on the main screen"),
-				]
-			],
-		},
+		HelpPage.new(TouchText.t("page.screen"), boxes),
+		HelpPage.new(
+			TouchText.t("page.requests"),
+			[HelpBox.new(lists, TouchText.t("captain.chips"), TouchText.t("help.captain.requests"))]
+		),
+		HelpPage.new(
+			TouchText.t("page.cards"),
+			[HelpBox.new(lists, TouchText.t("captain.cards"), TouchText.t("help.captain.cards"))]
+		),
 	]
 
 

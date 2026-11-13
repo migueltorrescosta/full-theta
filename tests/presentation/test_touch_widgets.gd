@@ -221,7 +221,7 @@ func test_fullscreen_button_only_where_offered() -> void:
 	FullscreenButton.forced = 1
 	b._refresh()
 	assert_bool(b.visible).is_true()
-	assert_str(b.text).is_equal(FullscreenButton.TEXT)
+	assert_str(b.text).is_equal(tr(FullscreenButton.TEXT_KEY))
 	assert_float(b.get_combined_minimum_size().y).is_greater_equal(UiTheme.TOUCH_PRIMARY)
 	assert_bool(b.is_in_group(TouchInput.GROUP)).is_true()
 	# Off the web nothing offers it.

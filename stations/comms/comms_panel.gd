@@ -155,11 +155,11 @@ func _setup() -> void:
 ## The phone's tab titles, in Page order.
 static func page_titles() -> Array[String]:
 	return [
-		TouchText.of("comms.page.missions", "Missions"),
-		TouchText.of("comms.page.contracts", "Contracts"),
-		TouchText.of("comms.page.hails", "Hails"),
-		TouchText.of("comms.page.rep", "Rep"),
-		TouchText.of("page.crew", "Crew"),
+		TouchText.t("comms.page.missions"),
+		TouchText.t("comms.page.contracts"),
+		TouchText.t("comms.page.hails"),
+		TouchText.t("comms.page.rep"),
+		TouchText.t("page.crew"),
 	]
 
 
@@ -358,71 +358,58 @@ func _call_help() -> void:
 
 ## Controls help on touch (P28-Help): per page, the boxes of its controls in the 844x390
 ## landscape frame (the rail's on the first page only) with a label and what each does.
-static func touch_help() -> Array:
+static func touch_help() -> Array[HelpPage]:
 	var t: Array[String] = page_titles()
-	var rail: Array = []
+	var rail: Array[HelpBox] = []
 	var rows: Array = [
-		["hail", "comms.hail", "Hail the selected contact"],
-		["accept", "comms.accept", "Accept the card, or answer a hail"],
-		["decline", "comms.decline", "Decline the card"],
-		["claim", "comms.claim", "Take or release the card's conversation"],
-		["hold_fire", "comms.hold_fire", "Ask Weapons to hold fire on the contact"],
+		["hail", "comms.hail"],
+		["accept", "comms.accept"],
+		["decline", "comms.decline"],
+		["claim", "comms.claim"],
+		["hold_fire", "comms.hold_fire"],
 	]
 	# Call for help (gp-14) shows only in a fight, so the help sheet leaves it out.
 	for i: int in rows.size():
 		var r: Array = rows[i]
-		(
-			rail
-			. append(
-				[
-					Rect2(47, 72 + 56 * i, 136, 48),
-					TranslationServer.translate(r[1]),
-					TouchText.of("help.comms." + r[0], r[2]),
-				]
+		rail.append(
+			HelpBox.new(
+				Rect2(47, 72 + 56 * i, 136, 48),
+				TouchText.t(r[1]),
+				TouchText.t("help.comms." + r[0])
 			)
 		)
 	var card: Rect2 = Rect2(195.0, 132.0 + CommsBoard.PAGE_WHY_H, 414, 72)
-	var open: String = TouchText.of("help.comms.card", "Tap to open; long-press pings its contact")
-	rail.append([card, TouchText.of("help.comms.mission", "Mission card"), open])
+	var open: String = TouchText.t("help.comms.card")
+	rail.append(HelpBox.new(card, TouchText.t("help.comms.mission"), open))
 	return [
-		{"page": t[Page.MISSIONS], "boxes": rail},
-		{
-			"page": t[Page.CONTRACTS],
-			"boxes": [[card, TouchText.of("help.comms.contract", "Contract card"), open]],
-		},
-		{
-			"page": t[Page.HAILS],
-			"boxes":
+		HelpPage.new(t[Page.MISSIONS], rail),
+		HelpPage.new(
+			t[Page.CONTRACTS], [HelpBox.new(card, TouchText.t("help.comms.contract"), open)]
+		),
+		HelpPage.new(
+			t[Page.HAILS],
+			[HelpBox.new(card, TouchText.t("help.comms.offer"), TouchText.t("help.comms.talk"))]
+		),
+		HelpPage.new(
+			t[Page.REP],
 			[
-				[
-					card,
-					TouchText.of("help.comms.offer", "Offer or hail"),
-					TouchText.of("help.comms.talk", "Tap to talk, buy or sell"),
-				]
-			],
-		},
-		{
-			"page": t[Page.REP],
-			"boxes":
-			[
-				[
+				HelpBox.new(
 					Rect2(191, 132, 422, 180),
-					TranslationServer.translate("comms.rep"),
-					TouchText.of("help.comms.rep", "Docked site, credits and standing per faction"),
-				]
-			],
-		},
-		{
-			"page": t[Page.CREW],
-			"boxes":
+					TouchText.t("comms.rep"),
+					TouchText.t("help.comms.rep")
+				)
+			]
+		),
+		HelpPage.new(
+			t[Page.CREW],
 			[
-				[
+				HelpBox.new(
 					Rect2(191, 132, 207, 48),
-					TranslationServer.translate("share.drawer"),
-					TranslationServer.translate("help.crew_share"),
-				],
-			],
-		},
+					TouchText.t("share.drawer"),
+					TouchText.t("help.crew_share")
+				)
+			]
+		),
 	]
 
 

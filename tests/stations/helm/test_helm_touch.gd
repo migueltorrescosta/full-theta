@@ -193,7 +193,7 @@ func test_portrait_reduced_layout_with_bottom_tabs() -> void:
 	assert_int(_screen.form).is_equal(LayoutMode.Form.PHONE_PORTRAIT)
 	assert_bool(_ui().portrait).is_true()
 	assert_bool(_screen.rotate_banner.visible).is_true()
-	assert_str(_screen.rotate_banner.label.text).is_equal(HelmTouch.ROTATE_TEXT)
+	assert_str(_screen.rotate_banner.label.text).is_equal(tr(HelmTouch.ROTATE_KEY))
 	assert_object(_screen.frame.bottom_tabs.host).is_same(_ui().pages)
 	assert_bool(_screen.frame.bottom_tabs.is_visible_in_tree()).is_true()
 	await _audit_pages("portrait")

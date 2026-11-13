@@ -24,8 +24,8 @@ var show_pips: bool = true
 func _init() -> void:
 	custom_minimum_size = Vector2(WIDTH, 40.0)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	rows[0][0] = TouchText.of("topbar.short_hull", "Hull")
-	rows[1][0] = TouchText.of("topbar.short_shields", "Sh")
+	rows[0][0] = tr("topbar.short_hull")
+	rows[1][0] = tr("topbar.short_shields")
 
 
 ## Sets the values; redraws only on a change.

@@ -406,7 +406,7 @@ func refresh_seats(phone: bool) -> void:
 		b.set_pressed_no_signal(mine == pair[1])
 		b.text = tr(StationCatalogue.name_key(pair[1]))
 	if phone:
-		_dev_all.text = TouchText.of("lobby.dev_short", "All (dev)")
+		_dev_all.text = tr("lobby.dev_short")
 	_captain.disabled = _ctx.crew.captain_seated(ship) and mine != CAPTAIN
 	# Only when this game was started with --dev and the server offers it (#35 A7).
 	_dev_all.visible = ClientSettings.dev_flag and not _ctx.crew.def_of(DEV_ALL).is_empty()

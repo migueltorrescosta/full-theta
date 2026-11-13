@@ -362,12 +362,12 @@ func test_desktop_keeps_the_board() -> void:
 # The touch help: one entry per page titled as its tab, the rail on the first page only,
 # each rail box where the button sits on a phone on its side.
 func test_touch_help_matches_the_pages() -> void:
-	var help: Array = CommsPanel.touch_help()
+	var help: Array[HelpPage] = CommsPanel.touch_help()
 	assert_int(help.size()).is_equal(5)
 	var titles: Array[String] = CommsPanel.page_titles()
 	for i: int in help.size():
-		assert_str(help[i]["page"]).is_equal(titles[i])
-		assert_array(help[i]["boxes"]).is_not_empty()
+		assert_str(help[i].title).is_equal(titles[i])
+		assert_array(help[i].boxes).is_not_empty()
 	var s: StationScreen = await _screen(SIDEWAYS, LANDSCAPE)
 	var p: CommsPanel = s.focused_panel()
 	# (two players at Comms: the help shows the whole rail, Claim included)
@@ -375,17 +375,17 @@ func test_touch_help_matches_the_pages() -> void:
 	await _frames(3)
 	var ids: Array[String] = ["hail", "accept", "decline", "claim", "hold_fire"]
 	for i: int in ids.size():
-		var box: Rect2 = help[0]["boxes"][i][0]
+		var box: Rect2 = help[0].boxes[i].box
 		var real: Rect2 = p._buttons[ids[i]].get_global_rect()
 		assert_vector(box.position).is_equal_approx(real.position, Vector2.ONE)
 		assert_vector(box.size).is_equal_approx(real.size, Vector2.ONE)
-	var card: Rect2 = help[0]["boxes"][5][0]
+	var card: Rect2 = help[0].boxes[5].box
 	var drawn: Rect2 = p.board.card_rect(CommsFixture.MISSION)
 	drawn.position = p.board.get_global_transform() * drawn.position
 	assert_vector(card.position).is_equal_approx(drawn.position, Vector2.ONE)
-	for e: Dictionary in help.slice(1):
-		for b: Array in e["boxes"]:
-			assert_bool((b[0] as Rect2).intersects(Rect2(47, 64, 136, 300))).is_false()
+	for e: HelpPage in help.slice(1):
+		for b: HelpBox in e.boxes:
+			assert_bool(b.box.intersects(Rect2(47, 64, 136, 300))).is_false()
 	_drop(s)
 
 

@@ -77,9 +77,9 @@ func _init(owner_panel: CaptainPanel = null, is_upright: bool = false) -> void:
 	requests.name = "Requests"
 	card_box.name = "Cards"
 	card_box.gui_input.connect(_on_cards_input)
-	pages.add_page(TouchText.of("page.screen", "Screen"), [])
-	pages.add_page(TouchText.of("page.requests", "Requests"), [requests])
-	pages.add_page(TouchText.of("page.cards", "Cards"), [card_box])
+	pages.add_page(tr("page.screen"), [])
+	pages.add_page(tr("page.requests"), [requests])
+	pages.add_page(tr("page.cards"), [card_box])
 
 
 ## Takes the mirror and the lists in.
