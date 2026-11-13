@@ -160,23 +160,23 @@ func test_every_step_has_touch_words_without_key_names_in_every_language() -> vo
 	assert_array(keyed).override_failure_message("key names: %s" % [keyed]).is_empty()
 
 
+## In English only: a button's label is the translation of its key, so which control a step
+## names doesn't depend on the language, and walking every screen once per language tripled
+## the file's run time (R08-14); the words themselves are checked in every language above.
 func test_every_control_a_step_names_is_on_the_stations_phone_screen() -> void:
 	var by_station: Dictionary = {}
+	I18n.apply("en")
 	for station: String in STATIONS:
-		by_station[station] = []
-	for lang: String in LANGS:
-		I18n.apply(lang)
-		for station: String in STATIONS:
-			var texts: Array[String] = []
-			for form: Array in FORMS.slice(0, 2):
-				var s: StationScreen = await _screen(station, form)
-				for i: int in _pages(s):
-					await _page(s, i)
-					for t: Dictionary in TapAudit.targets(s):
-						texts.append(str(t["text"]).trim_prefix("stick "))
-				s.queue_free()
-				_vp.queue_free()
-			by_station[station].append(texts)
+		var texts: Array[String] = []
+		for form: Array in FORMS.slice(0, 2):
+			var s: StationScreen = await _screen(station, form)
+			for i: int in _pages(s):
+				await _page(s, i)
+				for t: Dictionary in TapAudit.targets(s):
+					texts.append(str(t["text"]).trim_prefix("stick "))
+			s.queue_free()
+			_vp.queue_free()
+		by_station[station] = texts
 	var names: RegEx = RegEx.create_from_string("\\{t:([a-z][a-z0-9_.]*)\\}")
 	var absent: Array[String] = []
 	for step: TrainingStepDef in _steps().steps:
@@ -192,24 +192,18 @@ func test_every_control_a_step_names_is_on_the_stations_phone_screen() -> void:
 				var name_key: String = m.get_string(1)
 				if name_key in NOT_BUTTONS:
 					continue
-				for l: int in LANGS.size():
-					I18n.apply(LANGS[l])
-					var label: String = tr(name_key)
-					var found: bool = by_station[str(step.station)][l].any(
-						func(t: String) -> bool: return t.begins_with(label)
+				var label: String = tr(name_key)
+				var found: bool = (by_station[str(step.station)] as Array).any(
+					func(t: String) -> bool: return t.begins_with(label)
+				)
+				# Passive and Active are one button's two faces.
+				if not found and name_key == "sci.short_passive":
+					found = true
+				if not found:
+					absent.append(
+						"%s.%s names '%s' (%s)" % [step.station, step.intent, label, name_key]
 					)
-					# Passive and Active are one button's two faces.
-					if not found and name_key == "sci.short_passive":
-						found = true
-					if not found:
-						absent.append(
-							(
-								"%s %s.%s names '%s' (%s)"
-								% [LANGS[l], step.station, step.intent, label, name_key]
-							)
-						)
 			break
-	I18n.apply("en")
 	(
 		assert_array(absent)
 		. override_failure_message("controls not on screen: %s" % [absent])

@@ -292,7 +292,7 @@
  "res://tests/stations/test_station_screen.gd": 0.7,
  "res://tests/stations/test_training_banner.gd": 0.1,
  "res://tests/stations/test_training_pad_skip.gd": 0.2,
- "res://tests/stations/test_training_touch.gd": 21.4,
+ "res://tests/stations/test_training_touch.gd": 17.0,
  "res://tests/stations/test_viewer_panel.gd": 0.4,
  "res://tests/stations/test_weapons_flags.gd": 0.1,
  "res://tests/stations/test_weapons_guided.gd": 0.4,
