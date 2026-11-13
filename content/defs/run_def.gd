@@ -55,8 +55,9 @@ const PRESETS: Array[StringName] = [&"easy", &"normal", &"hard"]
 ## Relay's map marks the site of an encounter waiting for the ship with a dashed "?" this
 ## long after the encounter opened (s; gp-16, amends D250).
 @export var site_marker_delay: float = 30.0
-## A Viewer's contact pings (gp-15, FT-MSC-004): pings a second and burst (count).
+## A Viewer's contact pings (gp-15, FT-MSC-004): pings a second (1/s).
 @export var viewer_ping_rate: float = 0.1
+## The pings a Viewer may send at once before the rate applies (count).
 @export var viewer_ping_burst: float = 2.0
 ## A training run (the Shakedown, FT-MIS-039): a crewed ship at hull 0 is reset at the yard
 ## instead of eliminated. A rule of the training world, not a stat change (FT-SIM-029).

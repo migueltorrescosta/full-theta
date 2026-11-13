@@ -46,8 +46,8 @@ extends Resource
 @export var finale_site: StringName = &""
 ## Finale attempts before the run closes anyway (count).
 @export var finale_tries: int = 1
-## Raider escorts of the heavy raider at strength 1, scaled like a wave and rounded (at least
-## one); a fraction tunes between presets (1.5: 1 on Easy, 2 on Normal, 3 on Hard).
+## Raider escorts of the heavy raider at strength 1 (count), scaled like a wave and rounded
+## (at least one); a fraction tunes between presets (1.5: 1 on Easy, 2 on Normal, 3 on Hard).
 @export var finale_escorts: float = 0.0
 ## The finale's time limit (s): past it the encounter ends PARTIAL.
 @export var finale_time_limit: float = 300.0

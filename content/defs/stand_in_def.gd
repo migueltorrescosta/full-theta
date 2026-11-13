@@ -6,25 +6,28 @@ extends Resource
 ## Read-only at runtime (FT-ARC-020).
 
 @export var id: StringName = &""
-## Seconds between two looks of one bot at its station (each bot a seeded phase apart).
+## Time between two looks of one bot at its station (s; each bot a seeded phase apart).
 @export var look_every: float = 2.0
-## Seconds a new target must have stood before Weapons fires at it.
+## Time a new target must have stood before Weapons fires at it (s).
 @export var reaction_time: float = 8.0
-## Seconds between two aim updates, and between two due shots.
+## Time between two aim updates (s).
 @export var aim_every: float = 0.2
+## Time between two due shots (s).
 @export var fire_every: float = 0.6
 ## Aim error (rad, a random direction); 0 is a perfect lead.
 @export var aim_error: float = 0.001
-## Share of due shots Weapons does not fire (0..1).
+## Share of due shots Weapons does not fire (dimensionless, 0..1).
 @export var fire_skip: float = 0.1
-## How far Helm and Weapons look for a hostile, and how far Weapons shoots (m).
+## How far Helm and Weapons look for a hostile (m).
 @export var sight_reach: float = 12000.0
+## How far Weapons shoots (m).
 @export var shoot_reach: float = 5800.0
 ## Helm's speed while it faces a hostile (m/s): full throttle below it, none above.
 @export var cruise_ms: float = 120.0
-## Helm jumps once the bow is within this share of the ship's jump tolerance (0..1].
+## Helm jumps once the bow is within this share of the ship's jump tolerance
+## (dimensionless, 0..1].
 @export var jump_aim_share: float = 0.8
-## Players a ship needs when the host fills light stations with bots (gp-03).
+## Players a ship needs when the host fills light stations with bots (count; gp-03).
 @export var fill_min_players: int = 2
 
 
