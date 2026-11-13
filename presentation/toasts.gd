@@ -1,12 +1,13 @@
 class_name Toasts
 extends Control
 ## Toasts (§5.0, D319): the screen's one queue of short lines (C5), each expiring after
-## SHOW_MS. They replace the top bar's status text for their duration, so a toast never covers
-## a panel, a radar or a control: the newest of the highest priority shows (with "+N" for the
-## queued ones behind it), at most MAX are kept (the oldest of the lowest priority goes first).
+## SHOW_MS. They show in the top bar (over a phone's glance), so a toast never covers a panel,
+## a radar, a control or a desktop's hull, shields and power (D414): the newest of the highest
+## priority shows (with "+N" for the queued ones behind it), at most MAX are kept (the oldest
+## of the lowest priority goes first).
 ## Info toasts rank under the notes (a partner's shared data, a request that lapsed), which
 ## rank under warnings. A keyed toast is one line that updates in place (a share's seconds).
-## The station screen puts the box over TopBar.status_rect().
+## The station screen puts the box over TopBar.notice_rect().
 
 const SHOW_MS: int = 4000
 const MAX: int = 4

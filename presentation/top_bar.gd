@@ -367,36 +367,23 @@ static func _fill(
 
 
 ## Where a toast or the critical banner shows on a desktop or a tablet (C5): the free stretch
-## of the first row between the station names and the timer, so the ship's name, hull, shields
-## and power stay in view; status_rect() where that stretch is under NOTICE_MIN_WIDTH.
+## of the first row between the station names' text and the timer; where that is under
+## NOTICE_MIN_WIDTH, from where the names start, over them for the few seconds a
+## notice shows (a long notice wraps and trims there). It never reaches the ship's name, hull,
+## shields or power, which sit before the chip or on the second row (w-nk5). A phone's bar has
+## no stretch: its glance (the station screen widens the box to the tabs).
 func notice_rect() -> Rect2:
-	if not phone and _stations.is_visible_in_tree() and _timer.is_visible_in_tree():
-		var row: Rect2 = _row.get_global_rect()
-		var left: float = _stations.get_global_rect().end.x + 12.0
-		var right: float = _timer.get_global_rect().position.x - 12.0
-		if right - left >= NOTICE_MIN_WIDTH:
-			return Rect2(left, row.position.y, right - left, row.size.y)
-	return status_rect()
-
-
-## The box (global coordinates) of the bar's status text, which a toast replaces: the
-## phone's glance; else the ship name and the status up to the alert chip (the status row
-## alone when it sits on the second row), above the bar's divider line. It holds no control.
-func status_rect() -> Rect2:
-	var box: Rect2
 	if phone:
-		box = glance.get_global_rect()
-	elif _compact:
-		box = _row2.get_global_rect()
-	else:
-		var row: Rect2 = _row.get_global_rect()
-		var left: float = _name.get_global_rect().position.x
-		box = Rect2(
-			left, row.position.y, chip.get_global_rect().position.x - 8.0 - left, row.size.y
-		)
-	# The bar keeps its divider line along the bottom edge.
-	var bottom: float = get_global_rect().end.y - 1.0
-	return box.intersection(Rect2(box.position, Vector2(box.size.x, bottom - box.position.y)))
+		return glance.get_global_rect()
+	var row: Rect2 = _row.get_global_rect()
+	var right: float = _timer.get_global_rect().position.x - 12.0
+	var left: float = _stations.get_global_rect().position.x
+	var font: Font = _stations.get_theme_font("font")
+	var fs: int = _stations.get_theme_font_size("font_size")
+	var after: float = left + font.get_string_size(_stations.text, 0, -1, fs).x + 12.0
+	if right - after >= NOTICE_MIN_WIDTH:
+		left = after
+	return Rect2(left, row.position.y, right - left, row.size.y)
 
 
 ## Opens the alert picker (Alt+A cycles instead; this is the chip click). Does nothing

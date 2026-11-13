@@ -166,3 +166,26 @@ func test_names_the_watched_ship() -> void:
 	bar.show_state("Kestrel", {"hull": 1.0}, 0, [], 0.0)
 	assert_str(bar._name.text).is_equal("Kestrel")
 	assert_str(bar._phone_timer.text).is_equal("00:00\n2 foes")
+
+
+# FT: FT-STN-004
+# w-nk5 (D414): a toast's box keeps clear of the ship's name, hull, shields, power and the
+# chip in every desktop and tablet bar; where the free stretch after the station names is
+# too narrow it covers the names rather than fall back over the read-outs.
+func test_notice_box_never_covers_the_read_outs() -> void:
+	var status: Dictionary = {"hull": 0.92, "shields": 0.7, "pips_used": 6}
+	for case: Array in [[1920.0, false], [900.0, false], [700.0, true]]:
+		bar.size.x = case[0]
+		bar.apply(LayoutMode.Form.DESKTOP, case[1])
+		bar.show_state("Kestrel", status, 0, ["relay", "comms"], 50.0, "relay")
+		await await_idle_frame()
+		var box: Rect2 = bar.notice_rect()
+		for c: Control in [bar._name, bar._hull, bar._shields, bar._pips, bar.chip, bar._timer]:
+			assert_bool(box.intersects(c.get_global_rect())).override_failure_message(
+				"%s covers %s at %d" % [box, c, case[0]]
+			).is_false()
+		assert_float(box.size.x).is_greater(100.0)
+		# Only the narrowest one-row bar (900 px) has too little room after the station names
+		# and covers them; the others leave them in view.
+		var names: float = bar._stations.get_global_rect().position.x
+		assert_bool(is_equal_approx(box.position.x, names)).is_equal(case[0] == 900.0)
