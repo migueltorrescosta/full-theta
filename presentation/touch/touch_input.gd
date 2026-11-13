@@ -35,7 +35,7 @@ static func held_count() -> int:
 	return _holders.size()
 
 
-## Forgets every holder (tests, via UiOverrides.reset).
+## Forgets every holder (tests: tests/ui_overrides_hook.gd).
 static func reset() -> void:
 	_holders.clear()
 

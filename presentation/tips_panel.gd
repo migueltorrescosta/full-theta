@@ -313,4 +313,4 @@ func _draw_bar() -> void:
 	var r: Rect2 = Rect2(Vector2.ZERO, _bar.size)
 	var fill: Color = Palette.color("accent")
 	fill.a = FILL_ALPHA
-	BarPaint.draw(_bar, r, maxf(progress, 0.0), fill, Color(1, 1, 1, TRACK_ALPHA))
+	BarPaint.draw(_bar, r, progress, fill, Color(1, 1, 1, TRACK_ALPHA))

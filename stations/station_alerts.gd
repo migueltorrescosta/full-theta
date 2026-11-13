@@ -135,9 +135,11 @@ func _process(_delta: float) -> void:
 func check_fuel() -> void:
 	if not _covers(FUEL_AUDIENCE):
 		return
-	var status: Dictionary = ctx.snap.blocks.get(StationCatalogue.Section.STATUS, {})
 	var share: float = ctx.propellant_share()
-	if share < 0.0 or not status.has("propellant"):
+	if (
+		share < 0.0
+		or not ctx.snap.blocks.get(StationCatalogue.Section.STATUS, {}).has("propellant")
+	):
 		return
 	var tier: int = 0
 	if share < StationContext.FUEL_ALMOST_GONE:

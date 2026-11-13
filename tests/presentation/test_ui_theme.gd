@@ -79,3 +79,11 @@ func test_box_alpha_and_left_margin() -> void:
 		assert_float(m).is_equal(-1.0)
 	var rail: StyleBoxFlat = UiTheme.build().get_stylebox("panel", "OverlayRail") as StyleBoxFlat
 	assert_float(rail.bg_color.a).is_equal_approx(UiTheme.OVERLAY_ALPHA, 0.001)
+
+
+# R05-9: the overlays' one action-button factory keeps each caller's size.
+func test_action_button_sizes() -> void:
+	var b: Button = auto_free(UiTheme.action_button("Go", "Go", 140.0, "X"))
+	assert_vector(b.custom_minimum_size).is_equal(Vector2(140, UiTheme.TOUCH_PRIMARY))
+	assert_str(b.name).is_equal("Go")
+	assert_str(b.theme_type_variation).is_equal("X")

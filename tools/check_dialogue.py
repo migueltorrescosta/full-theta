@@ -33,7 +33,7 @@ SLOT = re.compile(r"\{([^{}]*)\}")
 SLOT_NAME = re.compile(r"^[a-z][a-z0-9_]*$")
 # A key literal passed to a translating call (a literal followed by "," or ")" only: not a prefix).
 UI_KEY = re.compile(r'(?<![\w.])(?:tr|TouchText\.t|TranslationServer\.translate)\(\s*"([^"\\]*)"\s*[,)]')
-UI_KEY_SKIP = {"addons", "tests", "tools", "build", "export", "dist"}
+UI_KEY_SKIP = {"addons", "tests", "tools", "build"}
 SCHEMAS = {"numbers.json": "numbers.schema.json"}
 DEFAULT_SCHEMA = "dialogue.schema.json"
 

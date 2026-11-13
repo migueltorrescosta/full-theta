@@ -25,7 +25,8 @@ const NUMBER_R: float = 9.0
 ## Text in the drawing: never under 12 px.
 const FONT: int = 12
 
-## The stations with a `touch_help()`; the others show no picture.
+## The stations with a `touch_help()` (help_of's arms, in its order; ControlsHoldHelp's
+## first-wins order); the others show no picture.
 const STATIONS: Array[String] = [
 	"engineering", "comms", "captain", "helm", "weapons", "science", "relay"
 ]

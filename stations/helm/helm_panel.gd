@@ -638,11 +638,6 @@ func helm_block() -> Dictionary:
 	return ctx.snap.blocks.get(StationCatalogue.Section.HELM, {})
 
 
-## Propellant left as a share of the ship's capacity, or -1 when the def is unknown.
-func propellant_share() -> float:
-	return ctx.propellant_share()
-
-
 func _shield_power() -> float:
 	return float(helm_block().get("shield_power", 1.0))
 

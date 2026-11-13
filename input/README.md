@@ -26,7 +26,7 @@ A binding is a string in the `kbm` or `pad` list of an `IntentTable` row (or a `
 
 ## Matcher semantics
 
-`InputMatcher.set_context(stations, focused)` sets the screen. An intent is active for an event from a device when `IntentTable.target` names a handler for it: common and live rows always, the focused station's rows, other stations' rows that are live on that device (FT-JNT-007), and rows that reach their station `via` the focused one (Weapons' KB/M fire buttons in Tactical's cockpit, FT-JNT-008). Each emitted event is an `IntentEvent` (input/intent_event.gd) with `id`, `group`, `target`, `kind`, `pressed`, `value` and `device`.
+`InputMatcher.set_context(stations, focused)` sets the screen. An intent is active for an event from a device when `IntentTable.target` names a handler for it: common and live rows always, the focused station's rows, other stations' rows that are live on that device (FT-JNT-007), and rows that reach their station `via` the focused one (Weapons' KB/M fire buttons in Tactical's cockpit, FT-JNT-008). Each emitted event is an `IntentEvent` (input/intent_event.gd) with `id`, `target`, `pressed` and `device`.
 
 - Longest chord wins: when an active binding with modifiers matches ("View+X"), plain bindings on the same button ("X") don't fire. The same holds for axes: while LB is held, "LB+LS_X" suppresses "LS_X", and "View+RS" suppresses the right-stick axes.
 - Identical bindings on two active intents both fire, in table order. The binding-table check exempts one pointer case, LMB select and Weapons fire: the screen consumes select only over a pickable item.

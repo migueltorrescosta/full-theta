@@ -8,7 +8,7 @@ extends RefCounted
 static var _boxes: Array[Control] = []
 
 
-## Forgets every box (tests, via UiOverrides.reset).
+## Forgets every box (tests: tests/ui_overrides_hook.gd).
 static func reset() -> void:
 	_boxes.clear()
 

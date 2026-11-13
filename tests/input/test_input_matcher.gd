@@ -8,7 +8,6 @@ func test_plain_key_fires_on_press_with_target_and_device() -> void:
 	var events: Array[IntentEvent] = _m.feed(_key("T", true), 0)
 	assert_array(_ids(events)).is_equal(["cycle_target"])
 	assert_str(events[0].target).is_equal("screen")
-	assert_str(events[0].group).is_equal("common")
 	assert_str(events[0].device).is_equal("kbm")
 	assert_array(_feed(_key("T", false), 10)).is_empty()
 	# D175: Z toggles the radar side strip.

@@ -987,7 +987,11 @@ func _draw_readout(font: Font, at: Vector2, full: bool) -> void:
 		true
 	)
 	_bar(
-		font, Vector2(at.x, y + 2.0 * pitch), tr("helm.propellant"), panel.propellant_share(), false
+		font,
+		Vector2(at.x, y + 2.0 * pitch),
+		tr("helm.propellant"),
+		panel.ctx.propellant_share(),
+		false
 	)
 
 

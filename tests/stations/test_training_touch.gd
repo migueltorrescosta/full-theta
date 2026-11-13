@@ -185,15 +185,13 @@ func test_every_control_a_step_names_is_on_the_stations_phone_screen() -> void:
 				continue
 			for m: RegExMatch in names.search_all(raw):
 				var name_key: String = m.get_string(1)
-				if name_key in NOT_BUTTONS:
+				# (Passive and Active are one button's two faces.)
+				if name_key in NOT_BUTTONS or name_key == "sci.short_passive":
 					continue
 				var label: String = tr(name_key)
 				var found: bool = (by_station[str(step.station)] as Array).any(
 					func(t: String) -> bool: return t.begins_with(label)
 				)
-				# Passive and Active are one button's two faces.
-				if not found and name_key == "sci.short_passive":
-					found = true
 				if not found:
 					absent.append(
 						"%s.%s names '%s' (%s)" % [step.station, step.intent, label, name_key]

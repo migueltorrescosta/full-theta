@@ -617,7 +617,7 @@ func _relayout() -> void:
 	# window's here (LayoutMode.apply re-sets it first on a resize).
 	theme = get_window().theme
 	_apply_scale()
-	var phone: bool = LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE
+	var phone: bool = PhoneSheet.is_phone(self)
 	var margin: float = 16.0 if phone else 40.0
 	# On a phone nothing sits under a notch or in the gesture band (#28, SafeArea).
 	var m: Vector4 = SafeArea.margins(self)
