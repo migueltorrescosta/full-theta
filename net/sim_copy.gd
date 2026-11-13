@@ -18,8 +18,10 @@ extends RefCounted
 ## state_hash() equals the world's when no command is queued. The copy has no queued
 ## commands, events or command log; don't step it.
 
-## Leading entries of a capture, before the tables.
-enum { SEED, BUILD, TICK, DEFS, RNG, RELATIONS, SCIENCE_DEF, HAZARDS, STORY_DATA, HEADER }
+## Leading entries of a capture, before the tables. RUN_DATA: the run's RunDef and its
+## modifier, shared like the other definitions (CallHelp.can_call and the SITES section
+## read them on the net thread).
+enum { SEED, BUILD, TICK, DEFS, RNG, RELATIONS, SCIENCE_DEF, HAZARDS, STORY_DATA, RUN_DATA, HEADER }
 
 
 ## A copy of the world's state on its own (capture() then restore()).
@@ -49,6 +51,7 @@ static func capture(world: SimWorld) -> Array:
 			world.module_defs,
 			world.rep_dists,
 		],
+		[world.run_def, world.modifier],
 	]
 	for table: SimTable in world.tables():
 		var names: Array[StringName] = table.variables()
@@ -84,6 +87,8 @@ static func restore(state: Array) -> SimWorld:
 	copy.site_markets = data[4]
 	copy.module_defs = data[5]
 	copy.rep_dists = data[6]
+	copy.run_def = state[RUN_DATA][0]
+	copy.modifier = state[RUN_DATA][1]
 	var k: int = HEADER
 	for table: SimTable in copy.tables():
 		var names: Array[StringName] = state[k]

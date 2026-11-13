@@ -223,7 +223,7 @@ Active ids per area: FT-GEN 14, FT-ARC 23, FT-NET 51, FT-SIM 37, FT-STN 17, FT-H
 | FT-COM-007 | tests | `tests/net/test_comms_section.gd`, `tests/pairs/test_p14_science_comms.gd`, `tests/scenarios/test_rescue.gd`, `tests/sim/story/test_cards.gd`, `tests/sim/story/test_conversation_guards.gd`, `tests/stations/comms/test_comms_phone.gd`, `tests/stations/test_comms_board.gd`, `tools/tests/test_conversations.py` |
 | FT-COM-008 | tests | `tests/net/test_comms_section.gd`, `tests/sim/story/test_cards.gd`, `tests/stations/comms/test_comms_phone.gd`, `tests/stations/test_comms_board.gd` |
 | FT-COM-009 | tests | `tests/net/test_comms_section.gd`, `tests/sim/economy/test_modules.gd`, `tests/stations/test_comms_trade.gd` |
-| FT-COM-010 | tests | `tests/sim/economy/test_call_help.gd`, `tests/stations/comms/test_comms_help.gd` |
+| FT-COM-010 | tests | `tests/net/test_comms_section.gd`, `tests/sim/economy/test_call_help.gd`, `tests/stations/comms/test_comms_help.gd` |
 | FT-CPT-001 | tests | `tests/net/test_net_main_screen_l3.gd`, `tests/net/test_net_main_screen_rules.gd`, `tests/presentation/test_phone_rest_layouts.gd`, `tests/stations/captain/test_captain_phone.gd`, `tests/stations/test_captain_panel.gd` |
 | FT-CPT-002 | tests | `tests/net/test_net_card_ping_l3.gd`, `tests/stations/captain/test_captain_phone.gd`, `tests/stations/test_captain_panel.gd` |
 | FT-CPT-003 | tests | `tests/net/test_net_card_ping_l3.gd`, `tests/net/test_net_priority_l3.gd`, `tests/stations/test_captain_panel.gd`, `tests/stations/test_priority_target.gd` |

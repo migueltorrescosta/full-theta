@@ -179,3 +179,34 @@ func test_hull_band_and_the_copy_matches() -> void:
 	assert_int(back["credits"]).is_equal(2000)
 	assert_str(back["offers"][1]["item"]).is_equal("parts")
 	assert_int(back["cards"].size()).is_equal(1)
+
+
+# FT: FT-COM-010
+# The net thread builds COMMS from a SimCopy: the copy carries the run's RunDef (and its
+# modifier), so with a hostile in an active encounter the copy's block offers the call for
+# help like the live world's.
+func test_help_ready_on_the_net_threads_copy() -> void:
+	var r: RunDef = ApiFixture.run_def()
+	var tough: ShipDef = TestDefs.corvette().duplicate()
+	tough.hull_max = 1e12
+	r.player_ship = tough
+	r.call_help = load("res://content/runs/m3_call_help.tres")
+	var w: SimWorld = ApiFixture.world(1, r)
+	ApiFixture.place(w, 0, ApiFixture.ALPHA)
+	var b: BeginEncounterCommand = BeginEncounterCommand.new()
+	b.scenario_id = &"s_a"
+	b.site = 1
+	b.ships = PackedInt32Array([0])
+	b.cost = 3
+	w.submit(b)
+	ApiFixture.step(w, 2)
+	w.spawn_npc(TestDefs.raider_enemy(), 2, CubePoint.of(ApiFixture.ALPHA + Vector3(0, 0, -3000)))
+	for i: int in SimWorld.HZ:
+		if ProbeSystem.nearest_hostile(w, 0) >= 0:
+			break
+		w.step()
+	assert_bool(CallHelp.can_call(w, 0)).is_true()
+	var copy: SimWorld = SimCopy.of(w)
+	assert_object(copy.run_def).is_same(w.run_def)
+	assert_object(copy.modifier).is_same(w.modifier)
+	assert_int(CommsSection.block(copy, 0)["help"]).is_equal(BlockSchema.HELP_READY)

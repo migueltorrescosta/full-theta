@@ -8,10 +8,6 @@ extends RefCounted
 ## PROVISIONAL (FT-SPA-017): one ping per 0.5 s, burst 3.
 const RATE: float = 2.0
 const BURST: float = 3.0
-## A Viewer pings contacts only, more slowly than the crew (gp-15): one per 10 s, burst 2.
-## PROVISIONAL, next to the crew's like them.
-const VIEWER_RATE: float = 0.1
-const VIEWER_BURST: float = 2.0
 ## A ping pulses for 3 s (FT-SPA-016); another ping on its item meanwhile is a copy.
 const COPY_US: int = 3_000_000
 const BAD_PING: String = "bad_ping"
@@ -20,26 +16,26 @@ const BAD_PING: String = "bad_ping"
 ## HAZARD_ZONE_BASE - its index (D222). The probe ids stay above HAZARD_ZONE_BASE.
 const HAZARD_ZONE_BASE: int = -1000
 
-## Session id -> NetTokenBucket: the crew's limit and a Viewer's.
+## Session id -> NetTokenBucket.
 var _buckets: Dictionary[int, NetTokenBucket] = {}
-var _viewer_buckets: Dictionary[int, NetTokenBucket] = {}
 ## Ship -> item key -> [time us, session id, name] of its original ping.
 var _recent: Dictionary[int, Dictionary] = {}
 
 
-## Takes a token from the session's ping limit (a Viewer's own, slower one when `viewer`);
-## false when it is empty.
-func take(session: int, now_us: int, viewer: bool = false) -> bool:
-	if viewer:
-		var vb: NetTokenBucket = NetTokenBucket.new(VIEWER_RATE, VIEWER_BURST)
-		return _viewer_buckets.get_or_add(session, vb).take(now_us)
-	return _buckets.get_or_add(session, NetTokenBucket.new(RATE, BURST)).take(now_us)
+## Takes a token from the session's ping limit, `rate` a second up to `burst` (a Viewer's
+## are RunDef's, gp-15); false when it is empty. A session whose limit changed (it moved
+## seats) starts a fresh bucket.
+func take(session: int, now_us: int, rate: float = RATE, burst: float = BURST) -> bool:
+	var b: NetTokenBucket = _buckets.get(session)
+	if b == null or b.rate != rate or b.burst != burst:
+		b = NetTokenBucket.new(rate, burst)
+		_buckets[session] = b
+	return b.take(now_us)
 
 
-## Forgets a session's limits (it was evicted, NetSessions.evict).
+## Forgets a session's limit (it was evicted, NetSessions.evict).
 func forget(session: int) -> void:
 	_buckets.erase(session)
-	_viewer_buckets.erase(session)
 
 
 ## Records a ping on the item and returns the original pinger's name when it is a copy,

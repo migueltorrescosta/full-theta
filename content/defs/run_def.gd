@@ -52,6 +52,12 @@ const PRESETS: Array[StringName] = [&"easy", &"normal", &"hard"]
 @export var salvage_range: float = 300.0
 ## How long a wreck can be collected (s).
 @export var salvage_lifetime: float = 300.0
+## Relay's map marks the site of an encounter waiting for the ship with a dashed "?" this
+## long after the encounter opened (s; gp-16, amends D250).
+@export var site_marker_delay: float = 30.0
+## A Viewer's contact pings (gp-15, FT-MSC-004): pings a second and burst (count).
+@export var viewer_ping_rate: float = 0.1
+@export var viewer_ping_burst: float = 2.0
 ## A training run (the Shakedown, FT-MIS-039): a crewed ship at hull 0 is reset at the yard
 ## instead of eliminated. A rule of the training world, not a stat change (FT-SIM-029).
 @export var training: bool = false
@@ -97,6 +103,9 @@ func validate() -> Array[String]:
 	DefCheck.in_range(errors, "crippled_hull", crippled_hull, 0.0, 1.0)
 	DefCheck.non_negative(errors, "crippled_subsystems", crippled_subsystems)
 	DefCheck.non_negative(errors, "limp_home_time", limp_home_time)
+	DefCheck.non_negative(errors, "site_marker_delay", site_marker_delay)
+	if viewer_ping_rate <= 0.0 or viewer_ping_burst < 1.0:
+		errors.append("viewer pings need a rate above 0 and a burst of at least 1")
 	DefCheck.non_negative(errors, "coop_relaunches", coop_relaunches)
 	DefCheck.non_negative(errors, "relaunch_cost", relaunch_cost)
 	DefCheck.non_negative(errors, "bounty", bounty)
