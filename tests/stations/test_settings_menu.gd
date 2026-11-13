@@ -11,10 +11,6 @@ func before() -> void:
 	I18n.apply("en")
 
 
-func after() -> void:
-	LayoutMode.forced = -1
-
-
 func _menu(in_session: bool = true) -> SettingsScreen:
 	LayoutMode.forced = LayoutMode.Kind.DESKTOP
 	var m: SettingsScreen = auto_free(SettingsScreen.new())

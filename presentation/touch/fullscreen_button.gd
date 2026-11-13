@@ -8,7 +8,6 @@ extends RailButton
 ## WebTextField does for text fields.
 
 const TEXT_KEY: String = "touch.fullscreen"
-const TEXT: String = "Full screen"
 ## How often it asks the page whether fullscreen is still offered, in frames.
 const POLL_FRAMES: int = 30
 
@@ -85,4 +84,4 @@ func _notification(what: int) -> void:
 
 ## The button's text (an icon button has none).
 func _label() -> String:
-	return TouchText.of(TEXT_KEY, TEXT)
+	return tr(TEXT_KEY)

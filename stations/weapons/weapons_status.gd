@@ -43,7 +43,7 @@ static func fire_block(p: WeaponsPanel, i: int) -> String:
 
 ## The FIRE button's text: FIRE, with the reason under it while it can't shoot.
 static func fire_text(p: WeaponsPanel, i: int) -> String:
-	var fire: String = TouchText.of("weapons.touch_fire", "FIRE")
+	var fire: String = TouchText.t("weapons.touch_fire")
 	var why: String = fire_block(p, i)
 	if why == "":
 		return fire
@@ -69,9 +69,9 @@ static func show_fire(p: WeaponsPanel, button: RailButton, i: int) -> void:
 ## only while 2+ players sit at Weapons (WeaponsPanel.shared, C3).
 static func claim_text(p: WeaponsPanel, i: int) -> String:
 	if p.is_mine(i):
-		return TouchText.of("weapons.touch_claim_held", "Release mount")
+		return TouchText.t("weapons.touch_claim_held")
 	if p.is_usable(i):
-		return TouchText.of("weapons.touch_claim", "Claim mount")
+		return TouchText.t("weapons.touch_claim")
 	return p.holder_name(i)
 
 

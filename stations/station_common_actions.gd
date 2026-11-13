@@ -11,11 +11,11 @@ func _init(screen: StationScreen) -> void:
 	s = screen
 
 
-func run(ev: Dictionary) -> bool:
-	if not bool(ev.get("pressed", true)):
+func run(ev: IntentEvent) -> bool:
+	if not ev.pressed:
 		return false
-	var id: String = ev["id"]
-	var device: String = str(ev.get("device", IntentTable.KBM))
+	var id: String = ev.id
+	var device: String = ev.device
 	var handled: bool = true
 	match id:
 		"select":

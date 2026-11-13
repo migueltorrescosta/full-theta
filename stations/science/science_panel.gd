@@ -591,7 +591,7 @@ func open_hack() -> void:
 		names.append(_sub_label(subs, i))
 	sheet.side = SIDE_RIGHT
 	sheet.open(
-		TouchText.of("sci.hack_sheet", "Hack %s") % ctx.snap.callsign(c),
+		tr("sci.hack_sheet") % ctx.snap.callsign(c),
 		names,
 		func(i: int) -> void: _hack_sub(c, subs[i])
 	)
@@ -634,8 +634,8 @@ func minigame_title() -> String:
 	)
 	var who: String = ctx.snap.callsign(int(b.get("minigame_contact", -1)))
 	if minigame == MINIGAME_SCAN:
-		return TouchText.of("sci.minigame_scan", "Scan %s · %d s") % [who, age]
-	return TouchText.of("sci.minigame_hack", "Hack %s · %d s") % [who, age]
+		return tr("sci.minigame_scan") % [who, age]
+	return tr("sci.minigame_hack") % [who, age]
 
 
 ## A phone upright has no rails: the view is the stage (the radar or a minigame).
@@ -706,11 +706,11 @@ func _on_sim_event(kind: StringName, p: Dictionary) -> void:
 # --- Input. ---
 
 
-func handle_intent(ev: Dictionary) -> bool:
-	if not bool(ev.get("pressed", true)):
+func handle_intent(ev: IntentEvent) -> bool:
+	if not ev.pressed:
 		return false
 	var minigame: int = int(block().get("minigame", MINIGAME_NONE))
-	var id: String = str(ev["id"])
+	var id: String = ev.id
 	if minigame == MINIGAME_SCAN and id == "accept":
 		scan_game.submit()
 		return true
@@ -819,26 +819,28 @@ func _stick_move(x: float, y: float) -> void:
 ## The touch picture of the phone pages (P28-Help, TouchHelpPicture), in the 844x390 frame:
 ## the rails as SciencePhone lays them out (design 2.4): left x 47-215, right x 629-797,
 ## rows from y 64 on a 56 px pitch.
-static func touch_help() -> Array:
+static func touch_help() -> Array[HelpPage]:
 	var t: Callable = TouchText.t
 	var r: Callable = func(col: int, row: int, wide: bool = false) -> Rect2:
 		return Rect2(629.0 + 88.0 * col, 64.0 + 56.0 * row, 168.0 if wide else 80.0, 48.0)
-	var contacts: Array = [
-		[Rect2(47, 64, 168, 230), t.call("page.contacts"), t.call("intent.select")],
-		[r.call(0, 0), t.call("sci.scan"), t.call("intent.sci_scan")],
-		[r.call(1, 0), t.call("sci.hack"), t.call("help.sci_hack")],
-		[r.call(0, 1), t.call("sci.sweep"), t.call("intent.sci_sweep")],
-		[r.call(1, 1), t.call("sci.short_mark"), t.call("intent.sci_scan_mark")],
-		[r.call(0, 2), t.call("sci.short_passive"), t.call("intent.sci_mode")],
-		[r.call(1, 2), t.call("sci.short_self"), t.call("intent.sci_self_scan")],
-		[r.call(0, 3, true), t.call("sci.claim"), t.call("intent.claim")],
+	var contacts: Array[HelpBox] = [
+		HelpBox.new(Rect2(47, 64, 168, 230), t.call("page.contacts"), t.call("intent.select")),
+		HelpBox.new(r.call(0, 0), t.call("sci.scan"), t.call("intent.sci_scan")),
+		HelpBox.new(r.call(1, 0), t.call("sci.hack"), t.call("help.sci_hack")),
+		HelpBox.new(r.call(0, 1), t.call("sci.sweep"), t.call("intent.sci_sweep")),
+		HelpBox.new(r.call(1, 1), t.call("sci.short_mark"), t.call("intent.sci_scan_mark")),
+		HelpBox.new(r.call(0, 2), t.call("sci.short_passive"), t.call("intent.sci_mode")),
+		HelpBox.new(r.call(1, 2), t.call("sci.short_self"), t.call("intent.sci_self_scan")),
+		HelpBox.new(r.call(0, 3, true), t.call("sci.claim"), t.call("intent.claim")),
 	]
-	var card: Array = [[Rect2(47, 64, 300, 280), t.call("page.card"), t.call("help.sci_card")]]
-	var crew: Array = [
-		[Rect2(47, 64, 168, 48), t.call("share.drawer"), t.call("help.crew_share")],
+	var card: Array[HelpBox] = [
+		HelpBox.new(Rect2(47, 64, 300, 280), t.call("page.card"), t.call("help.sci_card"))
+	]
+	var crew: Array[HelpBox] = [
+		HelpBox.new(Rect2(47, 64, 168, 48), t.call("share.drawer"), t.call("help.crew_share")),
 	]
 	return [
-		{"page": t.call("page.contacts"), "boxes": contacts},
-		{"page": t.call("page.card"), "boxes": card},
-		{"page": t.call("page.crew"), "boxes": crew},
+		HelpPage.new(t.call("page.contacts"), contacts),
+		HelpPage.new(t.call("page.card"), card),
+		HelpPage.new(t.call("page.crew"), crew),
 	]

@@ -64,7 +64,7 @@ func _setup() -> void:
 	clip_contents = true
 	in_frame = true
 	selection_extras = [
-		[tr("intent.route"), func() -> void: handle_intent({"id": "route", "pressed": true})],
+		[tr("intent.route"), func() -> void: handle_intent(IntentEvent.of("route"))],
 		[tr("intent.mark_send"), open_send],
 	]
 	map = RelayMap.new()
@@ -167,7 +167,7 @@ func open_send() -> void:
 	var names: Array = allies.map(func(a: Dictionary) -> String: return str(a["name"]))
 	sheet.side = SIDE_RIGHT
 	sheet.open(
-		TouchText.of("relay.send_sheet", "Send %s to") % str(ctx.crew.mark_in_slot(slot)["name"]),
+		tr("relay.send_sheet") % str(ctx.crew.mark_in_slot(slot)["name"]),
 		names,
 		func(i: int) -> void: _send_selected(int(allies[i]["id"]))
 	)
@@ -240,11 +240,11 @@ func refresh() -> void:
 		phone.update()
 
 
-func handle_intent(ev: Dictionary) -> bool:
-	if not bool(ev.get("pressed", true)):
+func handle_intent(ev: IntentEvent) -> bool:
+	if not ev.pressed:
 		return false
 	var handled: bool = true
-	match str(ev["id"]):
+	match ev.id:
 		"mark_delete":
 			var slot: int = _selected_mark()
 			if slot < 0:
@@ -273,9 +273,9 @@ func handle_intent(ev: Dictionary) -> bool:
 		"mark_send":
 			handled = _send_selected(hud.send_target())
 		"accept", "decline":
-			handled = _answer_oldest(str(ev["id"]) == "accept")
+			handled = _answer_oldest(ev.id == "accept")
 		_:
-			handled = _main_view(str(ev["id"]))
+			handled = _main_view(ev.id)
 	return handled
 
 
@@ -688,33 +688,35 @@ func _preview_label() -> String:
 ## The touch picture of the phone pages (P28-Help, TouchHelpPicture), in the 844x390 frame:
 ## the rails as RelayPhone lays them out (left x 47, right x 629, 168 wide, rows from y 64 on
 ## a 56 px pitch).
-static func touch_help() -> Array:
+static func touch_help() -> Array[HelpPage]:
 	var t: Callable = TouchText.t
 	var left: Callable = func(row: int) -> Rect2: return Rect2(47, 64 + 56 * row, 168, 48)
 	var right: Callable = func(row: int) -> Rect2: return Rect2(629, 64 + 56 * row, 168, 48)
-	var map: Array = [
-		[left.call(0), t.call("relay.launch"), t.call("help.relay_launch")],
-		[left.call(1), t.call("relay.hazard"), t.call("intent.hazard_add")],
-		[left.call(2), t.call("intent.route"), t.call("intent.route")],
-		[left.call(3), t.call("relay.lanes_off"), t.call("intent.flag_lanes")],
-		[right.call(0), t.call("relay.accept"), t.call("relay.inbox")],
-		[right.call(1), t.call("relay.decline"), t.call("relay.inbox")],
-		[right.call(2), t.call("relay.send_to"), t.call("intent.mark_send")],
-		[right.call(3), t.call("relay.centre"), t.call("intent.map_centre")],
-		[Rect2(223, 120, 398, 230), t.call("page.map"), t.call("help.relay_map")],
+	var map: Array[HelpBox] = [
+		HelpBox.new(left.call(0), t.call("relay.launch"), t.call("help.relay_launch")),
+		HelpBox.new(left.call(1), t.call("relay.hazard"), t.call("intent.hazard_add")),
+		HelpBox.new(left.call(2), t.call("intent.route"), t.call("intent.route")),
+		HelpBox.new(left.call(3), t.call("relay.lanes_off"), t.call("intent.flag_lanes")),
+		HelpBox.new(right.call(0), t.call("relay.accept"), t.call("relay.inbox")),
+		HelpBox.new(right.call(1), t.call("relay.decline"), t.call("relay.inbox")),
+		HelpBox.new(right.call(2), t.call("relay.send_to"), t.call("intent.mark_send")),
+		HelpBox.new(right.call(3), t.call("relay.centre"), t.call("intent.map_centre")),
+		HelpBox.new(Rect2(223, 120, 398, 230), t.call("page.map"), t.call("help.relay_map")),
 	]
-	var marks: Array = [
-		[Rect2(47, 64, 168, 230), t.call("relay.marks"), t.call("intent.select")],
-		[right.call(0), t.call("relay.rename"), t.call("intent.mark_rename")],
-		[right.call(1), t.call("relay.delete"), t.call("intent.mark_delete")],
-		[right.call(2), t.call("relay.attach"), t.call("intent.mark_attach")],
+	var marks: Array[HelpBox] = [
+		HelpBox.new(Rect2(47, 64, 168, 230), t.call("relay.marks"), t.call("intent.select")),
+		HelpBox.new(right.call(0), t.call("relay.rename"), t.call("intent.mark_rename")),
+		HelpBox.new(right.call(1), t.call("relay.delete"), t.call("intent.mark_delete")),
+		HelpBox.new(right.call(2), t.call("relay.attach"), t.call("intent.mark_attach")),
 	]
-	var log: Array = [
-		[Rect2(47, 64, 300, 280), t.call("relay.log"), t.call("relay.inbox")],
-		[Rect2(629, 64, 168, 272), t.call("view.forward") + " …", t.call("intent.main_view_1")],
+	var log: Array[HelpBox] = [
+		HelpBox.new(Rect2(47, 64, 300, 280), t.call("relay.log"), t.call("relay.inbox")),
+		HelpBox.new(
+			Rect2(629, 64, 168, 272), t.call("view.forward") + " …", t.call("intent.main_view_1")
+		),
 	]
 	return [
-		{"page": t.call("page.map"), "boxes": map},
-		{"page": t.call("relay.marks"), "boxes": marks},
-		{"page": t.call("relay.log"), "boxes": log},
+		HelpPage.new(t.call("page.map"), map),
+		HelpPage.new(t.call("relay.marks"), marks),
+		HelpPage.new(t.call("relay.log"), log),
 	]

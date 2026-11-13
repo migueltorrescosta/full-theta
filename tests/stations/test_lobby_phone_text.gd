@@ -69,4 +69,3 @@ func test_the_summary_role_wraps_on_a_short_desktop_screen() -> void:
 	assert_bool(role.clip_text).is_false()
 	assert_int(role.autowrap_mode).is_equal(TextServer.AUTOWRAP_WORD_SMART)
 	assert_int(role.max_lines_visible).is_equal(LobbySeatGrid.ROLE_LINES)
-	LayoutMode.forced = -1

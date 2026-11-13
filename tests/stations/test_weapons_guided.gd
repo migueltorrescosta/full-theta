@@ -43,16 +43,8 @@ func _panel(s: StationScreen) -> WeaponsPanel:
 	return s.panels[0] as WeaponsPanel
 
 
-func _ev(s: StationScreen, id: String) -> Dictionary:
-	return {
-		"id": id,
-		"group": IntentTable.row(id)["group"],
-		"target": IntentTable.target(id, "kbm", s.focused_station(), s.stations),
-		"kind": IntentTable.row(id)["kind"],
-		"pressed": true,
-		"value": 1.0,
-		"device": "kbm",
-	}
+func _ev(s: StationScreen, id: String) -> IntentEvent:
+	return IntentEvent.routed(id, "kbm", true, s.focused_station(), s.stations)
 
 
 func _commands(s: StationScreen, kind: String) -> Array:

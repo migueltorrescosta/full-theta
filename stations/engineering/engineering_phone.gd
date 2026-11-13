@@ -66,9 +66,9 @@ func build_pages() -> void:
 	panel.pages = PageHost.new()
 	var titles: Array[String] = [
 		panel.tr("eng.power"),
-		TouchText.of("eng.touch.ship", "Ship"),
+		tr("eng.touch.ship"),
 		panel.tr("eng.faults"),
-		TouchText.of("page.crew", "Crew"),
+		tr("page.crew"),
 	]
 	for i: int in titles.size():
 		var page: Control = crew_page if i == EngineeringPanel.Page.CREW else _board_page
@@ -126,7 +126,7 @@ func _build_rails() -> void:
 
 ## A button of `a` (a TOUCH_ACTIONS entry) that runs `p`'s intent (the rails and the tablet's).
 static func rail_button(p: EngineeringPanel, a: Array) -> RailButton:
-	var b: RailButton = RailButton.make(TouchText.of(a[1], a[2]))
+	var b: RailButton = RailButton.make(TouchText.t(a[1]))
 	b.name = "Touch_" + str(a[0])
 	# Two lines of text (the part or the reason under the label) in a 48 px row; the text
 	# size fits the widest line (EngineeringRail.fit).

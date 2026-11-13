@@ -7,7 +7,7 @@ extends ScrollContainer
 ## Add it as a station's last page:
 ##
 ##     var crew := CrewPage.new(self)
-##     pages.add_page(TouchText.of("page.crew", "Crew"), [crew])
+##     pages.add_page(tr("page.crew"), [crew])
 ##     rail.add(crew)
 
 const COLUMNS: int = 2

@@ -77,7 +77,7 @@ func _init() -> void:
 	_grid.add_theme_constant_override("v_separation", UiTheme.TOUCH_GAP)
 	_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scroll.add_child(_grid)
-	cancel_button = RailButton.make(TouchText.of("sheet.cancel", "Cancel"))
+	cancel_button = RailButton.make(tr("sheet.cancel"))
 	cancel_button.name = "Cancel"
 	cancel_button.pressed.connect(cancel)
 	col.add_child(cancel_button)

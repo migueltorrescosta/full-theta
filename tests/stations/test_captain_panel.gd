@@ -9,12 +9,11 @@ const ALLOWED: Array[String] = ["set_main_view", "ping", "place_mark"]
 
 func before() -> void:
 	I18n.apply("en")
+
+
+func before_test() -> void:
 	# gdUnit's 64 x 64 window is a phone on its side; these check the desktop layout (#28).
 	LayoutMode.forced = LayoutMode.Kind.DESKTOP
-
-
-func after() -> void:
-	LayoutMode.forced = -1
 
 
 func after_test() -> void:
@@ -134,7 +133,7 @@ func test_buttons_and_keys_send_the_main_view() -> void:
 	cap.buttons[2].pressed.emit()
 	assert_array(rec.of("set_main_view")[0][1]).is_equal([MainScreen.View.TACTICAL])
 	(
-		assert_bool(s.dispatch({"id": "captain_view_5", "target": "captain", "pressed": true}))
+		assert_bool(s.dispatch(IntentEvent.of("captain_view_5", true, IntentTable.KBM, "captain")))
 		. is_true()
 	)
 	assert_array(rec.of("set_main_view")[1][1]).is_equal([MainScreen.View.STATUS])
@@ -143,9 +142,9 @@ func test_buttons_and_keys_send_the_main_view() -> void:
 	s.ctx.crew.handle_event(
 		{"type": "main_view", "payload": {"ship": 0, "view": 4, "by": "Ana"}}, 1
 	)
-	s.dispatch({"id": "captain_view_next", "target": "captain", "pressed": true})
+	s.dispatch(IntentEvent.of("captain_view_next", true, IntentTable.KBM, "captain"))
 	assert_array(rec.of("set_main_view")[2][1]).is_equal([MainScreen.View.FORWARD])
-	s.dispatch({"id": "captain_view_prev", "target": "captain", "pressed": true})
+	s.dispatch(IntentEvent.of("captain_view_prev", true, IntentTable.KBM, "captain"))
 	assert_array(rec.of("set_main_view")[3][1]).is_equal([MainScreen.View.CLOSE_UP])
 	await get_tree().process_frame
 	assert_bool(cap.buttons[4].button_pressed).is_true()
@@ -167,7 +166,7 @@ func test_the_captain_sends_no_mechanics_command() -> void:
 			if row["group"] in [IntentTable.COMMON, IntentTable.LIVE]
 			else str(row["group"])
 		)
-		s.dispatch({"id": id, "group": row["group"], "target": target, "pressed": true})
+		s.dispatch(IntentEvent.of(id, true, IntentTable.KBM, target))
 	s.common.set_alert(2)
 	s.top_bar.open_alert_picker()
 	for sent: Array in rec.sent:

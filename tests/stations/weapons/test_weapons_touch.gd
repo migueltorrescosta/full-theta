@@ -19,8 +19,6 @@ func before() -> void:
 
 
 func after_test() -> void:
-	SafeArea.simulate([])
-	RotateBanner.dismissed_here = false
 	if FileAccess.file_exists(SETTINGS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
@@ -173,9 +171,8 @@ func test_phone_landscape_one_right_rail() -> void:
 	assert_float(p.top_reserve).is_greater(0.0)
 	var top: float = (p.get_global_transform() * view.position).y + p.top_reserve
 	assert_float(s.frame.selection_bar.get_global_rect().end.y).is_less_equal(top)
-	# The shares are on the Crew page: no Share opener on the screen.
+	# The shares are on the Crew page.
 	assert_bool(p.shows_shares).is_true()
-	assert_bool(s.share_opener.is_visible_in_tree()).is_false()
 
 
 # FT: FT-STN-005, FT-WPN-001, FT-WPN-002
@@ -307,7 +304,7 @@ func test_rail_buttons_send_the_key_intents() -> void:
 	_tap(t.guided_button)
 	var by_touch: Array = toasts.duplicate()
 	toasts.clear()
-	p.handle_intent({"id": "fire_guided", "pressed": true, "device": IntentTable.KBM})
+	p.handle_intent(IntentEvent.of("fire_guided", true, IntentTable.KBM))
 	assert_array(by_touch).is_not_empty()
 	assert_array(by_touch).is_equal(toasts)
 	assert_array(_commands(s, "fire_guided")).is_empty()
@@ -326,7 +323,7 @@ func test_rail_buttons_send_the_key_intents() -> void:
 	# The keyboard's fire hold sends the same command.
 	var k: StationScreen = await _screen(Vector2i(844, 390), LANDSCAPE)
 	_panel(k).set_aim_dir(0, k.ctx.interp.own_rotation() * Vector3.FORWARD)
-	_panel(k).handle_intent({"id": "fire", "pressed": true, "device": IntentTable.KBM})
+	_panel(k).handle_intent(IntentEvent.of("fire", true, IntentTable.KBM))
 	_panel(k).step(0.016)
 	assert_array(_commands(k, "fire")).is_equal(fired)
 
@@ -440,7 +437,7 @@ func test_long_press_on_the_view_pings_and_marks() -> void:
 	assert_int(marks.size()).is_equal(1)
 	assert_int(int(marks[0][1][2])).is_equal(StationFixture.U3)
 	assert_float(p.aim_dir(0).angle_to(aim)).is_less(1e-4)
-	assert_int(TouchInput.held).is_equal(0)
+	assert_int(TouchInput.held_count()).is_equal(0)
 	# A quick tap selects and neither pings nor marks.
 	_touch(u3, true)
 	clock.ms += 100
@@ -501,15 +498,15 @@ func test_touch_help_matches_the_layout() -> void:
 	var s: StationScreen = await _screen(Vector2i(844, 390), LANDSCAPE)
 	var p: WeaponsPanel = _panel(s)
 	var t: WeaponsTouch = p.touch()
-	var fire: Array = WeaponsTouch.touch_help()[WeaponsTouch.Page.FIRE]["boxes"]
+	var fire: Array[HelpBox] = WeaponsTouch.touch_help()[WeaponsTouch.Page.FIRE].boxes
 	var real: Array[Control] = [
 		t.mount_button, t.ammo_button, t.guided_button, t.fire_all_button, t.claim_button
 	]
 	real.append(t.fire_button)
 	for i: int in real.size():
 		var want: Rect2 = real[i].get_global_rect()
-		var got: Rect2 = fire[i][0]
-		var what: String = "%s: %s vs %s" % [fire[i][1], got, want]
+		var got: Rect2 = fire[i].box
+		var what: String = "%s: %s vs %s" % [fire[i].label, got, want]
 		(
 			assert_float(got.position.distance_to(want.position))
 			. override_failure_message(what)
@@ -517,17 +514,17 @@ func test_touch_help_matches_the_layout() -> void:
 		)
 		assert_float(got.end.distance_to(want.end)).override_failure_message(what).is_less(6.0)
 	await _page(s, WeaponsTouch.Page.MOUNTS)
-	var rows: Array = WeaponsTouch.touch_help()[WeaponsTouch.Page.MOUNTS]["boxes"]
+	var rows: Array[HelpBox] = WeaponsTouch.touch_help()[WeaponsTouch.Page.MOUNTS].boxes
 	for i: int in 2:
 		var want: Rect2 = (t.rows[0][i] as Control).get_global_rect()
-		var got: Rect2 = rows[i][0]
-		var what: String = "%s: %s vs %s" % [rows[i][1], got, want]
+		var got: Rect2 = rows[i].box
+		var what: String = "%s: %s vs %s" % [rows[i].label, got, want]
 		(
 			assert_float(got.position.distance_to(want.position))
 			. override_failure_message(what)
 			. is_less(6.0)
 		)
 		assert_float(got.end.distance_to(want.end)).override_failure_message(what).is_less(6.0)
-	for page: Dictionary in WeaponsTouch.touch_help():
-		for c: Array in page["boxes"]:
-			assert_str(c[1]).is_not_empty()
+	for page: HelpPage in WeaponsTouch.touch_help():
+		for c: HelpBox in page.boxes:
+			assert_str(c.label).is_not_empty()

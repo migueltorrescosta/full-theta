@@ -43,16 +43,8 @@ func _relay(s: StationScreen) -> RelayPanel:
 	return s.panels[s.stations.find("relay")] as RelayPanel
 
 
-func _ev(id: String, s: StationScreen, device: String = IntentTable.KBM) -> Dictionary:
-	return {
-		"id": id,
-		"group": IntentTable.row(id)["group"],
-		"target": IntentTable.target(id, device, s.focused_station(), s.stations),
-		"kind": IntentTable.row(id)["kind"],
-		"pressed": true,
-		"value": 1.0,
-		"device": device,
-	}
+func _ev(id: String, s: StationScreen, device: String = IntentTable.KBM) -> IntentEvent:
+	return IntentEvent.routed(id, device, true, s.focused_station(), s.stations)
 
 
 ## The arguments of each send of a method, newest last.

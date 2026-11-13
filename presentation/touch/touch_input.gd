@@ -6,13 +6,38 @@ extends RefCounted
 ## thumbs work at once (a stick and FIRE). Godot also emulates a mouse from the first
 ## finger; the widgets ignore those emulated events, and StationScreen asks `owns` so a
 ## tap on a rail never also reaches the station's bindings (select, fire, steer).
-## A widget joins GROUP and counts its held fingers in `held`.
+## A widget joins GROUP and registers itself with `hold` while it holds a finger.
 
 ## Controls whose rectangle takes every touch and emulated mouse event over it.
 const GROUP: StringName = &"ft_touch_owned"
 
-## Fingers held by touch widgets right now.
-static var held: int = 0
+## Instance ids of the widgets holding a finger right now.
+static var _holders: Dictionary[int, bool] = {}
+
+
+## `owner` holds a finger (idempotent).
+static func hold(owner: Object) -> void:
+	_holders[owner.get_instance_id()] = true
+
+
+## `owner` let go of its finger (idempotent).
+static func release(owner: Object) -> void:
+	_holders.erase(owner.get_instance_id())
+
+
+## True while any touch widget holds a finger.
+static func is_held() -> bool:
+	return not _holders.is_empty()
+
+
+## Widgets holding a finger right now.
+static func held_count() -> int:
+	return _holders.size()
+
+
+## Forgets every holder (tests: tests/ui_overrides_hook.gd).
+static func reset() -> void:
+	_holders.clear()
 
 
 ## True for a mouse event Godot made from a finger.
@@ -29,7 +54,7 @@ static func owns(tree: SceneTree, event: InputEvent) -> bool:
 	elif event is InputEventScreenDrag:
 		pos = (event as InputEventScreenDrag).position
 	elif is_emulated(event):
-		if held > 0:
+		if is_held():
 			return true
 		pos = (event as InputEventMouse).position
 	else:

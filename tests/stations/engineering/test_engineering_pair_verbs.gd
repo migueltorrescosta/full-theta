@@ -45,20 +45,7 @@ func _panel(s: StationScreen) -> EngineeringPanel:
 
 
 func _press(s: StationScreen, id: String, device: String = "kbm") -> bool:
-	return (
-		s
-		. dispatch(
-			{
-				"id": id,
-				"group": IntentTable.row(id)["group"],
-				"target": IntentTable.target(id, device, s.focused_station(), s.stations),
-				"kind": IntentTable.row(id)["kind"],
-				"pressed": true,
-				"value": 1.0,
-				"device": device,
-			}
-		)
-	)
+	return s.dispatch(IntentEvent.routed(id, device, true, s.focused_station(), s.stations))
 
 
 func _commands(s: StationScreen, kind: String) -> Array:

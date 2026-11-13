@@ -5,11 +5,6 @@ extends GdUnitTestSuite
 ## headless run).
 
 
-func after() -> void:
-	LayoutMode.forced = -1
-
-
-## A phone-sized viewport holding the menu with the touch pictures of two stations.
 func _menu(comfort: bool = false) -> Array:
 	LayoutMode.forced = LayoutMode.Kind.PHONE
 	var vp: SubViewport = auto_free(SubViewport.new())

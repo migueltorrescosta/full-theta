@@ -8,12 +8,11 @@ const SETTINGS: String = "user://test_viewer_panel.cfg"
 
 func before() -> void:
 	I18n.apply("en")
+
+
+func before_test() -> void:
 	# gdUnit's 64 x 64 window is a phone on its side; these check the desktop layout (#28).
 	LayoutMode.forced = LayoutMode.Kind.DESKTOP
-
-
-func after() -> void:
-	LayoutMode.forced = -1
 
 
 func after_test() -> void:
@@ -155,10 +154,10 @@ func test_first_chase_frame_keeps_the_ships_up() -> void:
 # FT: FT-MSC-004, FT-STN-008
 func test_viewers_only_watch() -> void:
 	var s: StationScreen = await _screen()
-	var mark: Dictionary = {"id": "mark", "target": "screen", "pressed": true, "device": "pad"}
+	var mark: IntentEvent = IntentEvent.of("mark", true, "pad", "screen")
 	s.ctx.crew.select("contact", StationFixture.H2)
 	s.dispatch(mark)
-	s.dispatch({"id": "alert_cycle", "target": "screen", "pressed": true, "device": "kbm"})
+	s.dispatch(IntentEvent.of("alert_cycle", true, "kbm", "screen"))
 	assert_array(StationFixture.sent(s.ctx).sent).is_empty()
 
 

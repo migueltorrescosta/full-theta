@@ -23,7 +23,7 @@ func _init() -> void:
 	action = ACTION
 	custom_minimum_size = Vector2(UiTheme.TOUCH_PRIMARY, UiTheme.TOUCH_PRIMARY)
 	size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	tooltip_text = TouchText.of(TEXT_KEY, TEXT)
+	tooltip_text = tr(TEXT_KEY)
 	draw.connect(_draw_icon)
 
 
@@ -51,10 +51,7 @@ func _is_offered() -> bool:
 
 func _refresh() -> void:
 	super()
-	tooltip_text = TouchText.of(
-		"touch.fullscreen_exit" if is_full() else TEXT_KEY,
-		"Exit full screen" if is_full() else TEXT
-	)
+	tooltip_text = tr("touch.fullscreen_exit" if is_full() else TEXT_KEY)
 	queue_redraw()
 
 

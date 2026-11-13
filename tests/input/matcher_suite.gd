@@ -55,10 +55,10 @@ func _motion(axis: JoyAxis, value: float) -> InputEventJoypadMotion:
 
 
 ## Event ids, released ones suffixed "/up".
-func _ids(events: Array[Dictionary]) -> Array[String]:
+func _ids(events: Array[IntentEvent]) -> Array[String]:
 	var out: Array[String] = []
-	for e: Dictionary in events:
-		out.append(e["id"] if e["pressed"] else e["id"] + "/up")
+	for e: IntentEvent in events:
+		out.append(e.id if e.pressed else e.id + "/up")
 	return out
 
 

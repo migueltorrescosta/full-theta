@@ -110,7 +110,7 @@ func test_thrust_envelope_and_propellant_come_from_the_snapshot() -> void:
 	assert_array(fields).contains(["thrust_scale", "torque_scale", "shield_power"])
 	assert_float(float(_panel.helm_block()["torque_scale"])).is_equal(0.8)
 	# 8000 kg of the corvette's 10 t.
-	assert_float(_panel.propellant_share()).is_equal_approx(0.8, 1e-6)
+	assert_float(_panel.ctx.propellant_share()).is_equal_approx(0.8, 1e-6)
 
 
 # FT: FT-STN-003, FT-STN-009

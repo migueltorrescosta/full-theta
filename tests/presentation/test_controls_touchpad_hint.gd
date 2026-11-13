@@ -57,7 +57,6 @@ func test_the_pad_and_left_click_notes() -> void:
 	var b: Bindings = Bindings.new()
 	b.rebind("fire", IntentTable.KBM, PackedStringArray(["Space"]))
 	assert_bool(ControlsPane.lmb_split(b, ["weapons"])).is_false()
-	LayoutMode.forced = -1
 
 
 # FT: FT-STN-011
@@ -77,4 +76,3 @@ func test_the_question_mark_is_named_not_drawn() -> void:
 	var note: Label = pane.get_node(ControlsPane.VIEW_KBM + "View").get_child(1)
 	assert_str(note.text).contains("Show controls: type ?")
 	assert_str(note.text).not_contains("Not on the picture")
-	LayoutMode.forced = -1

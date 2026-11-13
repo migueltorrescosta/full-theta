@@ -13,7 +13,6 @@ func before() -> void:
 
 
 func after_test() -> void:
-	LayoutMode.forced = -1
 	I18n.apply("en")
 	if FileAccess.file_exists(SETTINGS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
@@ -31,16 +30,8 @@ func _screen(seat: String, code: String = "easy") -> StationScreen:
 	return s
 
 
-func _ev(id: String, s: StationScreen) -> Dictionary:
-	return {
-		"id": id,
-		"group": IntentTable.row(id)["group"],
-		"target": IntentTable.target(id, "kbm", s.focused_station(), s.stations),
-		"kind": IntentTable.row(id)["kind"],
-		"pressed": true,
-		"value": 1.0,
-		"device": "kbm",
-	}
+func _ev(id: String, s: StationScreen) -> IntentEvent:
+	return IntentEvent.routed(id, "kbm", true, s.focused_station(), s.stations)
 
 
 func _sent(s: StationScreen, method: String) -> Array:

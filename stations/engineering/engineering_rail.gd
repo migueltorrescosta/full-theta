@@ -18,7 +18,7 @@ const FONT_SIZES: Array[int] = [14, 13, 12]
 static func text(id: String) -> String:
 	for a: Array in EngineeringPanel.TOUCH_ACTIONS:
 		if a[0] == id:
-			return TouchText.of(a[1], a[2])
+			return TouchText.t(a[1])
 	return id
 
 

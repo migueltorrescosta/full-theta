@@ -228,7 +228,7 @@ func open() -> void:
 	_ships.columns = 2 if short and not narrow else 1
 	refresh_mode()
 	_tabs.current_tab = 0
-	if LayoutMode.kind_of(row) == LayoutMode.Kind.PHONE:
+	if PhoneSheet.is_phone(row):
 		var m: Vector4 = SafeArea.margins(row)
 		var bottom: float = maxf(m.w, SafeArea.tap_band(row))
 		var title: int = _sheet.get_theme_constant("title_height", "Window")

@@ -4,9 +4,9 @@ extends VBoxContainer
 ## P28-Help, D292): per page, a drawing of the phone on its side with the page's tab lit and
 ## each control outlined with a number, then the numbered list of what each control does.
 ## The persistent rail shows on the first page only. A station describes its pages with a
-## static `touch_help() -> Array` on its panel script:
+## static `touch_help() -> Array[HelpPage]` on its panel script:
 ##
-##     [{"page": "Power", "boxes": [[Rect2(51, 76, 76, 48), "Power +", "One more pip"], ...]}]
+##     [HelpPage.new("Power", [HelpBox.new(Rect2(51, 76, 76, 48), "Power +", "One more pip")])]
 ##
 ## Boxes are in the phone frame's coordinates (FRAME, the design's 844x390 with the safe area
 ## x 47..797 and the top bar y 8..56).
@@ -14,8 +14,8 @@ extends VBoxContainer
 ##     var pic := TouchHelpPicture.make("engineering")
 ##     controls_tab.add_child(pic)
 ##
-## PANELS names each station's script with a `touch_help()` (the panel; Weapons' phone).
-## Its texts are all translation keys (content/i18n/strings.json).
+## help_of names each station's script with a `touch_help()` (the panel; Weapons' phone).
+## Its texts are translations of keys of content/i18n/strings.json.
 
 ## The frame the boxes are drawn in.
 const FRAME: Vector2 = Vector2(844.0, 390.0)
@@ -25,25 +25,19 @@ const NUMBER_R: float = 9.0
 ## Text in the drawing: never under 12 px.
 const FONT: int = 12
 
-## Where each station's `touch_help()` lives: its panel script, loaded on first use. A
-## station without an entry, or whose script has no `touch_help()` yet, shows no picture.
-const PANELS: Dictionary = {
-	"engineering": "res://stations/engineering/engineering_panel.gd",
-	"comms": "res://stations/comms/comms_panel.gd",
-	"captain": "res://stations/captain/captain_panel.gd",
-	"helm": "res://stations/helm/helm_panel.gd",
-	"weapons": "res://stations/weapons/weapons_touch.gd",
-	"science": "res://stations/science/science_panel.gd",
-	"relay": "res://stations/relay/relay_panel.gd",
-}
+## The stations with a `touch_help()` (help_of's arms, in its order; ControlsHoldHelp's
+## first-wins order); the others show no picture.
+const STATIONS: Array[String] = [
+	"engineering", "comms", "captain", "helm", "weapons", "science", "relay"
+]
 
 ## The pages as the station gave them.
-var pages: Array = []
+var pages: Array[HelpPage] = []
 
 
 ## The picture of `station`'s pages, or null for a station without one (Viewer).
 static func make(station: String) -> TouchHelpPicture:
-	var data: Array = help_of(station)
+	var data: Array[HelpPage] = help_of(station)
 	if data.is_empty():
 		return null
 	var pic: TouchHelpPicture = TouchHelpPicture.new()
@@ -52,15 +46,24 @@ static func make(station: String) -> TouchHelpPicture:
 	return pic
 
 
-## A station's touch help data, [] when it has none.
-static func help_of(station: String) -> Array:
-	var path: String = PANELS.get(station, "")
-	if path == "" or not ResourceLoader.exists(path):
-		return []
-	var script: Script = load(path)
-	if script == null or not script.has_method("touch_help"):
-		return []
-	return script.call("touch_help")
+## A station's touch help pages, [] when it has none.
+static func help_of(station: String) -> Array[HelpPage]:
+	match station:
+		"engineering":
+			return EngineeringPanel.touch_help()
+		"comms":
+			return CommsPanel.touch_help()
+		"captain":
+			return CaptainPanel.touch_help()
+		"helm":
+			return HelmPanel.touch_help()
+		"weapons":
+			return WeaponsTouch.touch_help()
+		"science":
+			return SciencePanel.touch_help()
+		"relay":
+			return RelayPanel.touch_help()
+	return []
 
 
 func _init() -> void:
@@ -68,17 +71,17 @@ func _init() -> void:
 
 
 ## Builds one section per page, numbering the controls across pages.
-func build(data: Array) -> void:
+func build(data: Array[HelpPage]) -> void:
 	pages = data
 	for c: Node in get_children():
 		remove_child(c)
 		c.queue_free()
 	var titles: Array[String] = []
-	for p: Dictionary in data:
-		titles.append(str(p["page"]))
+	for p: HelpPage in data:
+		titles.append(p.title)
 	var n: int = 1
 	for i: int in data.size():
-		var page: Dictionary = data[i]
+		var page: HelpPage = data[i]
 		var head: Label = Label.new()
 		head.text = titles[i]
 		head.add_theme_color_override("font_color", Palette.color("accent"))
@@ -86,21 +89,21 @@ func build(data: Array) -> void:
 		var draw: PageDrawing = PageDrawing.new()
 		draw.titles = titles
 		draw.current = i
-		draw.boxes = page["boxes"]
+		draw.boxes = page.boxes
 		draw.first = n
 		add_child(draw)
 		var legend: GridContainer = GridContainer.new()
 		legend.columns = 2
 		legend.add_theme_constant_override("h_separation", UiTheme.TOUCH_GAP)
 		add_child(legend)
-		for b: Array in page["boxes"]:
+		for b: HelpBox in page.boxes:
 			var num: Label = Label.new()
 			num.text = str(n)
 			num.add_theme_color_override("font_color", Palette.color("accent"))
 			legend.add_child(num)
 			var what: Label = Label.new()
 			# (a bare name when the station gives no more: "All stop")
-			what.text = str(b[1]) if b[2] == b[1] else "%s: %s" % [str(b[1]), str(b[2])]
+			what.text = b.label if b.what == b.label else "%s: %s" % [b.label, b.what]
 			what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			what.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			legend.add_child(what)
@@ -110,8 +113,8 @@ func build(data: Array) -> void:
 ## The numbers of the controls in the order the list shows them.
 func count() -> int:
 	var n: int = 0
-	for p: Dictionary in pages:
-		n += (p["boxes"] as Array).size()
+	for p: HelpPage in pages:
+		n += p.boxes.size()
 	return n
 
 
@@ -121,7 +124,7 @@ class PageDrawing:
 
 	var titles: Array[String] = []
 	var current: int = 0
-	var boxes: Array = []
+	var boxes: Array[HelpBox] = []
 	## The number of the first box.
 	var first: int = 1
 
@@ -168,8 +171,8 @@ class PageDrawing:
 				Palette.color("background" if on else "text")
 			)
 		for j: int in boxes.size():
-			var b: Array = boxes[j]
-			var r: Rect2 = _scaled(b[0], k)
+			var b: HelpBox = boxes[j]
+			var r: Rect2 = _scaled(b.box, k)
 			draw_rect(r, Palette.color("panel"))
 			draw_rect(r, Palette.color("text_dim"), false, 1.0)
 			var c: Vector2 = r.position + Vector2(NUMBER_R + 2.0, NUMBER_R + 2.0)
@@ -188,13 +191,13 @@ class PageDrawing:
 			# The control's name beside its number when it fits whole (else the number alone).
 			var room: float = r.size.x - 2.0 * NUMBER_R - 8.0
 			var name_width: float = (
-				font.get_string_size(str(b[1]), HORIZONTAL_ALIGNMENT_LEFT, -1, FONT).x
+				font.get_string_size(b.label, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT).x
 			)
 			if name_width <= room:
 				draw_string(
 					font,
 					Vector2(c.x + NUMBER_R + 4.0, c.y + 4.5),
-					str(b[1]),
+					b.label,
 					HORIZONTAL_ALIGNMENT_LEFT,
 					room,
 					FONT,

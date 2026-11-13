@@ -11,7 +11,6 @@ func before() -> void:
 
 
 func after_test() -> void:
-	LayoutMode.forced = -1
 	if FileAccess.file_exists(SETTINGS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
@@ -47,13 +46,13 @@ func test_decoy_shows_only_while_it_can_go_and_sends_launch_decoy() -> void:
 		var button: Control = p.phone.buttons["decoy"] if p.phone != null else p.hud.decoy
 		assert_bool(button.visible).override_failure_message("%s calm" % size).is_false()
 		# The key does nothing while it can't act.
-		p.handle_intent({"id": "decoy_launch", "pressed": true})
+		p.handle_intent(IntentEvent.of("decoy_launch"))
 		assert_int(StationFixture.sent(s.ctx).of("command").size()).is_equal(0)
 		s.ctx.snap.blocks[StationCatalogue.Section.RELAY] = _block(true)
 		p.refresh()
 		assert_bool(button.visible).override_failure_message("%s fight" % size).is_true()
 		(button as BaseButton).pressed.emit()
-		p.handle_intent({"id": "decoy_launch", "pressed": true})
+		p.handle_intent(IntentEvent.of("decoy_launch"))
 		var cmds: Array = StationFixture.sent(s.ctx).of("command")
 		assert_int(cmds.size()).is_equal(2)
 		for c: Array in cmds:

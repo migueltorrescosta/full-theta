@@ -39,12 +39,11 @@ static func table() -> Dictionary:
 		return _table
 	_locale = locale
 	_table = {}
-	for station: String in TouchHelpPicture.PANELS:
-		for page: Dictionary in TouchHelpPicture.help_of(station):
-			for box: Array in page["boxes"]:
-				var named: String = str(box[1])
-				if str(box[2]) != named and not _table.has(named):
-					_table[named] = str(box[2])
+	for station: String in TouchHelpPicture.STATIONS:
+		for page: HelpPage in TouchHelpPicture.help_of(station):
+			for box: HelpBox in page.boxes:
+				if box.what != box.label and not _table.has(box.label):
+					_table[box.label] = box.what
 	return _table
 
 

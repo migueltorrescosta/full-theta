@@ -15,7 +15,6 @@ signal dismissed
 ## The ClientSettings tooltip key of a dismissal.
 const KEY: String = "rotate_banner"
 const TEXT_KEY: String = "touch.rotate"
-const TEXT: String = "Turn sideways for the full view"
 
 ## Dismissed in this page (when there are no settings to remember it in).
 static var dismissed_here: bool = false
@@ -32,7 +31,7 @@ func _init() -> void:
 	visible = false
 	var row: HBoxContainer = HBoxContainer.new()
 	add_child(row)
-	label.text = TouchText.of(TEXT_KEY, TEXT)
+	label.text = tr(TEXT_KEY)
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -69,4 +68,4 @@ func dismiss() -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED:
-		label.text = TouchText.of(TEXT_KEY, TEXT)
+		label.text = tr(TEXT_KEY)

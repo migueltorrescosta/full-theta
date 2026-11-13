@@ -71,9 +71,7 @@ func setup(context: StationContext) -> void:
 	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	head.add_child(_title)
-	_menu = Button.new()
-	_menu.name = "MainMenu"
-	_menu.custom_minimum_size = Vector2(0, UiTheme.TOUCH_PRIMARY)
+	_menu = UiTheme.action_button("MainMenu", "")
 	_menu.pressed.connect(_on_menu_pressed)
 	head.add_child(_menu)
 	_end_dialog = ConfirmationDialog.new()
@@ -247,7 +245,7 @@ func _apply_safe_area() -> void:
 func _arrange() -> void:
 	if not is_inside_tree():
 		return
-	var phone: bool = LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE
+	var phone: bool = PhoneSheet.is_phone(self)
 	var side: bool = phone and size.x > size.y
 	_foot.visible = phone
 	_move(_menu, _foot if phone else _head, -1)

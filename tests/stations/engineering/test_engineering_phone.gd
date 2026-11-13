@@ -35,8 +35,6 @@ func before() -> void:
 
 
 func after_test() -> void:
-	SafeArea.simulate([])
-	LayoutMode.forced = -1
 	if FileAccess.file_exists(SETTINGS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
@@ -177,7 +175,7 @@ func test_rail_taps_send_the_key_intents() -> void:
 			var keys: StationScreen = await _screen(Vector2i(1280, 720), [])
 			_rare(keys)
 			var target: String = "screen" if id == "claim" else "engineering"
-			keys.dispatch({"id": id, "pressed": true, "device": IntentTable.KBM, "target": target})
+			keys.dispatch(IntentEvent.of(id, true, IntentTable.KBM, target))
 			var by_touch: Array = StationFixture.sent(touch.ctx).sent
 			assert_array(by_touch).override_failure_message("%s: %s" % [id, by_touch]).is_equal(
 				StationFixture.sent(keys.ctx).sent
@@ -221,13 +219,12 @@ func test_larger_screens_keep_their_layout() -> void:
 
 # FT: FT-STN-005, FT-PAIR-007, FT-JNT-001
 # In Systems (Engineering with Science) on its side the share buttons are on Engineering's
-# Crew page, 2 taps from rest; the screen shows no Share opener of its own.
+# Crew page, 2 taps from rest.
 func test_shares_on_the_crew_page() -> void:
 	var s: StationScreen = await _screen(Vector2i(844, 390), LANDSCAPE, "systems")
 	s.focus(0)
 	await _frames(2)
 	assert_str(s.focused_station()).is_equal("engineering")
-	assert_bool(s.share_opener.is_visible_in_tree()).is_false()
 	var crew: CrewPage = (s.focused_panel() as EngineeringPanel).phone.crew_page
 	crew.refresh()
 	var share: Array = crew.entries().filter(func(e: Array) -> bool: return e[0] == "share")

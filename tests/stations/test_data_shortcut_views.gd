@@ -12,7 +12,6 @@ func before() -> void:
 
 
 func after_test() -> void:
-	LayoutMode.forced = -1
 	I18n.apply("en")
 	if FileAccess.file_exists(SETTINGS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
@@ -179,7 +178,7 @@ func test_share_buttons_follow_the_toggles_and_the_stations() -> void:
 	assert_int(sent.size()).is_equal(1)
 	assert_array(sent[0][1]).is_equal(["routes"])
 	# The binding shares all of the screen's shortcuts.
-	s.dispatch({"id": "share", "target": "screen", "pressed": true, "device": "kbm"})
+	s.dispatch(IntentEvent.of("share", true, "kbm", "screen"))
 	assert_int(StationFixture.sent(ctx).of("share").size()).is_equal(5)
 	ctx.crew.handle_event(
 		{"type": "shares", "payload": {"ship": 0, "left": {"routes": 12.3}}}, ctx.now_ms()

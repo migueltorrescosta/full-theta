@@ -137,9 +137,7 @@ func _apply_form() -> void:
 		_captured = false
 		var screen: StationScreen = self.screen()
 		if screen != null and portrait:
-			screen.rotate_banner.label.text = TouchText.of(
-				HelmTouch.ROTATE_KEY, HelmTouch.ROTATE_TEXT
-			)
+			screen.rotate_banner.label.text = tr(HelmTouch.ROTATE_KEY)
 	# In the frame with the phone layout only, its Crew page holding the share buttons
 	# (w-yk5: no second set behind the share opener).
 	in_frame = touch_ui != null
@@ -189,7 +187,7 @@ func _form() -> LayoutMode.Form:
 
 
 ## Touch intent events go through the screen like a device's (StationScreen.dispatch).
-func _dispatch(ev: Dictionary) -> void:
+func _dispatch(ev: IntentEvent) -> void:
 	var screen: StationScreen = self.screen()
 	if screen != null:
 		screen.dispatch(ev)
@@ -304,9 +302,9 @@ func radar_inset_rect() -> Rect2:
 # --- Intents. ---
 
 
-func handle_intent(ev: Dictionary) -> bool:
-	var id: String = ev["id"]
-	var pressed: bool = bool(ev.get("pressed", true))
+func handle_intent(ev: IntentEvent) -> bool:
+	var id: String = ev.id
+	var pressed: bool = ev.pressed
 	match id:
 		"face", "approach", "helm_pointer":
 			# Polled (is_held) and latched into helm_input.
@@ -611,8 +609,6 @@ func hud_area(control: Control) -> Rect2:
 	if touch_ui != null and touch_ui.is_inside_tree():
 		# Under the screen's view-top row too (selection bar, request chips).
 		r = touch_ui.clear_view_in(control).intersection(r)
-	# Above the screen's joint switch (a joint view on a phone on its side).
-	r.size.y = maxf(r.size.y - bottom_reserve, 0.0)
 	return r
 
 
@@ -640,18 +636,6 @@ func steering() -> bool:
 ## The HELM block, or {} before the first snapshot.
 func helm_block() -> Dictionary:
 	return ctx.snap.blocks.get(StationCatalogue.Section.HELM, {})
-
-
-## Propellant left as a share of the ship's capacity (ShipDef in content/), or -1 when
-## the def is unknown.
-func propellant_share() -> float:
-	var def: ShipDef = ctx.ship_def()
-	var left: float = float(
-		ctx.snap.blocks.get(StationCatalogue.Section.STATUS, {}).get("propellant", 0.0)
-	)
-	if def == null or def.propellant_capacity <= 0.0:
-		return -1.0
-	return clampf(left / def.propellant_capacity, 0.0, 1.0)
 
 
 func _shield_power() -> float:
@@ -702,7 +686,7 @@ func _apply_mouse_mode() -> void:
 ## The touch picture of the phone pages (P28-Help, TouchHelpPicture), in the 844x390 frame:
 ## the Fly page also numbers the persistent controls. A box is an intent's label or a
 ## "Name: what" text (`touch.helm.help.*`).
-static func touch_help() -> Array:
+static func touch_help() -> Array[HelpPage]:
 	var texts: Array[String] = [
 		"throttle",
 		"turn",
@@ -746,9 +730,9 @@ static func touch_help() -> Array:
 		[["crew", Rect2(629, 64, 168, 160)]],
 	]
 	var titles: Array[String] = HelmTouch.page_titles()
-	var out: Array = []
+	var out: Array[HelpPage] = []
 	for p: int in pages.size():
-		var boxes: Array = []
+		var boxes: Array[HelpBox] = []
 		for c: Array in (persistent if p == HelmTouch.PAGE_FLY else []) + pages[p]:
 			var key: String = c[0]
 			var text: String = TouchText.t(IntentTable.label_key(key))
@@ -757,6 +741,6 @@ static func touch_help() -> Array:
 				text = TouchText.t("help.radar")
 			elif key in texts:
 				text = TouchText.t("touch.helm.help." + key)
-			boxes.append(TouchText.named(c[1], text))
-		out.append({"page": titles[p], "boxes": boxes})
+			boxes.append(HelpBox.named(c[1], text))
+		out.append(HelpPage.new(titles[p], boxes))
 	return out

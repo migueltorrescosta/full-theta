@@ -65,10 +65,10 @@ const CARDS: Dictionary = {
 	"relay|comms": [["relay.inbox", "relay.route"], ""],
 	"comms|relay": [["comms.offers", "comms.credits"], ""],
 }
-## The actions' button labels: intent -> [string key, English].
+## The actions' button labels: intent -> string key.
 const ACTIONS: Dictionary = {
-	"all_stop": ["glance.stop", "Stop"],
-	"boost": ["glance.boost", "Boost"],
+	"all_stop": "glance.stop",
+	"boost": "glance.boost",
 }
 
 var text: Label = Label.new()
@@ -122,7 +122,13 @@ func show_for(ctx: StationContext, partner_id: String, focused: String) -> void:
 		text.text = t
 	action.visible = intent != ""
 	if intent != "":
-		action.text = TouchText.of(ACTIONS[intent][0], ACTIONS[intent][1])
+		action.text = tr(ACTIONS[intent])
+		# A longer translation ("Impulso") widens the button instead of losing letters.
+		var w: float = (
+			action.get_theme_font("font").get_string_size(action.text, 0, -1, FONT).x
+			+ action.get_theme_stylebox("normal").get_minimum_size().x
+		)
+		action.custom_minimum_size.x = maxf(UiTheme.TOUCH_PRIMARY, ceilf(w))
 
 
 ## One read-out's text from the view (a dash while its block hasn't come).
@@ -140,33 +146,33 @@ static func readout(ctx: StationContext, id: String) -> String:
 		"helm.mode":
 			return _helm_mode(ctx, helm)
 		"eng.engines":
-			return _pips(ctx, eng, SubsystemDef.Kind.ENGINES, "glance.engines", "Engines ⚡%d")
+			return _pips(ctx, eng, SubsystemDef.Kind.ENGINES, "glance.engines")
 		"eng.weapons":
-			return _pips(ctx, eng, SubsystemDef.Kind.WEAPONS, "glance.weapons", "Weapons ⚡%d")
+			return _pips(ctx, eng, SubsystemDef.Kind.WEAPONS, "glance.weapons")
 		"eng.sensors":
-			return _pips(ctx, eng, SubsystemDef.Kind.SENSORS, "glance.sensors", "Sensors ⚡%d")
+			return _pips(ctx, eng, SubsystemDef.Kind.SENSORS, "glance.sensors")
 		"eng.reactor":
 			var used: int = 0
 			for r: Dictionary in eng.get("subsystems", []):
 				used += int(r.get("pips", 0))
-			return _t("glance.reactor", "Reactor %d/%d") % [used, ctx.pip_cap()]
+			return TouchText.t("glance.reactor") % [used, ctx.pip_cap()]
 		"eng.boost":
 			var ticks: int = int(eng.get("boost_ticks", 0))
 			if ticks > 0:
-				return _t("glance.boost_on", "Boost %d s") % ceili(float(ticks) / ChipsReader.HZ)
-			return _t("glance.boost_ready", "Boost ready")
+				return TouchText.t("glance.boost_on") % ceili(float(ticks) / ChipsReader.HZ)
+			return TouchText.t("glance.boost_ready")
 		"eng.faults":
 			var n: int = 0
 			for r: Dictionary in eng.get("subsystems", []):
 				n += 1 if bool(r.get("fault", false)) else 0
-			return _t("glance.faults", "Faults %d") % n
+			return TouchText.t("glance.faults") % n
 		"eng.parts":
-			return _t("glance.parts", "Parts %d") % int(eng.get("spare_parts", 0))
+			return TouchText.t("glance.parts") % int(eng.get("spare_parts", 0))
 		"eng.probe":
 			var left: float = float(relay.get("fab_left", 0.0))
 			if left > 0.0:
-				return _t("glance.probe_build", "Probe in %d s") % ceili(left)
-			return _t("glance.probe_idle", "No probe building")
+				return TouchText.t("glance.probe_build") % ceili(left)
+			return TouchText.t("glance.probe_idle")
 		"weapons.ready", "weapons.heat":
 			return _mounts(snap, id == "weapons.heat")
 		"weapons.target", "science.weak":
@@ -175,55 +181,51 @@ static func readout(ctx: StationContext, id: String) -> String:
 			return _scan(ctx, sci)
 		"science.mode":
 			if bool(sci.get("active", false)):
-				return _t("glance.active", "Active")
-			return _t("glance.passive", "Passive")
+				return TouchText.t("glance.active")
+			return TouchText.t("glance.passive")
 		"relay.inbox":
-			return _t("glance.inbox", "Inbox %d") % ctx.crew.inbox.size()
+			return TouchText.t("glance.inbox") % ctx.crew.inbox.size()
 		"relay.probes":
 			var out: int = 0
 			for p: Dictionary in relay.get("probes", []):
 				out += 1 if bool(p.get("deployed", false)) else 0
-			return _t("glance.probes", "Probes %d · out %d") % [int(relay.get("stock", 0)), out]
+			return TouchText.t("glance.probes") % [int(relay.get("stock", 0)), out]
 		"relay.route":
 			if ctx.crew.routes.is_empty():
-				return _t("glance.no_route", "No route")
-			return _t("glance.route", "Route set")
+				return TouchText.t("glance.no_route")
+			return TouchText.t("glance.route")
 		"comms.offers":
 			var live: int = 0
 			for c: Dictionary in CommsData.columns(comms)[2]:
 				live += 1 if CardList.is_live(c) else 0
-			return _t("glance.offers", "Offers %d") % live
+			return TouchText.t("glance.offers") % live
 		"comms.docked":
 			if bool(comms.get("docked", false)):
-				return _t("glance.docked", "Docked: %s") % ctx.site_name(int(comms.get("site", -1)))
-			return _t("glance.undocked", "Not docked")
+				return TouchText.t("glance.docked") % ctx.site_name(int(comms.get("site", -1)))
+			return TouchText.t("glance.undocked")
 		"comms.credits":
-			return _t("glance.credits", "%d cr") % int(comms.get("credits", 0))
+			return TouchText.t("glance.credits") % int(comms.get("credits", 0))
 	return "-"
-
-
-static func _t(key: String, fallback: String) -> String:
-	return TouchText.of(key, fallback)
 
 
 static func _helm_mode(ctx: StationContext, helm: Dictionary) -> String:
 	var target: String = ctx.snap.callsign(int(helm.get("sel_contact", -1)))
 	if bool(helm.get("all_stop", false)):
-		return _t("glance.all_stop", "All stop")
+		return TouchText.t("glance.all_stop")
 	if int(helm.get("docked_site", -1)) >= 0:
-		return _t("glance.docked", "Docked: %s") % ctx.site_name(int(helm["docked_site"]))
+		return TouchText.t("glance.docked") % ctx.site_name(int(helm["docked_site"]))
 	if int(helm.get("jump_left", 0)) > 0:
-		return _t("glance.jump", "Jump in %d s") % ceili(float(helm["jump_left"]) / ChipsReader.HZ)
+		return TouchText.t("glance.jump") % ceili(float(helm["jump_left"]) / ChipsReader.HZ)
 	if bool(helm.get("approach", false)):
-		return _t("glance.approach", "Approach %s") % target
+		return TouchText.t("glance.approach") % target
 	if bool(helm.get("face", false)):
-		return _t("glance.face", "Face %s") % target
+		return TouchText.t("glance.face") % target
 	var setpoint: int = roundi(float(helm.get("throttle_setpoint", 0.0)))
-	return _t("glance.setpoint", "Set %d m/s") % setpoint
+	return TouchText.t("glance.setpoint") % setpoint
 
 
 static func _pips(
-	ctx: StationContext, eng: Dictionary, kind: SubsystemDef.Kind, key: String, fallback: String
+	ctx: StationContext, eng: Dictionary, kind: SubsystemDef.Kind, key: String
 ) -> String:
 	var def: ShipDef = ctx.ship_def()
 	var rows: Array = eng.get("subsystems", [])
@@ -232,7 +234,7 @@ static func _pips(
 		for i: int in rows.size():
 			if def.subsystems[i].kind == kind:
 				n += int(rows[i].get("pips", 0))
-	return _t(key, fallback) % n
+	return TouchText.t(key) % n
 
 
 ## Mounts ready to fire ("2/3 ready"), or the hottest mount's heat.
@@ -246,8 +248,8 @@ static func _mounts(snap: SnapshotState, heat: bool) -> String:
 		if float(m.get("cooldown", 0.0)) <= 0.0 and not bool(m.get("locked", false)) and loaded:
 			ready += 1
 	if heat:
-		return _t("glance.heat", "Heat %d %%") % roundi(100.0 * hottest)
-	return _t("glance.ready", "%d/%d ready") % [ready, rows.size()]
+		return TouchText.t("glance.heat") % roundi(100.0 * hottest)
+	return TouchText.t("glance.ready") % [ready, rows.size()]
 
 
 ## The selection's callsign, or how many of its weak points Science knows.
@@ -257,7 +259,7 @@ static func _selection(ctx: StationContext, sci: Dictionary, weak: bool) -> Stri
 		return tr_none()
 	var id: int = int(sel["id"])
 	if not weak:
-		return _t("glance.target", "Target %s") % ctx.snap.callsign(id)
+		return TouchText.t("glance.target") % ctx.snap.callsign(id)
 	for c: Dictionary in sci.get("cards", []):
 		if int(c["contact"]) == id:
 			var mask: int = int(c.get("weak_mask", 0))
@@ -265,8 +267,8 @@ static func _selection(ctx: StationContext, sci: Dictionary, weak: bool) -> Stri
 			while mask != 0:
 				n += mask & 1
 				mask >>= 1
-			return _t("glance.weak", "Weak points %d") % n
-	return _t("glance.weak", "Weak points %d") % 0
+			return TouchText.t("glance.weak") % n
+	return TouchText.t("glance.weak") % 0
 
 
 ## Science's minigame, else the selected contact's scan.
@@ -274,20 +276,20 @@ static func _scan(ctx: StationContext, sci: Dictionary) -> String:
 	var minigame: int = int(sci.get("minigame", 0))
 	var target: String = ctx.snap.callsign(int(sci.get("minigame_contact", -1)))
 	if minigame == 1 or minigame == 3:
-		return _t("glance.scanning", "Scanning %s") % target
+		return TouchText.t("glance.scanning") % target
 	if minigame == 2:
-		return _t("glance.hacking", "Hacking %s") % target
+		return TouchText.t("glance.hacking") % target
 	var sel: Dictionary = ctx.crew.selection
 	if sel.get("kind", "") != "contact":
 		return tr_none()
 	for c: Dictionary in sci.get("cards", []):
 		if int(c["contact"]) == int(sel["id"]):
 			return (
-				_t("glance.scan", "Scan %s %d %%")
+				TouchText.t("glance.scan")
 				% [ctx.snap.callsign(int(sel["id"])), roundi(100.0 * float(c.get("scan", 0.0)))]
 			)
-	return _t("glance.scan", "Scan %s %d %%") % [ctx.snap.callsign(int(sel["id"])), 0]
+	return TouchText.t("glance.scan") % [ctx.snap.callsign(int(sel["id"])), 0]
 
 
 static func tr_none() -> String:
-	return _t("glance.nothing", "Nothing selected")
+	return TouchText.t("glance.nothing")

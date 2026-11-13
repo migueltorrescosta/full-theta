@@ -264,10 +264,7 @@ func _draw_shields(fs: int) -> void:
 	var frac: float = model.shield_frac()
 	_text(Vector2(PAD, y), tr("eng.shields") % roundi(frac * 100.0), "accent", fs)
 	var bar: Rect2 = Rect2(PAD, y + 8.0, size.x - 2.0 * PAD - 96.0, 10.0)
-	draw_rect(bar, Palette.color("line"))
-	draw_rect(
-		Rect2(bar.position, Vector2(bar.size.x * frac, bar.size.y)), Palette.color("friendly")
-	)
+	BarPaint.draw(self, bar, frac, Palette.color("friendly"), Palette.color("line"))
 	var si: int = _shield_subsystem()
 	var lean: bool = _lean_shields()
 	if si >= 0:
