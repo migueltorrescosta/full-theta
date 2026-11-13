@@ -151,6 +151,19 @@ static func _labels(t: Theme) -> void:
 	t.set_color("font_color", "CrewLabel", Palette.color("text"))
 
 
+## A touch-height action button named `node_name`: at least `min_width` wide and
+## TOUCH_PRIMARY high, with the theme type `variation` when given. The caller parents it.
+static func action_button(
+	node_name: String, text: String, min_width: float = 0.0, variation: String = ""
+) -> Button:
+	var b: Button = Button.new()
+	b.name = node_name
+	b.text = text
+	b.theme_type_variation = variation
+	b.custom_minimum_size = Vector2(min_width, TOUCH_PRIMARY)
+	return b
+
+
 ## The four button states and the focus ring of a Button-like type.
 static func _buttons(t: Theme, type: String, variation: String, pad_x: int, pad_y: int) -> void:
 	var name: String = type if variation == "" else variation

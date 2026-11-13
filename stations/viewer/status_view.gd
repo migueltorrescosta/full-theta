@@ -207,9 +207,12 @@ func _bar(font: Font, x: float, y: float, w: float, name: String, frac: float) -
 		Palette.color("text")
 	)
 	y += font.get_height(FONT_SIZE) + 4.0
-	var r: Rect2 = Rect2(x, y, w, BAR_HEIGHT)
-	draw_rect(r, Palette.color("panel"))
-	var role: String = bar_role(frac)
-	draw_rect(Rect2(x, y, w * frac, BAR_HEIGHT), Palette.color(role))
-	draw_rect(r, Palette.color("line"), false, 1.0)
+	BarPaint.draw(
+		self,
+		Rect2(x, y, w, BAR_HEIGHT),
+		frac,
+		Palette.color(bar_role(frac)),
+		Palette.color("panel"),
+		Palette.color("line")
+	)
 	return y + BAR_HEIGHT + ROW_GAP

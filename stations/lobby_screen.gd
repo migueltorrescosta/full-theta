@@ -328,7 +328,7 @@ func _apply_columns() -> void:
 		if size.y > 0.0:
 			_arrange(size.y < SHORT_HEIGHT)
 		if is_inside_tree():
-			_apply_targets(LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE)
+			_apply_targets(PhoneSheet.is_phone(self))
 			_apply_safe_area()
 
 

@@ -192,11 +192,7 @@ func _refresh_relaunch() -> void:
 
 
 func _button(node_name: String, text: String, variation: String = "") -> Button:
-	var b: Button = Button.new()
-	b.name = node_name
-	b.text = text
-	b.theme_type_variation = variation
-	b.custom_minimum_size = Vector2(140, UiTheme.TOUCH_PRIMARY)
+	var b: Button = UiTheme.action_button(node_name, text, 140.0, variation)
 	_buttons.add_child(b)
 	return b
 

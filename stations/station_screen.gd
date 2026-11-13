@@ -474,7 +474,7 @@ func _dispatch_batch(batch: Array[Dictionary]) -> void:
 ## True when the screen uses the phone frame: a phone-sized viewport (LayoutMode PHONE, as
 ## the stations' phone layouts), either way up.
 func phone_frame() -> bool:
-	return is_inside_tree() and LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE
+	return is_inside_tree() and PhoneSheet.is_phone(self)
 
 
 ## The menu button: the shell opens the menu, as Esc does.
