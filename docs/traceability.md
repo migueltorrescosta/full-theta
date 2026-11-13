@@ -318,7 +318,7 @@ Active ids per area: FT-GEN 14, FT-ARC 23, FT-NET 51, FT-SIM 37, FT-STN 17, FT-H
 | FT-MIS-022 | tests | `tests/sim/economy/test_modules.gd` |
 | FT-MIS-023 | tests | `tests/director/test_fleet_director.gd`, `tests/scenarios/test_fleet_scenarios.gd`, `tests/sim/run/test_relaunch.gd` |
 | FT-MIS-024 | tests | `tests/sim/run/test_map_def.gd`, `tests/sim/run/test_run_setup_map.gd`, `tests/sim/run/test_seeded_run.gd` |
-| FT-MIS-025 | tests | `tests/director/test_director_budget.gd`, `tests/director/test_director_pacing.gd`, `tests/director/test_director_pending_site.gd`, `tests/net/test_skip_gap_l3.gd`, `tests/sim/run/test_encounter_fixes.gd`, `tests/sim/run/test_encounter_pacing.gd`, `tests/sim/run/test_seeded_run.gd`, `tests/stations/test_gap_banner.gd` |
+| FT-MIS-025 | tests | `tests/director/test_director_budget.gd`, `tests/director/test_director_pacing.gd`, `tests/director/test_director_pending_site.gd`, `tests/net/test_site_pick_l3.gd`, `tests/net/test_skip_gap_l3.gd`, `tests/sim/run/test_encounter_fixes.gd`, `tests/sim/run/test_encounter_pacing.gd`, `tests/sim/run/test_seeded_run.gd`, `tests/stations/test_gap_banner.gd` |
 | FT-MIS-026 | tests | `tests/scenarios/test_debris_leg.gd`, `tests/sim/flight/test_jump.gd`, `tests/sim/run/test_encounter_fixes.gd`, `tests/sim/run/test_seeded_run.gd` |
 | FT-MIS-027 | tests | `tests/director/test_director_budget.gd`, `tests/director/test_director_pending_site.gd`, `tests/sim/run/test_encounter_fixes.gd`, `tests/sim/run/test_encounter_pacing.gd`, `tests/sim/run/test_seeded_run.gd`, `tests/stations/test_comms_board.gd` |
 | FT-MIS-028 | tests | `tests/director/test_director_budget.gd`, `tests/director/test_director_pacing.gd`, `tests/director/test_director_picks.gd` |

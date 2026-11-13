@@ -105,6 +105,7 @@ func start(
 	run_reset = NetRunReset.new(game, restart_run)
 	run_reset.decisions = _director_decisions
 	game.training.hook = begin_training
+	game.skip_gap.site_offers = _site_offers
 	_wire_fleet()
 	var err: Error = transport.start(port, address)
 	if err != OK:
@@ -255,6 +256,13 @@ static func _default_slots(setup: RunSetup) -> Array[ShipSlot]:
 		var label: String = ship_name if setup.crew_count() == 1 else "%s %d" % [ship_name, i + 1]
 		out.append(ShipSlot.of(label, 0))
 	return out
+
+
+## The current driver's site offers of the faction's gap (w-bzx, NetSkipGap); none without one.
+func _site_offers(faction: int) -> Array[Dictionary]:
+	if driver == null:
+		return []
+	return driver.site_offers(faction)
 
 
 ## The director's decisions so far for the debrief; none with another driver.
