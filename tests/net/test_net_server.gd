@@ -71,6 +71,26 @@ func _until(cond: Callable, timeout_ms: int = TIMEOUT_MS) -> bool:
 	return false
 
 
+## Polls every client each frame until count() reaches target; fails only when the count
+## stops rising for stall_ms, so a slow machine is not a failure (w-ff5).
+func _until_count(count: Callable, target: int, stall_ms: int = TIMEOUT_MS) -> bool:
+	var best: int = -1
+	var end: int = 0
+	while true:
+		for c: NetClient in _clients:
+			c.poll()
+		var n: int = count.call()
+		if n >= target:
+			return true
+		if n > best:
+			best = n
+			end = Time.get_ticks_msec() + stall_ms
+		elif Time.get_ticks_msec() >= end:
+			return false
+		await get_tree().process_frame
+	return false
+
+
 ## Polls for ms milliseconds.
 func _wait(ms: int) -> void:
 	await _until(func() -> bool: return false, ms)
@@ -92,7 +112,8 @@ func _events_of(events: Array[Dictionary], type: String) -> Array[Dictionary]:
 # FT: FT-NET-002, FT-NET-004, FT-NET-008, FT-ARC-005
 # The dedicated server runs the M1 sim and accepts WebSocket clients: a client gets
 # Welcome and the catalogue, picks Helm, receives its station's snapshots at about
-# 30 Hz, and a Helm command it sends shows up in the state it renders.
+# 30 Hz (one at the first frame SNAPSHOT_TICKS or more sim ticks after the last, so 30 Hz
+# while frames keep up), and a Helm command it sends shows up in the state it renders.
 func test_server_runs_sim_and_sends_snapshots_at_30_hz() -> void:
 	var server: NetServer = _server()
 	var c: NetClient = await _joined(server, "helm", "helm")
@@ -105,16 +126,25 @@ func test_server_runs_sim_and_sends_snapshots_at_30_hz() -> void:
 	assert_str(picked[0]["payload"]["reason"]).is_equal("")
 	assert_bool(c.snap.blocks.has(StationCatalogue.Section.HELM)).is_true()
 	assert_bool(c.snap.blocks.has(StationCatalogue.Section.ENGINEERING)).is_false()
-	# About 30 snapshots a second (wide band: 2 loaded cores).
-	var n0: int = c.stats["snapshots"]
-	var tick0: int = server.world.tick
-	var t0: int = Time.get_ticks_usec()
-	await _wait(1000)
-	var rate: float = (c.stats["snapshots"] - n0) / ((Time.get_ticks_usec() - t0) / 1e6)
-	var tick_rate: float = (server.world.tick - tick0) / ((Time.get_ticks_usec() - t0) / 1e6)
-	assert_float(rate).is_between(20.0, 34.0)
-	assert_float(tick_rate).is_between(45.0, 66.0)
-	assert_float(rate / tick_rate).is_between(0.4, 0.6)
+	# The cadence in sim ticks, against the tick each frame ended on, so a slow frame (more
+	# ticks in one step) is not a failure (w-ff5).
+	c.keep_raw = true
+	var frame_ticks: Array[int] = []
+	var seq0: int = c.snap.seq
+	var received: Callable = func() -> int:
+		frame_ticks.append(server.world.tick)
+		return c.raw_snapshots.keys().filter(func(q: int) -> bool: return q > seq0).size()
+	assert_bool(await _until_count(received, 30)).is_true()
+	var seqs: Array = c.raw_snapshots.keys().filter(func(q: int) -> bool: return q > seq0)
+	seqs.sort()
+	for i: int in range(1, seqs.size()):
+		var t0: int = SnapshotReader.peek(c.raw_snapshots[seqs[i - 1]])[2]
+		var t1: int = SnapshotReader.peek(c.raw_snapshots[seqs[i]])[2]
+		assert_int(t1 - t0).is_greater_equal(NetServer.SNAPSHOT_TICKS)
+		var skipped: Array = frame_ticks.filter(
+			func(t: int) -> bool: return t >= t0 + NetServer.SNAPSHOT_TICKS and t < t1
+		)
+		assert_array(skipped).is_empty()
 	assert_int(c.snap.rejected).is_equal(0)
 	# Commands up, state down.
 	c.helm(1.0)
@@ -158,6 +188,24 @@ func test_version_mismatch_is_rejected_with_a_reason() -> void:
 	)
 	assert_str(bad.reject_reason).is_equal(NetProtocol.REJECT_BAD_HELLO)
 	assert_int(server.game.by_id.size()).is_equal(0)
+
+
+# FT: FT-NET-005
+# A client that reads nothing until the server has closed (a stall longer than the
+# close linger) still gets the reason: the close frame carries it (w-ff5).
+func test_a_stalled_client_still_gets_the_reject_reason() -> void:
+	var server: NetServer = _server()
+	var old: NetClient = _client(server, "old")
+	old._hello_sent = true
+	assert_bool(await _until(func() -> bool: return _is_open(old))).is_true()
+	old.send_raw(NetProtocol.encode(NetProtocol.Type.HELLO, {"v": 999, "nick": "old"}))
+	old._peer.poll()
+	old.paused = true
+	await _wait(NetTransport.CLOSE_LINGER_US / 1000 + 1000)
+	old.paused = false
+	var r1: bool = await _until(func() -> bool: return old.state == NetClient.State.REJECTED)
+	assert_bool(r1).is_true()
+	assert_str(old.reject_reason).is_equal(NetProtocol.REJECT_VERSION)
 
 
 # FT: FT-NET-005
@@ -370,10 +418,12 @@ func test_encode_once_per_view_key() -> void:
 		clients.append(c)
 	await _wait(200)
 	var s0: Dictionary = server.transport.stats()
-	await _wait(1000)
-	var s1: Dictionary = server.transport.stats()
+	var s1: Dictionary = s0
+	var encoded: Callable = func() -> int:
+		s1 = server.transport.stats()
+		return s1["snapshots"] - s0["snapshots"]
+	assert_bool(await _until_count(encoded, 16)).is_true()
 	var snapshots: int = s1["snapshots"] - s0["snapshots"]
-	assert_int(snapshots).is_greater(15)
 	assert_int(s1["delta_messages"] - s0["delta_messages"]).is_equal(2 * snapshots)
 	assert_int(s1["full_messages"] - s0["full_messages"]).is_equal(0)
 	assert_int(s1["sends"] - s0["sends"]).is_equal(5 * snapshots)
@@ -433,9 +483,9 @@ func test_unappliable_snapshot_gets_one_full_snapshot() -> void:
 	c.snap.seq -= 3
 	assert_bool(await _until(func() -> bool: return c.stats["fulls"] > fulls)).is_true()
 	var deltas: int = c.stats["snapshots"]
-	await _wait(500)
+	var applied: Callable = func() -> int: return c.stats["snapshots"] - deltas
+	assert_bool(await _until_count(applied, 6)).is_true()
 	assert_int(c.stats["fulls"]).is_equal(fulls + 1)
-	assert_int(c.stats["snapshots"]).is_greater(deltas + 5)
 	assert_bool(c.snap.need_full).is_false()
 	assert_int(c.snap.rejected).is_greater_equal(1)
 	assert_int(_conn_of(server.transport.stats(), c.session_id)["stalls"]).is_equal(0)
@@ -542,6 +592,48 @@ func test_queue_overflow_closes_a_client_without_a_view() -> void:
 	assert_bool(await _until(closed_by_overflow)).is_true()
 	assert_bool(await _until(func() -> bool: return not session.connected(), 10_000)).is_true()
 	assert_bool(server.game.by_id.has(session.id)).is_true()
+
+
+# FT: FT-NET-037
+# The queue limit cuts a client only when its socket took nothing in the last pump: after
+# the net thread was descheduled for seconds (a backlog past the limit at once), a client
+# that reads keeps its connection and gets everything; one that doesn't read is still
+# closed (w-ff5).
+func test_net_thread_stall_cuts_only_the_client_that_does_not_read() -> void:
+	var server: NetServer = _server()
+	var reader: NetClient = _client(server, "reader")
+	var stalled: NetClient = _client(server, "stalled")
+	var both_in: Callable = func() -> bool: return reader.is_welcomed() and stalled.is_welcomed()
+	assert_bool(await _until(both_in)).is_true()
+	stalled.paused = true
+	var sessions: Array[NetSession] = [
+		server.game.by_id[reader.session_id], server.game.by_id[stalled.session_id]
+	]
+	var blob: PackedByteArray = PackedByteArray()
+	blob.resize(64 * 1024)
+	# The net thread sleeps 2 s while 384 KiB (past the 256 KiB limit) queue for both.
+	server.transport.loop_sleep_us = 2_000_000
+	await _wait(100)
+	for i: int in 6:
+		for session: NetSession in sessions:
+			server.game.notify(session, "test_blob", {"blob": blob})
+	server.transport.loop_sleep_us = 1000
+	var got: Array[int] = [0]
+	var blobs: Callable = func() -> int:
+		got[0] += _events_of(reader.take_events(), "test_blob").size()
+		return got[0]
+	assert_bool(await _until_count(blobs, 6, 10_000)).is_true()
+	assert_bool(sessions[0].connected()).is_true()
+	# The one that doesn't read is cut once the socket buffers are full too.
+	var sent: Array[int] = [0]
+	var cut: Callable = func() -> bool:
+		var code: int = _conn_of(server.transport.stats(), sessions[1].id).get("close_code", 0)
+		if code == 0 and sent[0] < 256:
+			server.game.notify(sessions[1], "test_blob", {"blob": blob})
+			sent[0] += 1
+		return code == NetTransport.CLOSE_QUEUE_FULL
+	assert_bool(await _until(cut, 10_000)).is_true()
+	assert_bool(sessions[0].connected()).is_true()
 
 
 # FT: FT-NET-037

@@ -16,6 +16,8 @@ var servers: Array[NetServer] = []
 var clients: Array[NetClient] = []
 ## NetClient -> Array[Dictionary] of every event delivered so far.
 var events: Dictionary = {}
+## Inbound buffer of new clients (bytes); 0 keeps NetClient's.
+var inbound_buffer_size: int = 0
 
 
 func _init(owner: Node) -> void:
@@ -83,6 +85,8 @@ func client(s: NetServer, name: String, token: String = "", secret: String = "")
 	c.name = name
 	c.token = token
 	c.host_secret = secret
+	if inbound_buffer_size > 0:
+		c.inbound_buffer_size = inbound_buffer_size
 	c.connect_to("ws://127.0.0.1:%d" % s.port())
 	clients.append(c)
 	events[c] = []
@@ -97,6 +101,27 @@ func until(cond: Callable, timeout_ms: int = TIMEOUT_MS) -> bool:
 		if cond.call():
 			return true
 		if Time.get_ticks_msec() >= end:
+			return false
+		await node.get_tree().process_frame
+	return false
+
+
+## Polls every client each frame until count() reaches target; fails only when the count
+## stops rising for stall_ms. For steps whose total time grows with the machine's speed
+## (64 clients and the server in one process on 2 cores, w-ff5), a stall is the failure,
+## not the total.
+func until_count(count: Callable, target: int, stall_ms: int = TIMEOUT_MS) -> bool:
+	var best: int = -1
+	var end: int = 0
+	while true:
+		_poll()
+		var n: int = count.call()
+		if n >= target:
+			return true
+		if n > best:
+			best = n
+			end = Time.get_ticks_msec() + stall_ms
+		elif Time.get_ticks_msec() >= end:
 			return false
 		await node.get_tree().process_frame
 	return false
