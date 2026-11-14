@@ -6,6 +6,15 @@ extends GdUnitTestSuite
 ## is tools/l4/load.sh (gate.sh l4load).
 
 const SHIPS: int = 6
+## The 64 clients and the server share one process here, so on 2 busy cores the welcomes
+## and picks can take tens of seconds in all (w-ff5): a wait fails only when nothing new
+## arrives for this long.
+const STALL_MS: int = 30_000
+## Each client reads at most its inbound buffer per frame, and frames here are slow: with
+## NetClient's 64 KiB, the burst of lobby states from 64 picks piled up past the server's
+## queue limit and closed clients before their pick was answered (w-ff5). Web clients use
+## 1 MiB too (D108).
+const INBOUND_BYTES: int = 1 << 20
 
 var h: NetHarness
 
@@ -36,21 +45,18 @@ func _server() -> NetServer:
 func test_connection_65_is_refused_in_a_six_ship_session() -> void:
 	var server: NetServer = _server()
 	assert_int(server.game.crew_ships().size()).is_equal(SHIPS)
+	h.inbound_buffer_size = INBOUND_BYTES
 	var all: Array[NetClient] = []
 	for i: int in LoadSeats.CONNECTIONS:
 		all.append(h.client(server, "load%02d" % i))
-	var all_in: Callable = func() -> bool:
-		return all.all(func(c: NetClient) -> bool: return c.is_welcomed())
-	assert_bool(await h.until(all_in, 30_000)).is_true()
+	var welcomed: Callable = func() -> int:
+		return all.filter(func(c: NetClient) -> bool: return c.is_welcomed()).size()
+	assert_bool(await h.until_count(welcomed, all.size(), STALL_MS)).is_true()
 	for i: int in all.size():
 		var seat: Array = LoadSeats.seat(i, SHIPS)
 		all[i].pick(seat[0], seat[1])
-	var picked: Callable = func() -> bool:
-		return all.all(
-			func(c: NetClient) -> bool:
-				return not h.events_of(c, NetProtocol.EVENT_PICKED).is_empty()
-		)
-	assert_bool(await h.until(picked, 30_000)).is_true()
+	var picked: Callable = func() -> int: return all.filter(_has_picked).size()
+	assert_bool(await h.until_count(picked, all.size(), STALL_MS)).is_true()
 	var seats: Dictionary = {}
 	for c: NetClient in all:
 		var answer: Dictionary = h.events_of(c, NetProtocol.EVENT_PICKED)[-1]
@@ -79,3 +85,7 @@ func test_connection_65_is_refused_in_a_six_ship_session() -> void:
 	assert_bool(await h.until(refused)).is_true()
 	assert_str(late.reject_reason).is_equal(NetProtocol.REJECT_FULL)
 	assert_int(server.game.by_id.size()).is_equal(LoadSeats.CONNECTIONS)
+
+
+func _has_picked(c: NetClient) -> bool:
+	return not h.events_of(c, NetProtocol.EVENT_PICKED).is_empty()

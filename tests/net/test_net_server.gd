@@ -161,6 +161,24 @@ func test_version_mismatch_is_rejected_with_a_reason() -> void:
 
 
 # FT: FT-NET-005
+# A client that reads nothing until the server has closed (a stall longer than the
+# close linger) still gets the reason: the close frame carries it (w-ff5).
+func test_a_stalled_client_still_gets_the_reject_reason() -> void:
+	var server: NetServer = _server()
+	var old: NetClient = _client(server, "old")
+	old._hello_sent = true
+	assert_bool(await _until(func() -> bool: return _is_open(old))).is_true()
+	old.send_raw(NetProtocol.encode(NetProtocol.Type.HELLO, {"v": 999, "nick": "old"}))
+	old._peer.poll()
+	old.paused = true
+	await _wait(NetTransport.CLOSE_LINGER_US / 1000 + 1000)
+	old.paused = false
+	var r1: bool = await _until(func() -> bool: return old.state == NetClient.State.REJECTED)
+	assert_bool(r1).is_true()
+	assert_str(old.reject_reason).is_equal(NetProtocol.REJECT_VERSION)
+
+
+# FT: FT-NET-005
 # A well-formed Hello of another protocol version is rejected with version_mismatch.
 func test_well_formed_hello_of_another_version_is_rejected() -> void:
 	var server: NetServer = _server()

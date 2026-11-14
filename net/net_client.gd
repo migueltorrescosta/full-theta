@@ -144,7 +144,12 @@ func poll() -> void:
 			_on_message(msg["stream"], msg["data"])
 	if ready_state == WebSocketPeer.STATE_CLOSED:
 		close_code = _peer.get_close_code()
-		if state != State.REJECTED:
+		# A client that didn't poll within the server's close linger loses HelloRejected
+		# with the close frame (w-ff5); the close carries the same reason.
+		if state == State.CONNECTING and close_code == NetProtocol.CLOSE_REJECTED:
+			reject_reason = _peer.get_close_reason()
+			state = State.REJECTED
+		elif state != State.REJECTED:
 			state = State.CLOSED
 		return
 	if ready_state != WebSocketPeer.STATE_OPEN:
