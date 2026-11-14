@@ -91,6 +91,10 @@ class Conn:
 	var close_code: int = 1000
 	var close_reason: String = ""
 	var errors: int = 0
+	## The last pump had messages queued and the socket took none of them: the client
+	## isn't reading. A queue that only grew while the net thread was descheduled
+	## doesn't count (w-ff5).
+	var blocked: bool = false
 	var stats: Dictionary = {"bytes": 0, "ws_messages": 0, "fulls": 0, "deltas": 0, "skipped": 0}
 
 
@@ -506,7 +510,7 @@ func _poll() -> Array:
 			_close(c, CLOSE_PROTOCOL, "malformed messages")
 		elif c.session < 0 and now - c.opened_us > HELLO_TIMEOUT_US:
 			_close(c, CLOSE_PROTOCOL, "no hello")
-		elif c.stream_key == "" and c.queue.high_bytes > NetResync.QUEUED_LIMIT:
+		elif c.stream_key == "" and c.blocked and c.queue.high_bytes > NetResync.QUEUED_LIMIT:
 			# No snapshots, so no stall policy: a client that doesn't read is closed and
 			# resumes with its token (its events wait in the outbox).
 			_close(c, CLOSE_QUEUE_FULL, "queue full")
@@ -633,6 +637,7 @@ func _pump() -> void:
 		if c.peer.get_ready_state() != WebSocketPeer.STATE_OPEN:
 			continue
 		c.queue.begin_pump()
+		var sent: int = 0
 		while true:
 			var room: int = mini(
 				BUNDLE_MAX,
@@ -652,6 +657,8 @@ func _pump() -> void:
 				break
 			c.stats["bytes"] += bundle.size()
 			c.stats["ws_messages"] += 1
+			sent += 1
+		c.blocked = sent == 0 and c.queue.peek_size() > 0
 		c.peer.poll()
 		# A client drops messages that arrive with the close frame, so the server lets
 		# the client close first (NetClient does on HelloRejected and Bye) and closes
