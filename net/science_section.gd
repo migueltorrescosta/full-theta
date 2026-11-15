@@ -22,8 +22,38 @@ extends RefCounted
 ## Most card rows (the wire format counts rows in a byte).
 const MAX_CARDS: int = 255
 
+## The block's schema without, and then only, its last two fields: the faction's `cards`
+## and `hacks`, the same for every ship of the faction (block_bytes encodes them once).
+static var _ship_fields: Array = BlockSchema.BLOCKS[StationCatalogue.Section.SCIENCE].slice(0, -2)
+static var _faction_fields: Array = BlockSchema.BLOCKS[StationCatalogue.Section.SCIENCE].slice(-2)
+
 
 static func block(world: SimWorld, ship: int) -> Dictionary:
+	var out: Dictionary = _ship_values(world, ship)
+	if world.science_def != null:
+		out["cards"] = _cards(world, ship)
+		out["hacks"] = hacks(world, world.faction_of(ship))
+	return out
+
+
+## block() encoded, the same bytes as NetBlock.encode of it, with the faction's rows
+## taken from `rows` (faction -> their bytes) and added to it the first time: the
+## SnapshotWriter shares one `rows` among a snapshot's blocks and empties it every build,
+## so a faction's cards are built once per snapshot, not once per ship.
+static func block_bytes(world: SimWorld, ship: int, rows: Dictionary = {}) -> PackedByteArray:
+	var faction: int = world.faction_of(ship)
+	if not rows.has(faction):
+		var values: Dictionary = {}
+		if world.science_def != null:
+			values = {"cards": _cards(world, ship), "hacks": hacks(world, faction)}
+		rows[faction] = NetBlock.encode(_faction_fields, values)
+	var out: PackedByteArray = NetBlock.encode(_ship_fields, _ship_values(world, ship))
+	out.append_array(rows[faction])
+	return out
+
+
+## The ship's own fields; `cards` and `hacks` empty.
+static func _ship_values(world: SimWorld, ship: int) -> Dictionary:
 	var t: ScienceTable = world.science
 	var out: Dictionary = _empty()
 	out["active"] = t.active[ship] == 1
@@ -34,8 +64,6 @@ static func block(world: SimWorld, ship: int) -> Dictionary:
 	_preview(out, t.preview[ship])
 	if world.science_def != null:
 		_minigame(out, world, ship)
-		out["cards"] = _cards(world, ship)
-		out["hacks"] = hacks(world, world.faction_of(ship))
 	return out
 
 

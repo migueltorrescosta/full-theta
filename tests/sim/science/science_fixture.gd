@@ -42,6 +42,12 @@ static func world(
 	return w
 
 
+## A second corvette of ME's faction, 200 m beside it (two ships that share their
+## faction's knowledge); returns its id.
+static func wing(w: SimWorld) -> int:
+	return w.spawn_ship(TestDefs.corvette(), BLUE, CubePoint.make(200, 0, 0))
+
+
 ## A deployed probe of the ship's faction on the contact, so the contact is in coverage.
 static func cover(w: SimWorld, contact: int = FOE, ship: int = ME) -> void:
 	var p: PackedFloat64Array = w.kin.point_at(contact, Vector3.ZERO)

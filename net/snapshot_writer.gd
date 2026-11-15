@@ -50,6 +50,9 @@ var _lists_ships: int = -1
 var _ownership: Dictionary = {}
 ## Faction -> the ship ids it knows (ContactsSection.known), computed once per build.
 var _known: Dictionary = {}
+## Faction -> its SCIENCE card and hack rows, encoded once per build and shared by its
+## ships' blocks (ScienceSection.block_bytes).
+var _science_rows: Dictionary = {}
 ## Ship -> the ship's open request chips posted by the main thread (ChipsSection).
 var _chips: Dictionary = {}
 ## Stream key -> ShortcutFilter (its toggle code and seat fixed by the key).
@@ -71,6 +74,7 @@ func build(world: SimWorld, snapshot_seq: int, stream_keys: Array) -> void:
 	_cache_delta.clear()
 	_cache_full.clear()
 	_known.clear()
+	_science_rows.clear()
 	if world.ship_count() != _lists_ships:
 		_lists.clear()
 		_lists_ships = world.ship_count()
@@ -117,6 +121,8 @@ func build(world: SimWorld, snapshot_seq: int, stream_keys: Array) -> void:
 			(section as ChipsSection).rows = _chips.get(section.owner, [])
 		elif section is CommsSection:  # the claims name each conversation's claimer
 			(section as CommsSection).claims = _ownership.get(section.owner, {}).get("claims", {})
+		elif section.kind == StationCatalogue.Section.SCIENCE:
+			(section as BlockSection).science_rows = _science_rows
 		if section is NearSection:
 			_deltas[skey] = (section as NearSection).update_members(world, near_sets[section.owner])
 		else:
