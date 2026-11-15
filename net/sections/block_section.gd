@@ -7,6 +7,9 @@ extends SnapshotSection
 ## What the section's view may carry of other stations' data, or null for everything
 ## (ShortcutFilter; sections of a filtered kind exist once per filter signature).
 var filter: ShortcutFilter = null
+## A SCIENCE block's faction rows for the next update only (ScienceSection.block_bytes):
+## the SnapshotWriter sets its shared ones before each update.
+var science_rows: Dictionary = {}
 
 
 func _init(section_kind: int, owner_id: int, shortcut_filter: ShortcutFilter = null) -> void:
@@ -15,5 +18,6 @@ func _init(section_kind: int, owner_id: int, shortcut_filter: ShortcutFilter = n
 
 
 func update(world: SimWorld) -> PackedByteArray:
-	var bytes: PackedByteArray = StationBlocks.block_bytes(kind, world, owner, filter)
+	var bytes: PackedByteArray = StationBlocks.block_bytes(kind, world, owner, filter, science_rows)
+	science_rows = {}
 	return _changed(bytes)

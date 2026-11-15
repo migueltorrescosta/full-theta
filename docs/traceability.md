@@ -84,7 +84,7 @@ Active ids per area: FT-GEN 14, FT-ARC 23, FT-NET 51, FT-SIM 37, FT-STN 17, FT-H
 | FT-NET-037 | tests | `tests/net/test_net_resync.gd`, `tests/net/test_net_server.gd` |
 | FT-NET-038 | tests | `tests/net/test_net_chunking.gd`, `tests/net/test_net_server.gd`, `tests/net/voice/test_voice_l3.gd` |
 | FT-NET-039 | tests | `tests/net/test_host_static_server.gd` |
-| FT-NET-040 | tests | `tests/net/test_comms_section.gd`, `tests/net/test_net_server.gd`, `tests/net/test_net_sim_copy.gd`, `tests/net/test_net_snapshot.gd`, `tests/net/test_probe_layout.gd`, `tests/net/test_thread_ownership.gd`, `tools/tests/test_load_check.py` |
+| FT-NET-040 | tests | `tests/net/test_comms_section.gd`, `tests/net/test_net_server.gd`, `tests/net/test_net_sim_copy.gd`, `tests/net/test_net_snapshot.gd`, `tests/net/test_probe_layout.gd`, `tests/net/test_science_section.gd`, `tests/net/test_thread_ownership.gd`, `tools/tests/test_load_check.py` |
 | FT-NET-041 | tests | `tests/net/test_fleet_pause_l3.gd`, `tests/net/test_net_pause_l3.gd`, `tests/net/test_net_pause_rules.gd`, `tests/net/test_net_refusals_l3.gd`, `tests/net/test_run_abandon_l3.gd`, `tests/sim/run/test_outcome.gd`, `tests/stations/test_pause_overlay.gd` |
 | FT-NET-042 | tests | `tests/net/test_fleet_pause_l3.gd`, `tests/net/test_net_pause_l3.gd`, `tests/stations/m4_phone/test_m4_phone_screens.gd`, `tests/stations/test_fleet_screens.gd`, `tests/stations/test_pause_overlay.gd` |
 | FT-NET-043 | tests | `tests/net/test_net_lobby_l3.gd` |
@@ -185,7 +185,7 @@ Active ids per area: FT-GEN 14, FT-ARC 23, FT-NET 51, FT-SIM 37, FT-STN 17, FT-H
 | FT-ENG-006 | tests | `tests/net/test_net_toggles_l3.gd`, `tests/net/test_shortcut_filter.gd`, `tests/sim/damage/test_faults.gd`, `tests/sim/science/test_self_scan_faults.gd`, `tests/stations/engineering/test_engineering_pair_verbs.gd`, `tests/stations/engineering/test_engineering_rail.gd` |
 | FT-ENG-007 | tests | `tests/net/test_net_engineering_view_l3.gd` |
 | FT-ENG-008 | tests | `tests/net/test_hazard_rows.gd`, `tests/sim/damage/test_damage_edges.gd`, `tests/sim/damage/test_faults.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/stations/engineering/test_engineering_pair_verbs.gd`, `tests/stations/engineering/test_engineering_phone.gd`, `tests/stations/engineering/test_engineering_rail.gd`, `tests/stations/test_data_shortcut_views.gd` |
-| FT-SCI-001 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_reveals.gd`, `tests/stations/science/test_science_phone.gd`, `tests/stations/test_phone_fixups.gd`, `tests/stations/test_science_panel.gd` |
+| FT-SCI-001 | tests | `tests/net/test_net_science_l3.gd`, `tests/net/test_science_section.gd`, `tests/sim/science/test_reveals.gd`, `tests/stations/science/test_science_phone.gd`, `tests/stations/test_phone_fixups.gd`, `tests/stations/test_science_panel.gd` |
 | FT-SCI-002 | tests | `tests/net/test_net_science_l3.gd`, `tests/net/test_science_section.gd`, `tests/sim/science/test_reveals.gd`, `tests/stations/test_science_panel.gd` |
 | FT-SCI-003 | tests | `tests/sim/damage/test_damage_types.gd`, `tests/sim/science/test_science_noise.gd`, `tests/stations/science/test_science_phone.gd`, `tests/stations/test_science_panel.gd` |
 | FT-SCI-004 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_minigame_timing.gd`, `tests/sim/science/test_scan.gd`, `tests/stations/science/test_science_phone.gd`, `tests/stations/test_science_panel.gd` |

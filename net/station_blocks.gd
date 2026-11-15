@@ -38,9 +38,16 @@ static func item_of(command: SimCommand) -> String:
 
 
 ## The block section's fields for a ship, read from a (copied) world, encoded.
+## `science_rows` is ScienceSection.block_bytes' (no filter changes SCIENCE).
 static func block_bytes(
-	kind: int, world: SimWorld, ship: int, filter: ShortcutFilter = null
+	kind: int,
+	world: SimWorld,
+	ship: int,
+	filter: ShortcutFilter = null,
+	science_rows: Dictionary = {}
 ) -> PackedByteArray:
+	if kind == StationCatalogue.Section.SCIENCE:
+		return ScienceSection.block_bytes(world, ship, science_rows)
 	var values: Dictionary = _block_values(kind, world, ship, filter)
 	if filter != null:
 		filter.apply(kind, values, world.defs[ship])
